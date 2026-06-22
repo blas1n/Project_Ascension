@@ -1,0 +1,108 @@
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# IDE
+# ===========================
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ===========================
+# Unity
+# ===========================
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emory[Cc]aptures/
+*.pidb
+*.unityproj
+*.booproj
+sysinfo.txt
+MemoryCaptures/
+crashlytics-build.properties
+ExportedObj/
+*.csproj
+*.unitypackage
+*.apk
+*.aab
+*.ipa
+
+# ===========================
+# .NET / C#
+# ===========================
+bin/
+obj/
+*.dll
+*.pdb
+*.mdb
+*.exe
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/launchSettings.json
+
+# ===========================
+# ASP.NET Core
+# ===========================
+appsettings.Development.json
+appsettings.Local.json
+*.pfx
+*.p12
+
+# ===========================
+# NuGet
+# ===========================
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!**/packages/build/
+
+# ===========================
+# Node (tools)
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ===========================
+# Secrets / Env
+# ===========================
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+
+# ===========================
+# Database
+# ===========================
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+
+# ===========================
+# Tools / Plugin
+# ===========================
+.omc/
