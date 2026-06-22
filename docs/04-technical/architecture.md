@@ -161,7 +161,14 @@ PostgreSQL을 사용한다.
 
 ## 실시간 서버
 
-Vertical Slice에서는 별도 game-server를 만들지 않는다. 전투와 몬스터 AI는 Unity 클라이언트 내부에서 처리한다. 서버 권위 구조는 MMO 단계에서 다시 설계한다.
+Vertical Slice에서도 별도 game-server를 구현한다. 전투 판정과 이동 권위는 game-server에 있다. Unity 클라이언트는 렌더링과 입력만 담당한다.
+
+서버 권위를 처음부터 적용하는 이유:
+* VS → MMO 전환 시 전투 레이어 재설계 비용 방지
+* Unity 의존성 없는 순수 C# 서버는 `dotnet test` 가능 (Claude Code 기반 개발에 필수)
+* Headless Unity보다 인프라 비용 낮음
+
+상세 구조는 `game-server-architecture.md` 참조.
 
 ---
 

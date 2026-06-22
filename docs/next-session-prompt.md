@@ -120,6 +120,7 @@ PlayerController부터 시작한다.
 
 ## 주의사항
 
+- **game-server는 Vertical Slice 범위에 포함된다.** `architecture.md`의 "별도 game-server 없음" 문구는 폐기된 이전 결정이다. `game-server-architecture.md`가 현재 기준이다.
 - MMO 시스템(조직, 주권, 지식 경제, 정착지 성장, World Will)은 구현하지 않는다. 데이터 모델만 정의한다.
 - AI는 이름/설명/로어 생성에만 사용한다. 판정 로직에 AI를 사용하지 않는다.
 - Unity 프로젝트는 솔루션과 별개로 `apps/client-unity/`에 위치한다. C# 패키지는 DLL 참조로 연결한다.
