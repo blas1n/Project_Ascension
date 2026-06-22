@@ -6,7 +6,11 @@
 * **입력:** Unity New Input System
 * **카메라:** Cinemachine
 * **DI:** VContainer
+* **실시간 전송:** ENet-CSharp
+* **직렬화:** MessagePack-CSharp
 * **기본 시점:** FPS (TPS 선택적)
+
+Unity는 **렌더링 + 입력 셸**이다. 게임 로직은 `packages/GameSimulation/`에 있고 Unity는 이를 참조한다.
 
 ---
 
@@ -151,10 +155,19 @@ ContractService.cs        — 수주, 진행, 완료 처리. API 연동.
 ContractBoardPresenter.cs — 게시판 UI 데이터 바인딩.
 ```
 
-### API
+### GameServer (실시간)
 
 ```
-ApiClient.cs              — HttpClient 래퍼. 인증 헤더 관리.
+GameServerClient.cs       — ENet-CSharp 연결 관리. 연결/재연결 처리.
+PacketSender.cs           — PlayerInputMessage 등 직렬화 후 송신.
+PacketReceiver.cs         — WorldStateMessage 수신 후 디스패치.
+ClientReconciliation.cs   — 서버 스냅샷 수신 시 로컬 상태 보정.
+```
+
+### API (영속화)
+
+```
+ApiClient.cs              — HttpClient 래퍼.
 ContractApiService.cs     — /api/contracts 엔드포인트 호출.
 DiscoveryApiService.cs    — /api/discoveries 엔드포인트 호출.
 CharacterApiService.cs    — /api/characters 엔드포인트 호출.
@@ -177,10 +190,11 @@ RegionData.cs    — 지역 환경 태그, 위험도, 발견 후보 목록.
 
 ## 설계 규칙
 
-* MonoBehaviour는 씬 오브젝트 생명주기만 담당한다. 비즈니스 로직은 순수 C# 서비스로 분리한다.
+* MonoBehaviour는 씬 오브젝트 생명주기만 담당한다. 게임 로직은 `packages/GameSimulation/`에 있다.
 * Inspector 직접 참조 최소화. VContainer로 주입한다.
-* API 호출은 반드시 `API/` 레이어를 통한다. MonoBehaviour에서 HttpClient를 직접 사용하지 않는다.
-* `packages/Contracts` DTO를 Unity에서 그대로 사용한다. 별도 Unity 전용 모델을 만들지 않는다.
+* 실시간 통신은 `GameServer/` 레이어를 통한다. 영속화는 `API/` 레이어를 통한다.
+* `packages/Contracts` DTO와 `packages/GameSimulation` 타입을 Unity에서 그대로 사용한다. Unity 전용 모델을 별도로 만들지 않는다.
+* Unity PhysX는 렌더링용 시각적 보정에만 사용한다. 판정 기준은 서버의 BEPUphysics2다.
 
 ---
 

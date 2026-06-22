@@ -30,13 +30,27 @@
 
 Unity 6 클라이언트. 상세 구조는 `unity-architecture.md` 참조.
 
+역할: **렌더링 + 입력만 담당.** 게임 로직은 `packages/GameSimulation/`에 있다.
+
 담당:
-* FPS/TPS 이동 및 카메라
-* 양손 2슬롯 장비
-* 전투 입력 및 피격
-* 계약 UI
-* 발견 알림 및 저널
-* 월드 렌더링
+* FPS/TPS 렌더링 및 카메라
+* 플레이어 입력 수집
+* 게임 서버 통신 (ENet-CSharp)
+* UI (계약, 발견, 인벤토리)
+* 클라이언트 예측 및 서버 보정
+
+---
+
+## apps/game-server
+
+순수 C# 콘솔 앱. Unity 의존성 없음. 상세 구조는 `game-server-architecture.md` 참조.
+
+담당:
+* 플레이어 이동/위치 권위
+* 전투 히트 판정
+* 몬스터 AI 실행
+* 발견 후보 감지
+* 영속화 이벤트 → API 보고
 
 ---
 
@@ -70,6 +84,20 @@ C# 클래스 라이브러리. Unity 클라이언트와 API 서버 양쪽에서 �
 
 ---
 
+### packages/GameSimulation
+
+순수 C# 게임 시뮬레이션 로직. `dotnet test` 가능.
+
+* PlayerSimulation (이동, 점프, 회피)
+* CombatSimulation (히트 판정, 데미지)
+* MonsterSimulation (AI 상태 머신)
+* PhysicsWorld (BEPUphysics2 래퍼)
+* BehaviorCounter (발견 후보 행동 추적)
+
+Unity 클라이언트와 게임 서버가 동일한 로직을 참조한다. 클라이언트 예측과 서버 보정의 기반이 된다.
+
+---
+
 ### packages/Contracts
 
 Unity 클라이언트와 API 서버가 공유하는 요청/응답 DTO.
@@ -87,6 +115,10 @@ Enums/
   ContractKind.cs
   ContractStatus.cs
   DiscoveryType.cs
+GameMessages/
+  PlayerInputMessage.cs
+  WorldStateMessage.cs
+  GameEventMessage.cs
 ```
 
 **규칙:** DTO만 포함. 비즈니스 로직 없음.
@@ -144,24 +176,25 @@ infra/
 
 ## 언어 경계
 
-| 영역 | 언어 |
-|---|---|
-| Unity 클라이언트 | C# |
-| API 서버 | C# (ASP.NET Core) |
-| 공유 패키지 | C# (.NET 클래스 라이브러리) |
-| DB 마이그레이션 | EF Core (C#) |
-| 인프라 설정 | Docker Compose, SQL |
+| 영역 | 언어 | Unity 의존 |
+|---|---|---|
+| Unity 클라이언트 | C# | ✓ (렌더링/입력) |
+| 게임 서버 | C# (콘솔 앱) | ✗ |
+| API 서버 | C# (ASP.NET Core) | ✗ |
+| 공유 패키지 | C# (.NET 클래스 라이브러리) | ✗ |
+| DB 마이그레이션 | EF Core (C#) | ✗ |
 
 ---
 
 ## 패키지 참조 규칙
 
 ```
-client-unity  →  packages/Contracts, packages/Domain (일부)
-api           →  packages/Domain, packages/Contracts, packages/Discovery, packages/Items, packages/Shared
+client-unity   →  packages/Contracts, packages/GameSimulation
+game-server    →  packages/Contracts, packages/GameSimulation, packages/Domain
+api            →  packages/Domain, packages/Contracts, packages/Discovery, packages/Items, packages/Shared
 ```
 
-packages 간 순환 참조 금지. Domain은 다른 package를 참조하지 않는다.
+packages 간 순환 참조 금지. Domain과 Contracts는 다른 package를 참조하지 않는다.
 
 ---
 
@@ -169,11 +202,11 @@ packages 간 순환 참조 금지. Domain은 다른 package를 참조하지 않�
 
 1. 솔루션 scaffold — 프로젝트 구조, 참조 관계 설정
 2. `packages/Domain` — 핵심 엔티티 정의
-3. `packages/Contracts` — DTO 정의
-4. `apps/api` scaffold — health endpoint, DB 연결
-5. `packages/Discovery`, `packages/Items` — 도메인 로직
-6. API 엔드포인트 구현 — Contract, Character, Item, Discovery
-7. Unity 클라이언트 — 패키지 참조 후 API 연동
+3. `packages/Contracts` — DTO 및 GameMessages 정의
+4. `packages/GameSimulation` — PlayerSimulation, CombatSimulation, MonsterSimulation
+5. `apps/api` scaffold — health endpoint, DB 연결, 엔드포인트 구현
+6. `apps/game-server` scaffold — ENet 서버 루프, GameSimulation 연결
+7. Unity 클라이언트 — 렌더링 셸, ENet 클라이언트, API 연동
 
 ---
 

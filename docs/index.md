@@ -153,6 +153,7 @@ NPC는 문명을 유지한다.
 * 04-technical/repo-structure.md
 * 04-technical/unity-architecture.md
 * 04-technical/backend-architecture.md
+* 04-technical/game-server-architecture.md
 * 04-technical/domain-model.md
 * 04-technical/db-schema-draft.md
 * 04-technical/event-flow.md
