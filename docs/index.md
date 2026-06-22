@@ -149,10 +149,12 @@ NPC는 문명을 유지한다.
 
 ### 문서
 
-* 04-technical/domain-model.md
-* 04-technical/db-schema-draft.md
 * 04-technical/architecture.md
 * 04-technical/repo-structure.md
+* 04-technical/unity-architecture.md
+* 04-technical/backend-architecture.md
+* 04-technical/domain-model.md
+* 04-technical/db-schema-draft.md
 * 04-technical/event-flow.md
 * 04-technical/ai-boundaries.md
 

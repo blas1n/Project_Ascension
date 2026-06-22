@@ -2,363 +2,186 @@
 
 ## 목적
 
-이 문서는 Claude Code가 monorepo를 생성할 때 따라야 할 폴더 구조와 책임 경계를 정의한다.
+이 문서는 Project_Ascension 모노레포의 폴더 구조와 책임 경계를 정의한다.
 
 ---
 
 ## 최상위 구조
 
-```txt
+```
 /
   apps/
+    client-unity/
+    api/
   packages/
+    Domain/
+    Contracts/
+    Discovery/
+    Items/
+    Shared/
   docs/
   infra/
-  scripts/
-  .devcontainer/
-  docker-compose.yml
-  README.md
+  tools/
 ```
 
 ---
 
-## apps
+## apps/client-unity
 
-실행 가능한 애플리케이션을 둔다.
-
-```txt
-/apps
-  /client-unity
-  /game-server
-  /api
-  /admin
-```
-
-### apps/client-unity
-
-Unity 클라이언트. 초기에는 Unity 프로젝트 전체가 이 폴더에 위치한다.
+Unity 6 클라이언트. 상세 구조는 `unity-architecture.md` 참조.
 
 담당:
-
-* FPS 이동
-* 조준
-* 전투 입력
-* 장비 장착
+* FPS/TPS 이동 및 카메라
+* 양손 2슬롯 장비
+* 전투 입력 및 피격
 * 계약 UI
-* 인벤토리 UI
-* 발견 알림
+* 발견 알림 및 저널
 * 월드 렌더링
 
-### apps/game-server
+---
 
-실시간 게임 서버. 초기에는 Unity/Photon 기반 구조를 우선 검토한다.
+## apps/api
 
-담당:
-
-* 세션 관리
-* 플레이어 위치 동기화
-* 몬스터 스폰
-* 몬스터 AI
-* 피격 판정
-* 전투 결과 이벤트 생성
-
-### apps/api
-
-영속 세계 백엔드.
+ASP.NET Core 백엔드. 상세 구조는 `backend-architecture.md` 참조.
 
 담당:
-
-* Account
-* Character
-* Actor
-* NPC
-* Contract
-* Item
-* Discovery
-* Knowledge
-* Organization
-* Settlement
-
-초기 스택:
-
-* TypeScript
-* NestJS
-* PostgreSQL
-* Redis
-* Prisma 또는 Drizzle
-
-### apps/admin
-
-개발자/운영자용 웹 도구. 초기 스택: Next.js 또는 Vite + React.
-
-담당:
-
-* 계약 조회
-* 캐릭터 조회
-* 지역 상태 조회
-* 몬스터 상태 조회
-* 정착지 성숙도 조회
-* 테스트 데이터 생성
+* 계약 생성/수주/완료
+* 캐릭터 상태 저장
+* 아이템 및 인벤토리
+* 발견 기록 및 지식 생성
+* 정착지 상태 (MVP 이후)
+* 조직 시스템 (MVP 이후)
 
 ---
 
 ## packages
 
-공유 코드와 도메인 로직을 둔다.
+C# 클래스 라이브러리. Unity 클라이언트와 API 서버 양쪽에서 참조한다.
 
-```txt
-/packages
-  /shared
-  /domain
-  /schemas
-  /contracts
-  /items
-  /world
-  /discovery
-  /knowledge
-  /settlements
-  /config
-```
+### packages/Domain
 
-### packages/shared
+핵심 도메인 엔티티, 열거형, 인터페이스.
 
-범용 유틸리티.
+* Actor, Contract, Item, Discovery, Knowledge
+* Region, Monster, Settlement, Organization
+* 인터페이스: IContractRepository, IDiscoveryRepository 등
 
-* id helper
-* date helper
-* result type
-* error type
-* pagination type
-
-### packages/domain
-
-핵심 도메인 타입.
-
-* Actor
-* Contract
-* Organization
-* Item
-* Discovery
-* Knowledge
-* Region
-* Monster
-* Settlement
-
-### packages/schemas
-
-API 요청/응답 검증 스키마. 권장: Zod, JSON Schema.
-
-### packages/contracts
-
-계약 엔진.
-
-담당:
-
-* 계약 타입 정의
-* 계약 상태 전이
-* 완료 조건 평가
-* 실패 조건 평가
-* 보상 계산 인터페이스
-
-MVP 계약: Collection, Survey, Hunt.
-
-### packages/items
-
-아이템과 인벤토리 도메인.
-
-담당:
-
-* Item type
-* Equipment type
-* Loadout
-* Inventory
-* Ownership
-
-### packages/world
-
-지역, 문명권, 위험도, 세계의 의지 관련 도메인.
-
-담당:
-
-* Region
-* Civilization
-* DangerLevel
-* WorldWillEvent
-
-### packages/discovery
-
-발견 시스템.
-
-담당:
-
-* DiscoveryRecord
-* 최초 발견 판정
-* 발견 이벤트 처리
-* Knowledge 생성 트리거
-
-### packages/knowledge
-
-지식 경제. 초기 MVP에서는 모델만 정의하고, 실제 거래는 이후 구현한다.
-
-담당:
-
-* Knowledge
-* KnowledgeLicense
-* LicenseTransaction
-* Royalty calculation
-
-### packages/settlements
-
-정착지와 인프라 시스템. 초기 MVP에서는 최소 상태만 구현한다.
-
-담당:
-
-* Settlement
-* Infrastructure
-* Infrastructure maturity
-* MigrationEvent
-* SettlementStyleProfile
-
-### packages/config
-
-공통 환경 설정.
-
-담당:
-
-* env parsing
-* service URLs
-* feature flags
+**규칙:** 외부 프레임워크 의존성 없음. 순수 C#.
 
 ---
 
-## docs
+### packages/Contracts
 
-기획과 기술 문서를 둔다.
+Unity 클라이언트와 API 서버가 공유하는 요청/응답 DTO.
 
-```txt
-/docs
-  /00-vision
-  /01-world
-  /02-systems
-  /03-gameplay
-  /04-technical
-  /05-art
-  /06-roadmap
 ```
+Requests/
+  AcceptContractRequest.cs
+  RecordDiscoveryRequest.cs
+  UpdateLoadoutRequest.cs
+Responses/
+  ContractResponse.cs
+  DiscoveryResponse.cs
+  CharacterResponse.cs
+Enums/
+  ContractKind.cs
+  ContractStatus.cs
+  DiscoveryType.cs
+```
+
+**규칙:** DTO만 포함. 비즈니스 로직 없음.
+
+---
+
+### packages/Discovery
+
+발견 시스템 도메인 로직.
+
+* DiscoveryCandidate 평가
+* 발견 진행도 계산
+* 최초 발견 판정 인터페이스
+
+---
+
+### packages/Items
+
+아이템/장비 도메인 로직.
+
+* Item, Equipment, Loadout 타입
+* 양손 2슬롯 유효성 검사
+
+---
+
+### packages/Shared
+
+범용 유틸리티.
+
+* Result<T> 타입
+* Error 타입
+* ID 헬퍼
+* 페이지네이션 타입
 
 ---
 
 ## infra
 
-인프라와 로컬 개발 환경을 둔다. 초기 MVP에서는 Terraform은 비워둔다.
+로컬 개발 환경.
 
-```txt
-/infra
-  /docker
-  /postgres
-  /redis
-  /terraform
+```
+infra/
+  docker-compose.yml    (postgres, api)
+  postgres/
+    init.sql
 ```
 
 ---
 
-## .devcontainer
+## tools
 
-개발 컨테이너 설정.
-
-목표:
-
-* Node.js
-* pnpm
-* PostgreSQL client
-* Redis client
-* Unity 관련 도구는 로컬 또는 별도 처리
+개발 보조 도구. 초기에는 비워둔다.
 
 ---
 
-## docker-compose.yml
+## 언어 경계
 
-초기 개발 서비스: postgres, redis, api, admin. Unity 클라이언트는 docker-compose에서 제외할 수 있다.
-
----
-
-## 패키지 매니저
-
-권장: pnpm workspace.
-
----
-
-## TypeScript 경계
-
-API와 packages는 TypeScript 기반이다. Unity 클라이언트는 C# 기반이다. Unity와 TypeScript 사이에는 API schema 또는 generated client를 사용한다.
+| 영역 | 언어 |
+|---|---|
+| Unity 클라이언트 | C# |
+| API 서버 | C# (ASP.NET Core) |
+| 공유 패키지 | C# (.NET 클래스 라이브러리) |
+| DB 마이그레이션 | EF Core (C#) |
+| 인프라 설정 | Docker Compose, SQL |
 
 ---
 
-## Claude Code 작업 원칙
+## 패키지 참조 규칙
 
-Claude Code는 한 번에 전체 repo를 만들지 않는다.
+```
+client-unity  →  packages/Contracts, packages/Domain (일부)
+api           →  packages/Domain, packages/Contracts, packages/Discovery, packages/Items, packages/Shared
+```
 
-작업 단위:
-
-1. workspace scaffold
-2. docs 배치
-3. api scaffold
-4. domain package
-5. contract package
-6. item package
-7. discovery package
-8. settlement package
-9. 테스트 작성
-10. Unity 연동은 별도 단계
+packages 간 순환 참조 금지. Domain은 다른 package를 참조하지 않는다.
 
 ---
 
 ## MVP 구현 순서
 
-### Step 1
-
-Monorepo scaffold. pnpm workspace. basic tsconfig. lint/test 설정.
-
-### Step 2
-
-API scaffold. health endpoint. database connection.
-
-### Step 3
-
-Domain model. Actor, Contract, Item, Region.
-
-### Step 4
-
-Contract engine MVP. Collection, Survey, Hunt.
-
-### Step 5
-
-Inventory and loadout. 양손 2슬롯.
-
-### Step 6
-
-Discovery MVP. 최초 발견 기록.
-
-### Step 7
-
-Settlement stub. 정착지 상태와 인프라 성숙도 최소 구현.
-
-### Step 8
-
-Unity prototype integration. 계약 조회, 계약 수락, 아이템 획득, 계약 완료.
+1. 솔루션 scaffold — 프로젝트 구조, 참조 관계 설정
+2. `packages/Domain` — 핵심 엔티티 정의
+3. `packages/Contracts` — DTO 정의
+4. `apps/api` scaffold — health endpoint, DB 연결
+5. `packages/Discovery`, `packages/Items` — 도메인 로직
+6. API 엔드포인트 구현 — Contract, Character, Item, Discovery
+7. Unity 클라이언트 — 패키지 참조 후 API 연동
 
 ---
 
 ## 금지 사항
 
-초기부터 다음을 구현하지 않는다.
+초기부터 구현하지 않는다.
 
-* 국가 전체 시스템
-* 종교 전체 시스템
-* 외교
-* 상속
-* 로열티 자동 정산
-* 완전한 AI 도시 생성
-* 대규모 경제 시뮬레이션
-
-문서는 남겨두되 구현은 MVP 이후로 미룬다.
+* 별도 게임 서버 프로세스
+* Redis, 메시지 큐
+* 마이크로서비스 분리
+* 실시간 동기화 서버

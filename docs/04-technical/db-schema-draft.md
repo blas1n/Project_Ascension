@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 Project_Ascension의 초기 데이터베이스 스키마 초안이다. 최종 DB 설계가 아니라, Claude Code가 Prisma 또는 Drizzle 모델을 작성하기 위한 기준 문서이다.
+이 문서는 Project_Ascension의 초기 데이터베이스 스키마 초안이다. 최종 DB 설계가 아니라, EF Core 엔티티와 마이그레이션을 작성하기 위한 기준 문서이다.
 
 ---
 
