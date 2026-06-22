@@ -33,7 +33,7 @@ sysinfo.txt
 MemoryCaptures/
 crashlytics-build.properties
 ExportedObj/
-*.csproj
+apps/client-unity/**/*.csproj
 *.unitypackage
 *.apk
 *.aab
@@ -68,8 +68,9 @@ appsettings.Local.json
 *.nupkg
 *.snupkg
 .nuget/
-packages/
-!**/packages/build/
+# Note: 'packages/' at root is our monorepo source directory, NOT NuGet packages
+# NuGet restore output goes to ~/.nuget/packages (global) or obj/ (local)
+**/packages.lock.json
 
 # ===========================
 # Node (tools)
