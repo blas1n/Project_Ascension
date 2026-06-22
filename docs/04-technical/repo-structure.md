@@ -125,25 +125,6 @@ GameMessages/
 
 ---
 
-### packages/Discovery
-
-발견 시스템 도메인 로직.
-
-* DiscoveryCandidate 평가
-* 발견 진행도 계산
-* 최초 발견 판정 인터페이스
-
----
-
-### packages/Items
-
-아이템/장비 도메인 로직.
-
-* Item, Equipment, Loadout 타입
-* 양손 2슬롯 유효성 검사
-
----
-
 ### packages/Shared
 
 범용 유틸리티.
@@ -189,12 +170,15 @@ infra/
 ## 패키지 참조 규칙
 
 ```
-client-unity   →  packages/Contracts, packages/GameSimulation
-game-server    →  packages/Contracts, packages/GameSimulation, packages/Domain
-api            →  packages/Domain, packages/Contracts, packages/Discovery, packages/Items, packages/Shared
+client-unity   →  Contracts, GameSimulation
+game-server    →  Domain, Contracts, GameSimulation
+api            →  Domain, Contracts, Shared
 ```
 
 packages 간 순환 참조 금지. Domain과 Contracts는 다른 package를 참조하지 않는다.
+
+Discovery/Items 도메인 로직은 `packages/Domain/`에 포함한다. VS 규모에서 별도 패키지로 분리하지 않는다.
+Application/Infrastructure 레이어는 `apps/api/` 내부 폴더로 유지한다.
 
 ---
 

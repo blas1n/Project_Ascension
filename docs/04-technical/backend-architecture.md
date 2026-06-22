@@ -11,25 +11,26 @@
 
 ## 프로젝트 구조
 
+Application과 Infrastructure는 별도 패키지가 아니라 `apps/api/` 내부 폴더로 유지한다. 공유가 필요한 코드만 `packages/`에 둔다.
+
 ```
 apps/api/
-  ProjectAscension.Api/           — 진입점. 컨트롤러, 미들웨어, DI 등록.
+  ProjectAscension.Api/
+    Controllers/
+    Services/          — Application 레이어 (API 내부, 서비스/유스케이스)
+    Data/              — Infrastructure 레이어 (EF Core, 리포지토리, 마이그레이션)
+    Middleware/
+    Program.cs
 
 packages/
   Domain/
-    ProjectAscension.Domain/      — 엔티티, 열거형, 도메인 인터페이스.
+    ProjectAscension.Domain/      — 엔티티, 열거형, 인터페이스 (API + GameServer 공유)
   Contracts/
-    ProjectAscension.Contracts/   — Unity와 공유하는 요청/응답 DTO.
-  Application/
-    ProjectAscension.Application/ — 유스케이스, 서비스, 앱 인터페이스.
-  Infrastructure/
-    ProjectAscension.Infrastructure/ — EF Core, 리포지토리, 마이그레이션.
-  Discovery/
-    ProjectAscension.Discovery/   — 발견 시스템 도메인 로직.
-  Items/
-    ProjectAscension.Items/       — 아이템/장비 도메인 로직.
+    ProjectAscension.Contracts/   — DTO + GameMessages (Unity + API + GameServer 공유)
+  GameSimulation/
+    ProjectAscension.GameSimulation/ — 순수 C# 게임 로직 (Unity + GameServer 공유)
   Shared/
-    ProjectAscension.Shared/      — 공통 유틸리티.
+    ProjectAscension.Shared/      — 공통 유틸리티
 ```
 
 ---
@@ -37,14 +38,18 @@ packages/
 ## 참조 관계
 
 ```
-Api  →  Application, Contracts
-Application  →  Domain, Shared
-Infrastructure  →  Domain, Application (인터페이스)
-Domain  →  (없음)
-Contracts  →  (없음)
+Api          →  Domain, Contracts, Shared
+GameServer   →  Domain, Contracts, GameSimulation
+client-unity →  Contracts, GameSimulation
 ```
 
 Domain과 Contracts는 외부 의존성이 없다. 순환 참조 금지.
+
+---
+
+## 타겟 프레임워크
+
+`net9.0` (.NET SDK 9 기준)
 
 ---
 

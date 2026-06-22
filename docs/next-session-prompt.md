@@ -25,7 +25,7 @@ Project_Ascension 구현 첫 세션이다. 문서 작업은 완료된 상태이�
 | 실시간 전송 | ENet-CSharp |
 | 직렬화 | MessagePack-CSharp |
 | 게임 서버 | 순수 C# 콘솔 앱 + BEPUphysics2 |
-| 영속화 API | ASP.NET Core 8 + EF Core + Dapper |
+| 영속화 API | ASP.NET Core 9 + EF Core + Dapper |
 | DB | PostgreSQL |
 | 공유 패키지 | C# (.NET 클래스 라이브러리) |
 
@@ -47,12 +47,19 @@ CLAUDE.md의 구현 순서를 따른다.
 
 ### Step 1 — 솔루션 Scaffold
 
+**타겟 프레임워크:** `net9.0` (.NET SDK 9.0 설치됨. SDK 8 없음)
+
 다음 구조를 생성한다:
 
 ```
 ProjectAscension.sln
 apps/
   api/ProjectAscension.Api/
+    Controllers/
+    Services/        ← Application 레이어 (API 내부 폴더)
+    Data/            ← Infrastructure 레이어 (EF Core, 리포지토리)
+    Middleware/
+    Program.cs
   game-server/ProjectAscension.GameServer/
 packages/
   Domain/ProjectAscension.Domain/
@@ -62,11 +69,13 @@ packages/
 ```
 
 참조 관계:
-- `GameServer` → `GameSimulation`, `Contracts`, `Domain`
+- `GameServer` → `Domain`, `Contracts`, `GameSimulation`
 - `Api` → `Domain`, `Contracts`, `Shared`
 - `GameSimulation` → (없음, 순수 C#)
 - `Contracts` → (없음)
 - `Domain` → (없음)
+
+**주의:** Application/Infrastructure는 별도 패키지가 아니라 `apps/api/` 내부 폴더다. Discovery/Items 로직은 `Domain`에 포함한다.
 
 ### Step 2 — packages/GameSimulation
 
