@@ -26,3 +26,6 @@ jobs:
 
       - name: Test
         run: dotnet test ProjectAscension.sln --no-build --configuration Release --verbosity normal
+
+      - name: Lint
+        run: dotnet format ProjectAscension.sln --verify-no-changes --severity warn

@@ -11,8 +11,8 @@ public static class ResultExtensions
             : result.Error.Code switch
             {
                 "NOT_FOUND" => controller.NotFound(result.Error),
-                "CONFLICT"  => controller.Conflict(result.Error),
-                "INVALID"   => controller.BadRequest(result.Error),
-                _           => controller.StatusCode(500, result.Error)
+                "CONFLICT" => controller.Conflict(result.Error),
+                "INVALID" => controller.BadRequest(result.Error),
+                _ => controller.StatusCode(500, result.Error)
             };
 }
