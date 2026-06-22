@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ProjectAscension.Api.Extensions;
 using ProjectAscension.Api.Services;
 using ProjectAscension.Contracts.Requests;
 
@@ -20,15 +21,13 @@ public class ContractsController : ControllerBase
 
     [HttpPost("{id:guid}/accept")]
     public async Task<IActionResult> Accept(Guid id, [FromBody] AcceptContractRequest request, CancellationToken ct)
-    {
-        var result = await _service.AcceptAsync(id, request, ct);
-        return result.IsSuccess ? Ok(result.Value) : Conflict(result.Error);
-    }
+        => (await _service.AcceptAsync(id, request, ct)).ToActionResult(this);
 
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id, CancellationToken ct)
-    {
-        var result = await _service.CompleteAsync(id, ct);
-        return result.IsSuccess ? Ok(result.Value) : Conflict(result.Error);
-    }
+        => (await _service.CompleteAsync(id, ct)).ToActionResult(this);
+
+    [HttpPost("{id:guid}/progress")]
+    public async Task<IActionResult> UpdateProgress(Guid id, [FromBody] UpdateContractProgressRequest request, CancellationToken ct)
+        => (await _service.UpdateProgressAsync(id, request, ct)).ToActionResult(this);
 }

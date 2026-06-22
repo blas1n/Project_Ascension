@@ -42,11 +42,18 @@ public class ContractService : IContractService
         return Result<ContractResponse>.Ok(ToResponse(contract));
     }
 
+    public async Task<Result<ContractResponse>> UpdateProgressAsync(Guid contractId, UpdateContractProgressRequest request, CancellationToken ct = default)
+    {
+        var contract = await _repo.GetByIdAsync(contractId, ct);
+        if (contract is null) return Result<ContractResponse>.Fail(Error.NotFound);
+        if (contract.Status != ContractStatus.Assigned) return Result<ContractResponse>.Fail(Error.Conflict);
+        if (contract.AssigneeActorId != request.ActorId) return Result<ContractResponse>.Fail(Error.Conflict);
+
+        contract.ProgressCount = request.ProgressCount;
+        await _repo.UpdateAsync(contract, ct);
+        return Result<ContractResponse>.Ok(ToResponse(contract));
+    }
+
     private static ContractResponse ToResponse(Domain.Entities.Contract c) =>
-        new(c.Id,
-            (Contracts.Enums.ContractKind)(int)c.Kind,
-            c.Title,
-            c.Description,
-            (Contracts.Enums.ContractStatus)(int)c.Status,
-            c.RewardJson);
+        new(c.Id, c.Kind, c.Title, c.Description, c.Status, c.RewardJson);
 }

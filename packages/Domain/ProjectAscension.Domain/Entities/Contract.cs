@@ -16,6 +16,7 @@ public class Contract
     public bool DelegationAllowed { get; set; }
     public DateTime? StartsAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
+    public int ProgressCount { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? FailedAt { get; set; }
     public DateTime CreatedAt { get; set; }

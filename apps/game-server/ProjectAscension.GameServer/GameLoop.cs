@@ -55,7 +55,7 @@ public class GameLoop
         if (!actorId.HasValue) return;
 
         var input = new PlayerInput(msg.MoveX, msg.MoveZ, msg.Jump, msg.Dodge, msg.Attack, msg.Sequence);
-        _zone.ApplyInput(actorId.Value, input, deltaTime: (float)_movementInterval.TotalSeconds);
+        _zone.BufferInput(actorId.Value, input);
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -68,8 +68,10 @@ public class GameLoop
             _transport.Poll();
 
             var now = DateTime.UtcNow;
-            if (now - lastMovement >= _movementInterval)
+            var elapsed = now - lastMovement;
+            if (elapsed >= _movementInterval)
             {
+                _zone.Tick((float)elapsed.TotalSeconds);
                 BroadcastWorldState();
                 lastMovement = now;
                 _tick++;

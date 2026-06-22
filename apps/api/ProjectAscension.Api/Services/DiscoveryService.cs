@@ -16,7 +16,7 @@ public class DiscoveryService : IDiscoveryService
         var discovery = new Discovery
         {
             Id = Guid.NewGuid(),
-            Type = (Domain.Enums.DiscoveryType)(int)request.Type,
+            Type = request.Type,
             DiscovererActorId = request.ActorId,
             RegionId = request.RegionId,
             Title = request.Title,
@@ -25,19 +25,14 @@ public class DiscoveryService : IDiscoveryService
         };
         await _repo.AddAsync(discovery, ct);
         return Result<DiscoveryResponse>.Ok(new DiscoveryResponse(
-            discovery.Id, request.Type, discovery.Title, discovery.Description, discovery.DiscoveredAt));
+            discovery.Id, discovery.Type, discovery.Title, discovery.Description, discovery.DiscoveredAt));
     }
 
     public async Task<Result<IReadOnlyList<DiscoveryResponse>>> GetByActorAsync(Guid actorId, CancellationToken ct = default)
     {
         var discoveries = await _repo.GetByActorAsync(actorId, ct);
         var responses = (IReadOnlyList<DiscoveryResponse>)discoveries
-            .Select(d => new DiscoveryResponse(
-                d.Id,
-                (Contracts.Enums.DiscoveryType)(int)d.Type,
-                d.Title,
-                d.Description,
-                d.DiscoveredAt))
+            .Select(d => new DiscoveryResponse(d.Id, d.Type, d.Title, d.Description, d.DiscoveredAt))
             .ToList();
         return Result<IReadOnlyList<DiscoveryResponse>>.Ok(responses);
     }
