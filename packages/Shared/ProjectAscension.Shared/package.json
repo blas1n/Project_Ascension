@@ -1,0 +1,7 @@
+{
+  "name": "com.projectascension.shared",
+  "version": "0.1.0",
+  "displayName": "ProjectAscension Shared",
+  "description": "Shared primitives (Result, Error) used across server and client.",
+  "unity": "6000.0"
+}

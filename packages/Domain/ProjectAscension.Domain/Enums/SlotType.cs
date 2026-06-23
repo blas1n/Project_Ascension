@@ -1,3 +1,5 @@
-namespace ProjectAscension.Domain.Enums;
-
-public enum SlotType { Left, Right, Either, TwoHand }
+#nullable enable
+namespace ProjectAscension.Domain.Enums
+{
+    public enum SlotType { Left, Right, Either, TwoHand }
+}

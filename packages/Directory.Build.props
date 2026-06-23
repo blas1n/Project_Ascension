@@ -1,0 +1,16 @@
+<Project>
+
+  <!--
+    These packages double as Unity UPM local packages (referenced from
+    apps/client_unity/Packages/manifest.json). Unity compiles every .cs file
+    inside a package folder, including generated files under obj/, which causes
+    duplicate-AssemblyInfo errors. Redirecting intermediate/output paths to a
+    single .artifacts folder OUTSIDE the package folders keeps the Unity-scanned
+    directories clean while normal `dotnet build` keeps working.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).artifacts/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory).artifacts/bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+
+</Project>

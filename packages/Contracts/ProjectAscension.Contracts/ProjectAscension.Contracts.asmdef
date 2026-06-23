@@ -1,0 +1,11 @@
+{
+  "name": "ProjectAscension.Contracts",
+  "rootNamespace": "ProjectAscension.Contracts",
+  "references": [
+    "ProjectAscension.Domain"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

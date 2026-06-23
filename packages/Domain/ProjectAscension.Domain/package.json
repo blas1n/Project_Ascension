@@ -1,0 +1,7 @@
+{
+  "name": "com.projectascension.domain",
+  "version": "0.1.0",
+  "displayName": "ProjectAscension Domain",
+  "description": "Domain entities, enums, and interfaces shared across server and client.",
+  "unity": "6000.0"
+}

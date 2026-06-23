@@ -1,0 +1,9 @@
+{
+  "name": "ProjectAscension.Domain",
+  "rootNamespace": "ProjectAscension.Domain",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}
