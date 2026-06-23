@@ -1,0 +1,15 @@
+{
+  "name": "ProjectAscension.Player",
+  "rootNamespace": "ProjectAscension.Player",
+  "references": [
+    "ProjectAscension.Core",
+    "ProjectAscension.GameSimulation",
+    "Unity.InputSystem",
+    "Unity.Cinemachine",
+    "VContainer"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}
