@@ -1,50 +1,76 @@
 using System.Numerics;
 
-namespace ProjectAscension.GameSimulation.Player;
-
-public class PlayerSimulation
+namespace ProjectAscension.GameSimulation.Player
 {
-    private const float MoveSpeed = 5f;
-    private const float JumpVelocity = 6f;
-    private const float Gravity = 20f;
-    private const float GroundY = 0f;
-
-    public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime)
+    /// <summary>
+    /// Pure, deterministic player movement step. Runs identically on the server
+    /// (authority) and the Unity client (prediction). Input is expressed in world
+    /// XZ; the client converts camera-relative input before calling this.
+    /// </summary>
+    public class PlayerSimulation
     {
-        var velocity = state.Velocity;
+        public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime)
+            => ApplyInput(state, input, deltaTime, MovementSettings.Default);
 
-        // Horizontal movement
-        velocity = velocity with
+        public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime, MovementSettings settings)
         {
-            X = input.MoveX * MoveSpeed,
-            Z = input.MoveZ * MoveSpeed
-        };
+            var velocity = state.Velocity;
+            var dodgeVelocity = state.DodgeVelocity;
+            var dodgeTimeRemaining = state.DodgeTimeRemaining;
 
-        // Jump (only when grounded)
-        if (input.Jump && state.IsGrounded)
-            velocity = velocity with { Y = JumpVelocity };
+            // Begin a dodge: only when grounded and not already dodging.
+            if (input.Dodge && state.IsGrounded && dodgeTimeRemaining <= 0f)
+            {
+                var dir = new Vector3(input.MoveX, 0f, input.MoveZ);
+                dir = dir.LengthSquared() > 0.0001f
+                    ? Vector3.Normalize(dir)
+                    : new Vector3(0f, 0f, 1f); // no input → dash forward (world +Z)
 
-        // Gravity (only when airborne)
-        if (!state.IsGrounded)
-            velocity = velocity with { Y = velocity.Y - Gravity * deltaTime };
+                dodgeVelocity = dir * settings.DodgeSpeed;
+                dodgeTimeRemaining = settings.DodgeDuration;
+            }
 
-        // Position update
-        var position = state.Position + velocity * deltaTime;
+            // Horizontal movement: locked to the dodge vector while dodging.
+            // (Construct new Vector3 values rather than `with` — `with` on structs
+            // is C# 10, but this is shared with the Unity client which is C# 9.)
+            if (dodgeTimeRemaining > 0f)
+            {
+                velocity = new Vector3(dodgeVelocity.X, velocity.Y, dodgeVelocity.Z);
+                dodgeTimeRemaining -= deltaTime;
+            }
+            else
+            {
+                velocity = new Vector3(input.MoveX * settings.MoveSpeed, velocity.Y, input.MoveZ * settings.MoveSpeed);
+            }
 
-        // Ground detection
-        bool isGrounded = position.Y <= GroundY;
-        if (isGrounded)
-        {
-            position = position with { Y = GroundY };
-            velocity = velocity with { Y = 0f };
+            // Jump (only when grounded)
+            if (input.Jump && state.IsGrounded)
+                velocity = new Vector3(velocity.X, settings.JumpVelocity, velocity.Z);
+
+            // Gravity (only when airborne)
+            if (!state.IsGrounded)
+                velocity = new Vector3(velocity.X, velocity.Y - settings.Gravity * deltaTime, velocity.Z);
+
+            // Position update
+            var position = state.Position + velocity * deltaTime;
+
+            // Ground detection
+            bool isGrounded = position.Y <= settings.GroundY;
+            if (isGrounded)
+            {
+                position = new Vector3(position.X, settings.GroundY, position.Z);
+                velocity = new Vector3(velocity.X, 0f, velocity.Z);
+            }
+
+            return state with
+            {
+                Position = position,
+                Velocity = velocity,
+                IsGrounded = isGrounded,
+                InputSequence = input.Sequence,
+                DodgeVelocity = dodgeVelocity,
+                DodgeTimeRemaining = dodgeTimeRemaining < 0f ? 0f : dodgeTimeRemaining
+            };
         }
-
-        return state with
-        {
-            Position = position,
-            Velocity = velocity,
-            IsGrounded = isGrounded,
-            InputSequence = input.Sequence
-        };
     }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "ProjectAscension.GameSimulation",
+  "rootNamespace": "ProjectAscension.GameSimulation",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": true,
+  "autoReferenced": true
+}
