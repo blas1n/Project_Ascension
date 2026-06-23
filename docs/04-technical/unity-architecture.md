@@ -17,29 +17,28 @@ Unity는 **렌더링 + 입력 셸**이다. 게임 로직은 `packages/GameSimula
 ## 폴더 구조
 
 ```
-apps/client-unity/Assets/
-  _Project/
-    Scripts/
-      Core/
-      Player/
-      Equipment/
+apps/client_unity/Assets/
+  Scripts/
+    Core/
+    Player/
+    Equipment/
+    Weapons/
+    Combat/
+    Monsters/
+    Discovery/
+    Contracts/
+    City/
+    API/
+    UI/
+  Data/
+    ScriptableObjects/
       Weapons/
-      Combat/
       Monsters/
-      Discovery/
-      Contracts/
-      City/
-      API/
-      UI/
-    Data/
-      ScriptableObjects/
-        Weapons/
-        Monsters/
-        Regions/
-    Prefabs/
-    Scenes/
-    Materials/
-    Animations/
+      Regions/
+  Prefabs/
+  Scenes/
+  Materials/
+  Animations/
 ```
 
 ---

@@ -40,7 +40,7 @@ packages/
 ```
 Api          →  Domain, Contracts, Shared
 GameServer   →  Domain, Contracts, GameSimulation
-client-unity →  Contracts, GameSimulation
+client_unity →  Contracts, GameSimulation
 ```
 
 Domain과 Contracts는 외부 의존성이 없다. 순환 참조 금지.

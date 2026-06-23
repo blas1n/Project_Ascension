@@ -11,7 +11,7 @@
 ```
 /
   apps/
-    client-unity/
+    client_unity/
     api/
   packages/
     Domain/
@@ -26,7 +26,7 @@
 
 ---
 
-## apps/client-unity
+## apps/client_unity
 
 Unity 6 클라이언트. 상세 구조는 `unity-architecture.md` 참조.
 
@@ -170,7 +170,7 @@ infra/
 ## 패키지 참조 규칙
 
 ```
-client-unity   →  Contracts, GameSimulation
+client_unity   →  Contracts, GameSimulation
 game-server    →  Domain, Contracts, GameSimulation
 api            →  Domain, Contracts, Shared
 ```
