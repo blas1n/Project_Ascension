@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cc389fad6167429ea3efa5dbc5021f9, type: 3}
+  m_Name: StarterLoadout
+  m_EditorClassIdentifier: ProjectAscension.Equipment::ProjectAscension.Equipment.LoadoutConfig
+  left: {fileID: 11400000, guid: d2e88bc30cba84c9ca1c0f1399544879, type: 2}
+  right: {fileID: 11400000, guid: fb4c43b97f3f54e50b5481ed31118d8d, type: 2}

@@ -4,6 +4,8 @@
   "references": [
     "ProjectAscension.Core",
     "ProjectAscension.Player",
+    "ProjectAscension.Equipment",
+    "ProjectAscension.Domain",
     "ProjectAscension.GameSimulation",
     "Unity.InputSystem",
     "Unity.Cinemachine",
