@@ -1,11 +1,15 @@
-namespace ProjectAscension.Domain.Entities;
+#nullable enable
+using System;
 
-public class Loadout
+namespace ProjectAscension.Domain.Entities
 {
-    public Guid ActorId { get; set; }
-    public Guid? LeftItemId { get; set; }
-    public Guid? RightItemId { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public class Loadout
+    {
+        public Guid ActorId { get; set; }
+        public Guid? LeftItemId { get; set; }
+        public Guid? RightItemId { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
-    public Actor? Actor { get; set; }
+        public Actor? Actor { get; set; }
+    }
 }

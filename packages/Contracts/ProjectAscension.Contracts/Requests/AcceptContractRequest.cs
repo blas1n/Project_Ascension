@@ -1,3 +1,7 @@
-namespace ProjectAscension.Contracts.Requests;
+#nullable enable
+using System;
 
-public record AcceptContractRequest(Guid ActorId);
+namespace ProjectAscension.Contracts.Requests
+{
+    public record AcceptContractRequest(Guid ActorId);
+}

@@ -1,9 +1,15 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using ProjectAscension.Domain.Entities;
-namespace ProjectAscension.Domain.Interfaces;
-
-public interface IItemRepository
+namespace ProjectAscension.Domain.Interfaces
 {
-    Task<IReadOnlyList<Item>> GetByActorAsync(Guid actorId, CancellationToken ct = default);
-    Task<Loadout?> GetLoadoutAsync(Guid actorId, CancellationToken ct = default);
-    Task UpsertLoadoutAsync(Loadout loadout, CancellationToken ct = default);
+    public interface IItemRepository
+    {
+        Task<IReadOnlyList<Item>> GetByActorAsync(Guid actorId, CancellationToken ct = default);
+        Task<Loadout?> GetLoadoutAsync(Guid actorId, CancellationToken ct = default);
+        Task UpsertLoadoutAsync(Loadout loadout, CancellationToken ct = default);
+    }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "com.projectascension.contracts",
+  "version": "0.1.0",
+  "displayName": "ProjectAscension Contracts",
+  "description": "DTOs and network/game messages shared across server and client.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.projectascension.domain": "0.1.0"
+  }
+}

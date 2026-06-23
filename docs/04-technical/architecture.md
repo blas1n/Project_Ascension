@@ -38,7 +38,7 @@ Vertical Slice는 작아야 한다.
 ```txt
 /
   apps/
-    client-unity/
+    client_unity/
     api/
     admin/
 
@@ -56,7 +56,7 @@ Vertical Slice는 작아야 한다.
 
 ---
 
-## client-unity
+## client_unity
 
 Unity 클라이언트이다. Vertical Slice의 핵심 구현 대상이다.
 

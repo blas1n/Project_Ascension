@@ -28,7 +28,7 @@ Unity는 렌더링 + 입력 셸이다. 실제 이동 판정은 `packages/GameSim
 세션 시작 전 사용자가 완료해야 한다:
 
 1. Unity Hub에서 **Unity 6 LTS** 프로젝트 생성
-   - 경로: `apps/client-unity/`
+   - 경로: `apps/client_unity/`
    - 템플릿: 3D (URP)
 
 ---
@@ -186,7 +186,7 @@ public sealed class PhysicsWorld : IDisposable
 
 ## Step 4 — Unity manifest.json 수정
 
-`apps/client-unity/Packages/manifest.json`:
+`apps/client_unity/Packages/manifest.json`:
 
 ```json
 {
@@ -217,7 +217,7 @@ public sealed class PhysicsWorld : IDisposable
 `unity-architecture.md` 기준:
 
 ```
-apps/client-unity/Assets/_Project/
+apps/client_unity/Assets/
   Scripts/
     Core/
       ProjectAscension.Core.asmdef

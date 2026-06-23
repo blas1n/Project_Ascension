@@ -1,0 +1,11 @@
+{
+  "name": "ProjectAscension.Core",
+  "rootNamespace": "ProjectAscension.Core",
+  "references": [
+    "VContainer"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

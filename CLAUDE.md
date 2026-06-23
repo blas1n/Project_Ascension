@@ -156,7 +156,7 @@ Monorepo
 Create:
 
 /apps
-/client-unity
+/client_unity
 /api
 
 /packages

@@ -1,3 +1,5 @@
-namespace ProjectAscension.Domain.Enums;
-
-public enum MonsterTier { Common, Elite, Named, Beast, Disaster }
+#nullable enable
+namespace ProjectAscension.Domain.Enums
+{
+    public enum MonsterTier { Common, Elite, Named, Beast, Disaster }
+}

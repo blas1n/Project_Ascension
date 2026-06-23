@@ -1,3 +1,5 @@
-namespace ProjectAscension.Domain.Enums;
-
-public enum EquipmentType { Weapon, MagicTool, Shield, Bow, Firearm, Catalyst }
+#nullable enable
+namespace ProjectAscension.Domain.Enums
+{
+    public enum EquipmentType { Weapon, MagicTool, Shield, Bow, Firearm, Catalyst }
+}

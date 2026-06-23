@@ -1,0 +1,7 @@
+{
+  "name": "com.projectascension.gamesimulation",
+  "version": "0.1.0",
+  "displayName": "ProjectAscension GameSimulation",
+  "description": "Deterministic gameplay simulation shared by server authority and client prediction.",
+  "unity": "6000.0"
+}

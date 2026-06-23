@@ -1,3 +1,7 @@
-namespace ProjectAscension.Contracts.Requests;
+#nullable enable
+using System;
 
-public record UpdateContractProgressRequest(Guid ActorId, int ProgressCount);
+namespace ProjectAscension.Contracts.Requests
+{
+    public record UpdateContractProgressRequest(Guid ActorId, int ProgressCount);
+}

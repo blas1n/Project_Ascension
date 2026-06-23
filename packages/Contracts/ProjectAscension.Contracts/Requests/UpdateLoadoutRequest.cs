@@ -1,3 +1,7 @@
-namespace ProjectAscension.Contracts.Requests;
+#nullable enable
+using System;
 
-public record UpdateLoadoutRequest(Guid? LeftItemId, Guid? RightItemId);
+namespace ProjectAscension.Contracts.Requests
+{
+    public record UpdateLoadoutRequest(Guid? LeftItemId, Guid? RightItemId);
+}

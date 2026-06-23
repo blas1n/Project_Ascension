@@ -1,3 +1,5 @@
-namespace ProjectAscension.Domain.Enums;
-
-public enum ItemType { Resource, Weapon, MagicTool, Map, KnowledgeDocument, MonsterMaterial, ContractDocument, Equipment, Consumable }
+#nullable enable
+namespace ProjectAscension.Domain.Enums
+{
+    public enum ItemType { Resource, Weapon, MagicTool, Map, KnowledgeDocument, MonsterMaterial, ContractDocument, Equipment, Consumable }
+}
