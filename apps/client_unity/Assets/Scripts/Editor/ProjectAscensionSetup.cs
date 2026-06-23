@@ -7,6 +7,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using ProjectAscension.Core;
+using ProjectAscension.Domain.Enums;
+using ProjectAscension.Equipment;
 using ProjectAscension.Player;
 
 namespace ProjectAscension.Editor
@@ -20,7 +22,9 @@ namespace ProjectAscension.Editor
     {
         private const string ScenesDir = "Assets/Scenes";
         private const string DataDir = "Assets/Data/ScriptableObjects";
+        private const string WeaponsDir = DataDir + "/Weapons";
         private const string PlayerDataPath = DataDir + "/PlayerData.asset";
+        private const string LoadoutConfigPath = DataDir + "/StarterLoadout.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
         private const string BootstrapScene = ScenesDir + "/Bootstrap.unity";
@@ -35,11 +39,15 @@ namespace ProjectAscension.Editor
         {
             EnsureFolder(ScenesDir);
             EnsureFolder(DataDir);
+            EnsureFolder(WeaponsDir);
 
-            var playerData = GetOrCreatePlayerData();
-            var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
-            if (inputActions == null)
-                Debug.LogWarning($"[Setup] Input actions not found at {InputActionsPath}; assign it on FrontierLifetimeScope manually.");
+            // Create/ensure ALL assets first, then SaveAssets. The scene builders
+            // load asset references themselves (immediately before assigning) so
+            // they are never invalidated by these writes.
+            GetOrCreatePlayerData();
+            GetOrCreateStarterLoadout();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
 
             // Preserve whatever the user currently has open and restore it afterwards
             // so this is safe to run automatically.
@@ -48,7 +56,7 @@ namespace ProjectAscension.Editor
             {
                 BuildBootstrapScene();
                 BuildCityScene();
-                BuildFrontierScene(playerData, inputActions);
+                BuildFrontierScene();
                 RegisterBuildScenes();
             }
             finally
@@ -91,6 +99,53 @@ namespace ProjectAscension.Editor
             return data;
         }
 
+        // The four starter weapons owned by the player. In the full game these come
+        // from the inventory; here they are authored assets. StarterLoadout picks
+        // two of them (the pre-chosen loadout — no in-field switching).
+        private static LoadoutConfig GetOrCreateStarterLoadout()
+        {
+            // Create all weapons first, then save once, then load fresh references.
+            // (Each CreateWeapon must not hold a reference across other writes.)
+            CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either);
+            CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.Either);
+            CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either);
+            CreateWeapon("Catalyst", "Arcane Catalyst", EquipmentType.Catalyst, SlotType.Either);
+
+            var config = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
+            if (config == null)
+            {
+                config = ScriptableObject.CreateInstance<LoadoutConfig>();
+                AssetDatabase.CreateAsset(config, LoadoutConfigPath);
+            }
+            AssetDatabase.SaveAssets();
+
+            var sword = AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Sword.asset");
+            var pistol = AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Pistol.asset");
+
+            var so = new SerializedObject(config);
+            so.FindProperty("left").objectReferenceValue = sword;
+            so.FindProperty("right").objectReferenceValue = pistol;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
+        }
+
+        private static void CreateWeapon(string assetName, string displayName, EquipmentType equipmentType, SlotType slotType)
+        {
+            var path = $"{WeaponsDir}/{assetName}.asset";
+            var data = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
+            if (data == null)
+            {
+                data = ScriptableObject.CreateInstance<WeaponData>();
+                AssetDatabase.CreateAsset(data, path);
+            }
+            var so = new SerializedObject(data);
+            so.FindProperty("displayName").stringValue = displayName;
+            so.FindProperty("equipmentType").enumValueIndex = (int)equipmentType;
+            so.FindProperty("slotType").enumValueIndex = (int)slotType;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void BuildBootstrapScene()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -113,8 +168,12 @@ namespace ProjectAscension.Editor
             EditorSceneManager.SaveScene(scene, CityScene);
         }
 
-        private static void BuildFrontierScene(PlayerData playerData, InputActionAsset inputActions)
+        private static void BuildFrontierScene()
         {
+            // Asset references are (re)loaded immediately before each SetObjectField
+            // below. Loading earlier and holding a reference is unreliable: any
+            // intervening AssetDatabase write or scene op can invalidate it, which
+            // then serializes as null (fileID: 0) in the scene.
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
             // Ground (50 x 50, top at y = 0 to match the simulation's ground plane).
@@ -153,6 +212,22 @@ namespace ProjectAscension.Editor
             var playerController = player.AddComponent<PlayerController>();
             SetObjectField(playerController, "cameraPivot", pivot.transform);
 
+            // Hand anchors under the camera pivot (view-locked) + Loadout that
+            // equips the pre-chosen pair on spawn.
+            var leftHand = new GameObject("LeftHand");
+            leftHand.transform.SetParent(pivot.transform, false);
+            leftHand.transform.localPosition = new Vector3(-0.3f, -0.25f, 0.4f);
+            var rightHand = new GameObject("RightHand");
+            rightHand.transform.SetParent(pivot.transform, false);
+            rightHand.transform.localPosition = new Vector3(0.3f, -0.25f, 0.4f);
+
+            var loadout = player.AddComponent<Loadout>();
+            SetObjectField(loadout, "leftHand", leftHand.transform);
+            SetObjectField(loadout, "rightHand", rightHand.transform);
+            var loadoutConfig = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
+            Debug.Log($"[Setup] LoadoutConfig load: {(loadoutConfig == null ? "NULL" : loadoutConfig.name)}");
+            SetObjectField(loadout, "config", loadoutConfig);
+
             // Main Camera gets the Cinemachine brain.
             var mainCam = FindMainCamera();
             if (mainCam != null && mainCam.GetComponent<CinemachineBrain>() == null)
@@ -161,6 +236,9 @@ namespace ProjectAscension.Editor
             // VContainer scope for the player stack.
             var scopeGo = new GameObject("FrontierLifetimeScope");
             var scope = scopeGo.AddComponent<FrontierLifetimeScope>();
+            var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            var playerData = AssetDatabase.LoadAssetAtPath<PlayerData>(PlayerDataPath);
+            Debug.Log($"[Setup] PlayerData load: {(playerData == null ? "NULL" : playerData.name)} | InputActions: {(inputActions == null ? "NULL" : inputActions.name)}");
             SetObjectField(scope, "inputActions", inputActions);
             SetObjectField(scope, "playerData", playerData);
 
