@@ -1,0 +1,61 @@
+using System.Collections.Generic;
+using ProjectAscension.Combat;
+using ProjectAscension.Domain.Enums;
+
+namespace ProjectAscension.Game
+{
+    /// <summary>
+    /// Tracks available contracts, the active one, and its progress. Lives for the
+    /// whole session (owned by GameSession) so progress survives City&lt;-&gt;Frontier.
+    /// Hunt progress comes from CombatEvents; Survey/Collection from objectives.
+    /// </summary>
+    public sealed class ContractService
+    {
+        public List<ContractInstance> Available { get; } = new();
+        public ContractInstance Active { get; private set; }
+
+        public ContractService()
+        {
+            Available.Add(new ContractInstance
+            {
+                Purpose = ContractPurpose.Hunt, Title = "Cull the Beasts",
+                Description = "Defeat 5 monsters in the frontier.", TargetCount = 5, RewardCurrency = 120,
+            });
+            Available.Add(new ContractInstance
+            {
+                Purpose = ContractPurpose.Survey, Title = "Map the Frontier",
+                Description = "Reach the survey marker.", TargetCount = 1, RewardCurrency = 80,
+            });
+            Available.Add(new ContractInstance
+            {
+                Purpose = ContractPurpose.Collection, Title = "Gather Samples",
+                Description = "Collect 3 samples.", TargetCount = 3, RewardCurrency = 90,
+            });
+
+            CombatEvents.MonsterKilled += OnMonsterKilled;
+        }
+
+        public void Accept(ContractInstance template) => Active = template.Fresh();
+
+        public void Abandon() => Active = null;
+
+        public void ReportSurvey() => Advance(ContractPurpose.Survey, Active != null ? Active.TargetCount : 0);
+        public void ReportCollect() => Advance(ContractPurpose.Collection, 1);
+        private void OnMonsterKilled(UnityEngine.GameObject _) => Advance(ContractPurpose.Hunt, 1);
+
+        private void Advance(ContractPurpose purpose, int amount)
+        {
+            if (Active == null || Active.Purpose != purpose || Active.IsComplete) return;
+            Active.Progress = System.Math.Min(Active.TargetCount, Active.Progress + amount);
+        }
+
+        /// <summary>Hand in a completed contract; returns the reward (0 if not completable).</summary>
+        public int TurnIn()
+        {
+            if (Active == null || !Active.IsComplete) return 0;
+            int reward = Active.RewardCurrency;
+            Active = null;
+            return reward;
+        }
+    }
+}

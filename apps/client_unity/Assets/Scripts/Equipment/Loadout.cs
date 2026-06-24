@@ -4,9 +4,9 @@ using ProjectAscension.Domain.Enums;
 namespace ProjectAscension.Equipment
 {
     /// <summary>
-    /// The player's two equip slots. Equips the pre-chosen LoadoutConfig (selected
-    /// ahead of time from the inventory / City — not switched in the field) onto the
-    /// hand anchors when the player spawns.
+    /// The player's two equip slots. Equips a pre-chosen pair onto the hand anchors.
+    /// A serialized LoadoutConfig is used standalone; in the loop the selection is
+    /// applied at runtime via <see cref="Equip"/>.
     /// </summary>
     public sealed class Loadout : MonoBehaviour
     {
@@ -20,19 +20,23 @@ namespace ProjectAscension.Equipment
         public EquipmentSlot LeftSlot => _left;
         public EquipmentSlot RightSlot => _right;
 
-        private void Start()
+        private void Awake()
         {
             _left = new EquipmentSlot(SlotType.Left, leftHand);
             _right = new EquipmentSlot(SlotType.Right, rightHand);
+        }
 
-            if (config == null)
-            {
-                Debug.LogWarning("[Loadout] No LoadoutConfig assigned.", this);
-                return;
-            }
+        private void Start()
+        {
+            if (config != null)
+                Equip(config.Left, config.Right);
+        }
 
-            if (config.Left != null) _left.Equip(WeaponFactory.Create(config.Left));
-            if (config.Right != null) _right.Equip(WeaponFactory.Create(config.Right));
+        /// <summary>Re-equip both slots from explicit weapon data (runtime selection).</summary>
+        public void Equip(WeaponData left, WeaponData right)
+        {
+            if (left != null) _left.Equip(WeaponFactory.Create(left)); else _left.Unequip();
+            if (right != null) _right.Equip(WeaponFactory.Create(right)); else _right.Unequip();
         }
     }
 }

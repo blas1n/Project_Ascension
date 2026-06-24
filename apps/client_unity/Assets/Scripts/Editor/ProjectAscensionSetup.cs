@@ -10,6 +10,7 @@ using ProjectAscension.Combat;
 using ProjectAscension.Core;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
+using ProjectAscension.Game;
 using ProjectAscension.Monsters;
 using ProjectAscension.Player;
 
@@ -153,6 +154,49 @@ namespace ProjectAscension.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static WeaponData[] LoadWeapons() => new[]
+        {
+            AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Sword.asset"),
+            AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Pistol.asset"),
+            AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Bow.asset"),
+            AssetDatabase.LoadAssetAtPath<WeaponData>($"{WeaponsDir}/Catalyst.asset"),
+        };
+
+        private static void SetObjectArray(Object target, string fieldName, Object[] values)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(fieldName);
+            if (prop == null)
+            {
+                Debug.LogWarning($"[Setup] Array field '{fieldName}' not found on {target.GetType().Name}.");
+                return;
+            }
+            prop.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+                prop.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static GameObject CreateTrigger(string name, PrimitiveType primitive, Vector3 position, Vector3 scale, Color color)
+        {
+            var go = GameObject.CreatePrimitive(primitive);
+            go.name = name;
+            go.transform.position = position;
+            go.transform.localScale = scale;
+            go.GetComponent<Collider>().isTrigger = true;
+            SetColorField(go.AddComponent<Tint>(), "color", color);
+            return go;
+        }
+
+        private static void SetColorField(Object target, string fieldName, Color color)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(fieldName);
+            if (prop == null) return;
+            prop.colorValue = color;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void BuildBootstrapScene()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -163,14 +207,26 @@ namespace ProjectAscension.Editor
             var bootstrapGo = new GameObject("Bootstrap");
             bootstrapGo.AddComponent<Bootstrap>();
 
+            // Cross-scene game state (contracts, currency, loadout selection).
+            var sessionGo = new GameObject("GameSession");
+            var session = sessionGo.AddComponent<GameSession>();
+            SetObjectArray(session, "ownedWeapons", LoadWeapons());
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, BootstrapScene);
         }
 
         private static void BuildCityScene()
         {
-            // Placeholder hub for this phase.
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "CityGround";
+            ground.transform.localScale = new Vector3(3f, 1f, 3f);
+
+            var hub = new GameObject("CityHub");
+            hub.AddComponent<CityHub>();
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, CityScene);
         }
@@ -231,9 +287,11 @@ namespace ProjectAscension.Editor
             var loadout = player.AddComponent<Loadout>();
             SetObjectField(loadout, "leftHand", leftHand.transform);
             SetObjectField(loadout, "rightHand", rightHand.transform);
+            // config left null: the loadout is driven by LoadoutApplier (City selection,
+            // or the StarterLoadout fallback when played directly).
             var loadoutConfig = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
-            Debug.Log($"[Setup] LoadoutConfig load: {(loadoutConfig == null ? "NULL" : loadoutConfig.name)}");
-            SetObjectField(loadout, "config", loadoutConfig);
+            var applier = new GameObject("LoadoutApplier").AddComponent<LoadoutApplier>();
+            SetObjectField(applier, "fallback", loadoutConfig);
 
             // Combat: player is damageable ("Player" tag for monsters to find) and
             // can attack with the equipped weapons.
@@ -253,6 +311,18 @@ namespace ProjectAscension.Editor
             var spawnerGo = new GameObject("MonsterSpawner");
             spawnerGo.transform.position = Vector3.zero;
             spawnerGo.AddComponent<MonsterSpawner>();
+
+            // Contract HUD (objective + progress).
+            new GameObject("ContractHud").AddComponent<ContractHud>();
+
+            // Objectives: collectibles (Collection), a survey marker (Survey), and a
+            // green return pad (step on it to go back to the City).
+            var sample = new Color(0.3f, 1f, 0.4f);
+            CreateTrigger("Collectible_1", PrimitiveType.Sphere, new Vector3(6f, 1f, 2f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
+            CreateTrigger("Collectible_2", PrimitiveType.Sphere, new Vector3(-4f, 1f, 7f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
+            CreateTrigger("Collectible_3", PrimitiveType.Sphere, new Vector3(7f, 1f, -3f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
+            CreateTrigger("SurveyPoint", PrimitiveType.Cylinder, new Vector3(0f, 1.5f, 12f), new Vector3(1f, 1.5f, 1f), new Color(0.3f, 0.6f, 1f)).AddComponent<SurveyPoint>();
+            CreateTrigger("ReturnPad", PrimitiveType.Cube, new Vector3(0f, 0.1f, -5f), new Vector3(3f, 0.2f, 3f), new Color(0.2f, 0.9f, 0.3f)).AddComponent<ReturnZone>();
 
             // VContainer scope for the player stack.
             var scopeGo = new GameObject("FrontierLifetimeScope");

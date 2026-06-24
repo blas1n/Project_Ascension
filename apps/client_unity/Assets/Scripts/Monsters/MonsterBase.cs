@@ -103,6 +103,7 @@ namespace ProjectAscension.Monsters
         private void OnDied(HitReceiver _)
         {
             _state = State.Dead;
+            CombatEvents.RaiseMonsterKilled(gameObject);
             Destroy(gameObject, 0.1f);
         }
 
