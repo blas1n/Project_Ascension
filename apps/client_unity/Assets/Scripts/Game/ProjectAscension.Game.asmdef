@@ -1,0 +1,13 @@
+{
+  "name": "ProjectAscension.Game",
+  "rootNamespace": "ProjectAscension.Game",
+  "references": [
+    "ProjectAscension.Domain",
+    "ProjectAscension.Equipment",
+    "ProjectAscension.Combat"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}
