@@ -1,5 +1,6 @@
 using UnityEngine;
 using VContainer;
+using ProjectAscension.Combat;
 
 namespace ProjectAscension.Player
 {
@@ -16,6 +17,8 @@ namespace ProjectAscension.Player
         private PlayerInputHandler _input;
         private PlayerMovement _movement;
         private PlayerCamera _camera;
+        private HitReceiver _hitReceiver;
+        private Vector3 _spawnPoint;
 
         [Inject]
         public void Construct(PlayerInputHandler input, PlayerMovement movement, PlayerCamera camera)
@@ -44,12 +47,26 @@ namespace ProjectAscension.Player
             _input.JumpPressed += _movement.QueueJump;
             _input.DodgePressed += _movement.QueueDodge;
 
+            _spawnPoint = transform.position;
+            _hitReceiver = GetComponent<HitReceiver>();
+            if (_hitReceiver != null)
+                _hitReceiver.Died += OnDied;
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
 
+        private void OnDied(HitReceiver hitReceiver)
+        {
+            Debug.Log("[PlayerController] Player died — respawning.");
+            _movement.Teleport(_spawnPoint);
+            hitReceiver.Revive();
+        }
+
         private void OnDestroy()
         {
+            if (_hitReceiver != null)
+                _hitReceiver.Died -= OnDied;
             if (_input == null) return;
             _input.JumpPressed -= _movement.QueueJump;
             _input.DodgePressed -= _movement.QueueDodge;

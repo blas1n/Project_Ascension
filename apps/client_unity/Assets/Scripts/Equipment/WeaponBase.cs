@@ -1,19 +1,19 @@
 using UnityEngine;
+using ProjectAscension.Combat;
 
 namespace ProjectAscension.Equipment
 {
     /// <summary>
-    /// Common behaviour for an equippable weapon. Phase 2 handles only equip/
-    /// unequip and identity; the action hooks are wired to input and the
-    /// simulation in Phase 3 (combat).
+    /// Common behaviour for an equippable weapon: equip/unequip + a cooldown-gated
+    /// primary attack. Subclasses implement the attack (melee/hitscan/projectile).
     /// </summary>
     public abstract class WeaponBase : MonoBehaviour, IEquippable
     {
         private WeaponData _data;
+        private float _nextReadyTime;
 
         public WeaponData Data => _data;
 
-        /// <summary>Assigns the data when the weapon is spawned by the Loadout.</summary>
         public void Configure(WeaponData data) => _data = data;
 
         public virtual void OnEquip(Transform handAnchor)
@@ -24,15 +24,19 @@ namespace ProjectAscension.Equipment
             gameObject.SetActive(true);
         }
 
-        public virtual void OnUnequip()
+        public virtual void OnUnequip() => gameObject.SetActive(false);
+
+        /// <summary>Primary use, gated by the weapon's cooldown.</summary>
+        public void PrimaryAction(AttackContext ctx)
         {
-            gameObject.SetActive(false);
+            if (_data == null || Time.time < _nextReadyTime) return;
+            _nextReadyTime = Time.time + _data.Cooldown;
+            OnPrimary(ctx);
         }
 
-        /// <summary>Primary use (e.g. swing / fire / cast). No-op until Phase 3.</summary>
-        public virtual void PrimaryAction() { }
+        protected abstract void OnPrimary(AttackContext ctx);
 
-        /// <summary>Secondary use (e.g. aim / block / charge). No-op until Phase 3.</summary>
-        public virtual void SecondaryAction() { }
+        /// <summary>Secondary use (aim/block/charge). No-op until later.</summary>
+        public virtual void SecondaryAction(AttackContext ctx) { }
     }
 }

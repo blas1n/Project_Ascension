@@ -5,6 +5,8 @@
     "ProjectAscension.Core",
     "ProjectAscension.Player",
     "ProjectAscension.Equipment",
+    "ProjectAscension.Combat",
+    "ProjectAscension.Monsters",
     "ProjectAscension.Domain",
     "ProjectAscension.GameSimulation",
     "Unity.InputSystem",

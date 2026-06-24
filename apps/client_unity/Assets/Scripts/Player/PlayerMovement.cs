@@ -38,6 +38,22 @@ namespace ProjectAscension.Player
         public void QueueJump() => _jumpQueued = true;
         public void QueueDodge() => _dodgeQueued = true;
 
+        /// <summary>Hard-set position (respawn) and clear velocity in the simulation.</summary>
+        public void Teleport(Vector3 position)
+        {
+            if (_controller == null) return;
+
+            _controller.enabled = false;
+            _body.position = position;
+            _controller.enabled = true;
+
+            _state = _state with
+            {
+                Position = new SimVector3(position.x, position.y, position.z),
+                Velocity = SimVector3.Zero
+            };
+        }
+
         public void Tick(Vector2 moveInput, float deltaTime)
         {
             if (_controller == null) return;

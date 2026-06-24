@@ -6,9 +6,11 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using ProjectAscension.Combat;
 using ProjectAscension.Core;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
+using ProjectAscension.Monsters;
 using ProjectAscension.Player;
 
 namespace ProjectAscension.Editor
@@ -106,10 +108,10 @@ namespace ProjectAscension.Editor
         {
             // Create all weapons first, then save once, then load fresh references.
             // (Each CreateWeapon must not hold a reference across other writes.)
-            CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either);
-            CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.Either);
-            CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either);
-            CreateWeapon("Catalyst", "Arcane Catalyst", EquipmentType.Catalyst, SlotType.Either);
+            CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either, damage: 25f, range: 2.2f, projectileSpeed: 0f, cooldown: 0.5f);
+            CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.Either, damage: 18f, range: 60f, projectileSpeed: 28f, cooldown: 0.6f);
+            CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either, damage: 12f, range: 60f, projectileSpeed: 0f, cooldown: 0.25f);
+            CreateWeapon("Catalyst", "Arcane Catalyst", EquipmentType.Catalyst, SlotType.Either, damage: 22f, range: 50f, projectileSpeed: 18f, cooldown: 0.8f);
 
             var config = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
             if (config == null)
@@ -130,7 +132,8 @@ namespace ProjectAscension.Editor
             return AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
         }
 
-        private static void CreateWeapon(string assetName, string displayName, EquipmentType equipmentType, SlotType slotType)
+        private static void CreateWeapon(string assetName, string displayName, EquipmentType equipmentType, SlotType slotType,
+            float damage, float range, float projectileSpeed, float cooldown)
         {
             var path = $"{WeaponsDir}/{assetName}.asset";
             var data = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
@@ -143,6 +146,10 @@ namespace ProjectAscension.Editor
             so.FindProperty("displayName").stringValue = displayName;
             so.FindProperty("equipmentType").enumValueIndex = (int)equipmentType;
             so.FindProperty("slotType").enumValueIndex = (int)slotType;
+            so.FindProperty("damage").floatValue = damage;
+            so.FindProperty("range").floatValue = range;
+            so.FindProperty("projectileSpeed").floatValue = projectileSpeed;
+            so.FindProperty("cooldown").floatValue = cooldown;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -228,10 +235,24 @@ namespace ProjectAscension.Editor
             Debug.Log($"[Setup] LoadoutConfig load: {(loadoutConfig == null ? "NULL" : loadoutConfig.name)}");
             SetObjectField(loadout, "config", loadoutConfig);
 
+            // Combat: player is damageable ("Player" tag for monsters to find) and
+            // can attack with the equipped weapons.
+            player.tag = "Player";
+            var playerHealth = player.AddComponent<HitReceiver>();
+            playerHealth.SetMaxHealth(100f);
+            var playerCombat = player.AddComponent<PlayerCombat>();
+            SetObjectField(playerCombat, "loadout", loadout);
+            SetObjectField(playerCombat, "aimSource", pivot.transform);
+
             // Main Camera gets the Cinemachine brain.
             var mainCam = FindMainCamera();
             if (mainCam != null && mainCam.GetComponent<CinemachineBrain>() == null)
                 mainCam.gameObject.AddComponent<CinemachineBrain>();
+
+            // Monsters: spawner drops the 3 types around the origin on play.
+            var spawnerGo = new GameObject("MonsterSpawner");
+            spawnerGo.transform.position = Vector3.zero;
+            spawnerGo.AddComponent<MonsterSpawner>();
 
             // VContainer scope for the player stack.
             var scopeGo = new GameObject("FrontierLifetimeScope");

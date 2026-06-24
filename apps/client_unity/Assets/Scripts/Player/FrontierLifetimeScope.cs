@@ -34,6 +34,7 @@ namespace ProjectAscension.Player
             builder.Register<PlayerCamera>(Lifetime.Singleton);
 
             builder.RegisterComponentInHierarchy<PlayerController>();
+            builder.RegisterComponentInHierarchy<PlayerCombat>();
         }
     }
 }

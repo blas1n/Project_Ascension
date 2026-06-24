@@ -16,9 +16,11 @@ namespace ProjectAscension.Equipment
         [SerializeField] private EquipmentType equipmentType = EquipmentType.Weapon;
         [SerializeField] private SlotType slotType = SlotType.Either;
 
-        [Header("Combat (Phase 3 hooks — unused)")]
-        [SerializeField] private float damage = 0f;
-        [SerializeField] private float range = 0f;
+        [Header("Combat")]
+        [SerializeField] private float damage = 10f;
+        [SerializeField] private float range = 50f;
+        [SerializeField] private float projectileSpeed = 0f; // 0 = hitscan/melee
+        [SerializeField] private float cooldown = 0.4f;
 
         [Header("Discovery (later phase hook — unused)")]
         [SerializeField] private float discoveryWeight = 0f;
@@ -28,6 +30,8 @@ namespace ProjectAscension.Equipment
         public SlotType SlotType => slotType;
         public float Damage => damage;
         public float Range => range;
+        public float ProjectileSpeed => projectileSpeed;
+        public float Cooldown => cooldown;
         public float DiscoveryWeight => discoveryWeight;
     }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "ProjectAscension.Combat",
+  "rootNamespace": "ProjectAscension.Combat",
+  "references": [
+    "ProjectAscension.GameSimulation"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}
