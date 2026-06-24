@@ -4,6 +4,8 @@
   "references": [
     "ProjectAscension.Core",
     "ProjectAscension.GameSimulation",
+    "ProjectAscension.Equipment",
+    "ProjectAscension.Combat",
     "Unity.InputSystem",
     "Unity.Cinemachine",
     "VContainer"

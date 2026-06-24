@@ -1,8 +1,7 @@
 {
-  "name": "ProjectAscension.Equipment",
-  "rootNamespace": "ProjectAscension.Equipment",
+  "name": "ProjectAscension.Monsters",
+  "rootNamespace": "ProjectAscension.Monsters",
   "references": [
-    "ProjectAscension.Domain",
     "ProjectAscension.Combat"
   ],
   "includePlatforms": [],

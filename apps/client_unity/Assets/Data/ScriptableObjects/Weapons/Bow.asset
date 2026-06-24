@@ -15,6 +15,8 @@ MonoBehaviour:
   displayName: Bow
   equipmentType: 3
   slotType: 2
-  damage: 0
-  range: 0
+  damage: 18
+  range: 60
+  projectileSpeed: 28
+  cooldown: 0.6
   discoveryWeight: 0

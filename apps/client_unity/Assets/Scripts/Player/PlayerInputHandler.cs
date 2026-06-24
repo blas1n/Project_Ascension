@@ -16,10 +16,18 @@ namespace ProjectAscension.Player
         private readonly InputAction _look;
         private readonly InputAction _jump;
         private readonly InputAction _dodge;
+        private readonly InputAction _attack;
+        private readonly InputAction _attackLeft;
 
         public event Action<Vector2> MoveInput;
         public event Action JumpPressed;
         public event Action DodgePressed;
+
+        /// <summary>Primary attack (right-hand weapon).</summary>
+        public event Action AttackPressed;
+
+        /// <summary>Secondary attack (left-hand weapon).</summary>
+        public event Action AttackLeftPressed;
 
         public Vector2 Move => _move.ReadValue<Vector2>();
         public Vector2 Look => _look.ReadValue<Vector2>();
@@ -31,11 +39,15 @@ namespace ProjectAscension.Player
             _look = _playerMap.FindAction("Look", throwIfNotFound: true);
             _jump = _playerMap.FindAction("Jump", throwIfNotFound: true);
             _dodge = _playerMap.FindAction("Dodge", throwIfNotFound: true);
+            _attack = _playerMap.FindAction("Attack", throwIfNotFound: true);
+            _attackLeft = _playerMap.FindAction("AttackLeft", throwIfNotFound: true);
 
             _move.performed += OnMove;
             _move.canceled += OnMove;
             _jump.performed += OnJump;
             _dodge.performed += OnDodge;
+            _attack.performed += OnAttack;
+            _attackLeft.performed += OnAttackLeft;
 
             _playerMap.Enable();
         }
@@ -43,6 +55,8 @@ namespace ProjectAscension.Player
         private void OnMove(InputAction.CallbackContext ctx) => MoveInput?.Invoke(ctx.ReadValue<Vector2>());
         private void OnJump(InputAction.CallbackContext ctx) => JumpPressed?.Invoke();
         private void OnDodge(InputAction.CallbackContext ctx) => DodgePressed?.Invoke();
+        private void OnAttack(InputAction.CallbackContext ctx) => AttackPressed?.Invoke();
+        private void OnAttackLeft(InputAction.CallbackContext ctx) => AttackLeftPressed?.Invoke();
 
         public void Dispose()
         {
@@ -50,6 +64,8 @@ namespace ProjectAscension.Player
             _move.canceled -= OnMove;
             _jump.performed -= OnJump;
             _dodge.performed -= OnDodge;
+            _attack.performed -= OnAttack;
+            _attackLeft.performed -= OnAttackLeft;
             _playerMap.Disable();
         }
     }
