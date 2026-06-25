@@ -73,6 +73,20 @@ namespace ProjectAscension.Game
                 GameScenes.LoadFrontier();
 
             GUILayout.EndArea();
+
+            // Discovery journal.
+            GUILayout.BeginArea(new Rect(440, 20, 360, 620), GUI.skin.box);
+            GUILayout.Label($"DISCOVERIES ({session.Discovery.DiscoveredCount})");
+            GUILayout.Space(4);
+            bool any = false;
+            foreach (var discovery in session.Discovery.DiscoveredCandidates())
+            {
+                GUILayout.Label($"• {discovery.Title}");
+                any = true;
+            }
+            if (!any)
+                GUILayout.Label("None yet — fight and explore to discover.");
+            GUILayout.EndArea();
         }
 
         private static void DrawWeaponSelector(string label, WeaponData current,

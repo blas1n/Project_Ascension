@@ -1,14 +1,15 @@
 using UnityEngine;
+using ProjectAscension.Combat;
 
 namespace ProjectAscension.Game
 {
-    /// <summary>Reaching this marker completes a Survey contract.</summary>
+    /// <summary>A survey marker. Announces the survey fact; it doesn't know who
+    /// listens (contracts, discovery, …).</summary>
     public sealed class SurveyPoint : PlayerTriggerVolume
     {
         protected override void OnPlayerEntered()
         {
-            if (GameSession.Instance != null)
-                GameSession.Instance.Contracts.ReportSurvey();
+            GameplayEvents.RaiseMarkerSurveyed(gameObject);
         }
     }
 }

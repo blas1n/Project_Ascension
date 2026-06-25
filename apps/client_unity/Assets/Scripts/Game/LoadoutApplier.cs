@@ -13,7 +13,7 @@ namespace ProjectAscension.Game
 
         private void Start()
         {
-            var loadout = FindFirstObjectByType<Loadout>();
+            var loadout = FindAnyObjectByType<Loadout>();
             if (loadout == null) return;
 
             WeaponData left, right;

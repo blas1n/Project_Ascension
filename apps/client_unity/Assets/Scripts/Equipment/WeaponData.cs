@@ -33,5 +33,8 @@ namespace ProjectAscension.Equipment
         public float ProjectileSpeed => projectileSpeed;
         public float Cooldown => cooldown;
         public float DiscoveryWeight => discoveryWeight;
+
+        /// <summary>Melee weapons strike in range; everything else is ranged.</summary>
+        public bool IsMelee => equipmentType == EquipmentType.Weapon;
     }
 }

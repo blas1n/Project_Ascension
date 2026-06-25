@@ -1,14 +1,15 @@
 using UnityEngine;
+using ProjectAscension.Combat;
 
 namespace ProjectAscension.Game
 {
-    /// <summary>A pickup that advances a Collection contract when the player touches it.</summary>
+    /// <summary>A sample pickup. Announces the collection fact; it doesn't know who
+    /// listens (contracts, discovery, …).</summary>
     public sealed class Collectible : PlayerTriggerVolume
     {
         protected override void OnPlayerEntered()
         {
-            if (GameSession.Instance != null)
-                GameSession.Instance.Contracts.ReportCollect();
+            GameplayEvents.RaiseSampleCollected(gameObject);
             Destroy(gameObject);
         }
     }

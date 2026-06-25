@@ -4,7 +4,8 @@
   "references": [
     "ProjectAscension.Domain",
     "ProjectAscension.Equipment",
-    "ProjectAscension.Combat"
+    "ProjectAscension.Combat",
+    "ProjectAscension.GameSimulation"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
