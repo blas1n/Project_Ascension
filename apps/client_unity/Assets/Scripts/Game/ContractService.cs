@@ -7,7 +7,8 @@ namespace ProjectAscension.Game
     /// <summary>
     /// Tracks available contracts, the active one, and its progress. Lives for the
     /// whole session (owned by GameSession) so progress survives City&lt;-&gt;Frontier.
-    /// Hunt progress comes from CombatEvents; Survey/Collection from objectives.
+    /// A pure observer of <see cref="GameplayEvents"/> facts — objectives and
+    /// monsters announce what happened; this maps the relevant facts to progress.
     /// </summary>
     public sealed class ContractService
     {
@@ -32,16 +33,19 @@ namespace ProjectAscension.Game
                 Description = "Collect 3 samples.", TargetCount = 3, RewardCurrency = 90,
             });
 
-            CombatEvents.MonsterKilled += OnMonsterKilled;
+            GameplayEvents.MonsterKilled += OnMonsterKilled;
+            GameplayEvents.SampleCollected += OnSampleCollected;
+            GameplayEvents.MarkerSurveyed += OnMarkerSurveyed;
         }
 
         public void Accept(ContractInstance template) => Active = template.Fresh();
 
         public void Abandon() => Active = null;
 
-        public void ReportSurvey() => Advance(ContractPurpose.Survey, Active != null ? Active.TargetCount : 0);
-        public void ReportCollect() => Advance(ContractPurpose.Collection, 1);
         private void OnMonsterKilled(UnityEngine.GameObject _) => Advance(ContractPurpose.Hunt, 1);
+        private void OnSampleCollected(UnityEngine.GameObject _) => Advance(ContractPurpose.Collection, 1);
+        private void OnMarkerSurveyed(UnityEngine.GameObject _) =>
+            Advance(ContractPurpose.Survey, Active != null ? Active.TargetCount : 0);
 
         private void Advance(ContractPurpose purpose, int amount)
         {

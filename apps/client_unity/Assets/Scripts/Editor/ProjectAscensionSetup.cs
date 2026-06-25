@@ -315,6 +315,10 @@ namespace ProjectAscension.Editor
             // Contract HUD (objective + progress).
             new GameObject("ContractHud").AddComponent<ContractHud>();
 
+            // Discovery: track behaviors -> discoveries, and toast on unlock.
+            new GameObject("BehaviorTracker").AddComponent<BehaviorTracker>();
+            new GameObject("DiscoveryNotification").AddComponent<DiscoveryNotification>();
+
             // Objectives: collectibles (Collection), a survey marker (Survey), and a
             // green return pad (step on it to go back to the City).
             var sample = new Color(0.3f, 1f, 0.4f);

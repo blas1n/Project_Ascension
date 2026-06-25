@@ -226,24 +226,34 @@ Do not hard-couple systems.
 
 # AI Usage Rules
 
-AI must never determine game state.
+AI must never determine game numbers or facts. See ADR 0002.
 
-AI may only generate:
+AI may generate / create:
 
 * names
 * descriptions
 * lore
 * flavor text
+* discovery concepts — the skill idea/composition, built from engine effect
+  primitives within a rule-engine power budget, then frozen as a deterministic
+  entity (created once at discovery, never re-rolled)
 
 AI must never determine:
 
-* combat outcomes
-* discoveries
-* rewards
-* progression
-* ownership
+* combat outcomes (damage, hit, death, status)
+* numbers, balance, or power budgets
+* whether or when a discovery occurs (trigger conditions)
+* first-discoverer or ownership
+* rewards, progression, economy
 
-All game logic must be deterministic.
+All game numbers and facts are deterministic and server-authoritative. A
+discovery's mechanical numbers are deterministic; its concept may be AI-created.
+
+Discovery uses fact/content separation: the rule engine fixes the discovery fact
+(who/when, first-discoverer) instantly and deterministically; the AI fills in the
+skill content asynchronously. On AI failure the discovery is deferred and retried
+— there is no deterministic fallback skill (the core loop runs without AI; only
+discovery content waits).
 
 ---
 
@@ -379,6 +389,12 @@ depending on player behavior.
 Never reduce discoveries to static recipes.
 
 Player behavior must matter.
+
+A discovery's concept is AI-created (composed from effect primitives within a
+deterministic power budget), so the same combination + different behavior yields a
+genuinely unique skill — "your own skill, your own path." The vertical slice ships
+a deterministic catalog as temporary scaffolding for this; the AI composition
+engine is a later phase. See ADR 0002.
 
 ---
 

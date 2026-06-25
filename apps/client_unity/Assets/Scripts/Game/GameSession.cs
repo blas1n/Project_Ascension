@@ -17,6 +17,7 @@ namespace ProjectAscension.Game
 
         public ContractService Contracts { get; private set; }
         public PlayerStateService PlayerState { get; private set; }
+        public DiscoveryService Discovery { get; private set; }
 
         private void Awake()
         {
@@ -31,6 +32,7 @@ namespace ProjectAscension.Game
 
             Contracts = new ContractService();
             PlayerState = new PlayerStateService(ownedWeapons ?? new WeaponData[0]);
+            Discovery = new DiscoveryService();
         }
     }
 }

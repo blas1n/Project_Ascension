@@ -26,12 +26,13 @@ namespace ProjectAscension.Equipment
 
         public virtual void OnUnequip() => gameObject.SetActive(false);
 
-        /// <summary>Primary use, gated by the weapon's cooldown.</summary>
-        public void PrimaryAction(AttackContext ctx)
+        /// <summary>Primary use, gated by cooldown. Returns true if it actually fired.</summary>
+        public bool PrimaryAction(AttackContext ctx)
         {
-            if (_data == null || Time.time < _nextReadyTime) return;
+            if (_data == null || Time.time < _nextReadyTime) return false;
             _nextReadyTime = Time.time + _data.Cooldown;
             OnPrimary(ctx);
+            return true;
         }
 
         protected abstract void OnPrimary(AttackContext ctx);

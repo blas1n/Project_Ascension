@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectAscension.Combat;
 using ProjectAscension.GameSimulation.Player;
 using SimVector3 = System.Numerics.Vector3;
 
@@ -79,9 +80,18 @@ namespace ProjectAscension.Player
                 Attack: false,
                 Sequence: _state.InputSequence + 1);
 
+            // Detect actual execution against the pre-tick state, mirroring the
+            // simulation's gates, so behavior events fire on real jumps/dodges —
+            // not on every input press (airborne spam, dodge on cooldown).
+            bool jumpExecuted = _jumpQueued && _state.IsGrounded;
+            bool dodgeExecuted = _dodgeQueued && _state.IsGrounded && _state.DodgeTimeRemaining <= 0f;
+
             _state = _simulation.ApplyInput(_state, input, deltaTime, _data.ToMovementSettings());
             _jumpQueued = false;
             _dodgeQueued = false;
+
+            if (jumpExecuted) GameplayEvents.RaiseJumped();
+            if (dodgeExecuted) GameplayEvents.RaiseDodged();
 
             // Visually sync the CharacterController to the predicted position.
             var target = new Vector3(_state.Position.X, _state.Position.Y, _state.Position.Z);

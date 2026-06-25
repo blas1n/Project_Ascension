@@ -7,7 +7,9 @@ namespace ProjectAscension.Player
 {
     /// <summary>
     /// Drives weapon attacks from input. Right-hand weapon on Attack (LMB),
-    /// left-hand on AttackLeft (RMB). Aim comes from the camera pivot.
+    /// left-hand on AttackLeft (RMB). Aim comes from the camera pivot. Announces an
+    /// execution fact (melee/ranged) when a weapon actually fires; the discovery
+    /// relay derives combos (e.g. dodge-then-attack) — combat doesn't know about it.
     /// </summary>
     public sealed class PlayerCombat : MonoBehaviour
     {
@@ -45,8 +47,11 @@ namespace ProjectAscension.Player
         private void Fire(EquipmentSlot slot)
         {
             if (slot?.Current is not WeaponBase weapon || aimSource == null) return;
+
             var ctx = new AttackContext(aimSource.position, aimSource.forward, gameObject);
-            weapon.PrimaryAction(ctx);
+            if (!weapon.PrimaryAction(ctx)) return; // on cooldown
+
+            GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
         }
     }
 }
