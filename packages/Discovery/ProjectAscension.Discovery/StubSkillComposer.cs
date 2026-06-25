@@ -1,4 +1,4 @@
-namespace ProjectAscension.Discovery;
+namespace ProjectAscension.SkillForge;
 
 /// <summary>
 /// A deterministic stand-in for the LLM composer. Same request → same skill,
