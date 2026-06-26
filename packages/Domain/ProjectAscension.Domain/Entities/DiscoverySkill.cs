@@ -45,6 +45,11 @@ namespace ProjectAscension.Domain.Entities
         /// time. Stored as a string so the Domain stays free of the SkillForge package.</summary>
         public string? Manifestation { get; set; }
 
+        /// <summary>For a Command, the button-input combo that invokes it (e.g.
+        /// ["Jump","RightClick","LeftClick"]) — assigned deterministically by the rule
+        /// engine at compose time. Empty for weapons. JSON array.</summary>
+        public string InvocationComboJson { get; set; } = "[]";
+
         public int Attempts { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ComposedAt { get; set; }

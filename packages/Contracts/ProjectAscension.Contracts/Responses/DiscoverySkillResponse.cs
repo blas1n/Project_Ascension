@@ -16,5 +16,6 @@ namespace ProjectAscension.Contracts.Responses
         IReadOnlyList<string> Primitives,
         string? Manifestation,
         IReadOnlyList<string> ContextTags,
-        IReadOnlyList<string> Behaviors);
+        IReadOnlyList<string> Behaviors,
+        IReadOnlyList<string> InvocationCombo);
 }
