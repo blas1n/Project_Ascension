@@ -36,5 +36,25 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
 
             Assert.Equal(40f, next.Current, precision: 3);
         }
+
+        [Fact]
+        public void ApplyHeal_RestoresUpToMax()
+        {
+            var health = CombatResolver.ApplyDamage(Health.Full(100f), 50f); // 50
+
+            Assert.Equal(80f, CombatResolver.ApplyHeal(health, 30f).Current, precision: 3);
+            Assert.Equal(100f, CombatResolver.ApplyHeal(health, 999f).Current, precision: 3); // clamped
+        }
+
+        [Fact]
+        public void ApplyHeal_DoesNotReviveTheDead()
+        {
+            var dead = CombatResolver.ApplyDamage(Health.Full(20f), 50f);
+
+            var next = CombatResolver.ApplyHeal(dead, 10f);
+
+            Assert.True(next.IsDead);
+            Assert.Equal(0f, next.Current, precision: 3);
+        }
     }
 }

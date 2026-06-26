@@ -13,5 +13,14 @@ namespace ProjectAscension.GameSimulation.Combat
             var next = health.Current - amount;
             return health with { Current = next < 0f ? 0f : next };
         }
+
+        /// <summary>Restores health up to max (e.g. a skill's Leech self-heal). Does not
+        /// revive the dead.</summary>
+        public static Health ApplyHeal(Health health, float amount)
+        {
+            if (amount <= 0f || health.IsDead) return health;
+            var next = health.Current + amount;
+            return health with { Current = next > health.Max ? health.Max : next };
+        }
     }
 }

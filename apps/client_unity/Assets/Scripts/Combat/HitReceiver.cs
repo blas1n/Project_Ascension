@@ -41,6 +41,12 @@ namespace ProjectAscension.Combat
             if (IsDead) Died?.Invoke(this);
         }
 
+        /// <summary>Restore health up to max (e.g. a skill's Leech self-heal).</summary>
+        public void Heal(float amount)
+        {
+            _health = CombatResolver.ApplyHeal(_health, amount);
+        }
+
         public void Revive()
         {
             _health = Health.Full(maxHealth);
