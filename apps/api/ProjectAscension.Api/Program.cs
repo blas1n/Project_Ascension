@@ -22,6 +22,7 @@ builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
 builder.Services.AddScoped<IContractRepository, ContractRepository>();
 builder.Services.AddScoped<IDiscoveryRepository, DiscoveryRepository>();
 builder.Services.AddScoped<IDiscoverySkillRepository, DiscoverySkillRepository>();
+builder.Services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
@@ -31,6 +32,7 @@ builder.Services.AddScoped<IDiscoveryService, DiscoveryService>();
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ILoadoutService, LoadoutService>();
 builder.Services.AddScoped<ISkillCompositionService, SkillCompositionService>();
+builder.Services.AddScoped<IKnowledgeService, KnowledgeService>();
 builder.Services.AddSingleton<CompositionMetrics>();
 
 // AI skill composition. Provider-agnostic via Microsoft.Extensions.AI IChatClient:
