@@ -41,6 +41,11 @@ public class SkillCompositionService : ISkillCompositionService
         };
         await _discoveries.AddAsync(discovery, ct);
 
+        // The rule engine owns the power budget — derived from rarity, never sent by
+        // the client (ADR 0002: numbers are server-authoritative).
+        var rarity = Enum.TryParse<Rarity>(request.Rarity, ignoreCase: true, out var parsed) ? parsed : Rarity.Common;
+        var budget = BudgetRules.Derive(rarity);
+
         // Content starts Pending; the AI fills it asynchronously.
         var skill = new DiscoverySkill
         {
@@ -50,7 +55,7 @@ public class SkillCompositionService : ISkillCompositionService
             Theme = request.Theme,
             ContextTagsJson = JsonSerializer.Serialize(request.ContextTags),
             PrimaryBehavior = request.PrimaryBehavior,
-            PowerBudget = request.PowerBudget,
+            PowerBudget = budget.Total,
             CreatedAt = DateTime.UtcNow,
         };
         await _skills.AddAsync(skill, ct);
