@@ -16,6 +16,14 @@ public static class SkillCompositionPrompt
                 "\n", g.Select(p => $"- {p.Kind} (cost {p.BaseCost}): {p.Blurb}"))));
         var tags = request.ContextTags.Count > 0 ? string.Join(", ", request.ContextTags) : "none";
 
+        var lineage = request.Lineage ?? Array.Empty<PriorArt>();
+        var lineageSection = lineage.Count == 0
+            ? string.Empty
+            : "\nThis discovery builds on the player's prior discoveries — extend this lineage, evolve it, do not merely repeat it:\n"
+              + string.Join("\n", lineage.Select(a =>
+                  $@"- ""{a.Name}"": {a.Description} [{string.Join(", ", a.Primitives.Select(p => $"{p.Kind} x{p.Magnitude}"))}]"))
+              + "\n";
+
         return
 $@"You are composing a unique combat skill for a discovery in a fantasy MMOFPS.
 
@@ -23,7 +31,7 @@ Theme: {request.Theme}
 Context (equipment / situation): {tags}
 Primary behavior to center the skill on: {request.PrimaryBehavior}
 Power budget: {request.Budget.Total}.
-
+{lineageSection}
 Build the skill ONLY from these effect primitives:
 {primitives}
 

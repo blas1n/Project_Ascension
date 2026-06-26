@@ -90,4 +90,30 @@ public class SkillCompositionPromptTests
         foreach (var def in PrimitiveCatalog.All)
             Assert.Contains(def.Kind.ToString(), prompt);
     }
+
+    [Fact]
+    public void IncludesLineageWhenPresent()
+    {
+        var lineage = new[]
+        {
+            new PriorArt("Flame Bullet", "A small fiery dart.",
+                new[] { new ComposedPrimitive(PrimitiveKind.Projectile, 2) }),
+        };
+        var request = new CompositionRequest(
+            "compressed fire", new[] { "fire" }, PrimitiveKind.Projectile, new PowerBudget(30), lineage);
+
+        var prompt = SkillCompositionPrompt.Build(request);
+
+        Assert.Contains("Flame Bullet", prompt);
+        Assert.Contains("builds on", prompt);
+    }
+
+    [Fact]
+    public void OmitsLineageSectionWhenEmpty()
+    {
+        var request = new CompositionRequest(
+            "fire", new[] { "fire" }, PrimitiveKind.Projectile, new PowerBudget(30));
+
+        Assert.DoesNotContain("builds on the player's prior discoveries", SkillCompositionPrompt.Build(request));
+    }
 }
