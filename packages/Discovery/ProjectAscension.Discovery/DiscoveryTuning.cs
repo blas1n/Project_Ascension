@@ -8,7 +8,9 @@ namespace ProjectAscension.SkillForge;
 /// </summary>
 public sealed record DiscoveryTuning(
     IReadOnlyDictionary<string, int> BehaviorWeights,
+    IReadOnlyDictionary<string, int> FactorWeights,
     int DefaultBehaviorWeight,
+    int DefaultFactorWeight,
     int PersistenceWeight,
     int CombinationSynergy,
     int FireThreshold,
@@ -33,7 +35,24 @@ public sealed record DiscoveryTuning(
             ["ChargeAttack"] = 3,
             ["DodgeAttack"] = 3,
         },
+        new Dictionary<string, int>
+        {
+            // Environment / equipment / knowledge — notable factors that make a
+            // behavior more significant (discovery.md 발견 생성 요소).
+            ["waterfall"] = 10,
+            ["ice_wall"] = 10,
+            ["crystal_desert"] = 12,
+            ["jungle"] = 8,
+            ["sword"] = 4,
+            ["bow"] = 4,
+            ["pistol"] = 4,
+            ["catalyst"] = 6,
+            ["fire"] = 8,
+            ["compression"] = 8,
+            ["wind"] = 8,
+        },
         DefaultBehaviorWeight: 1,
+        DefaultFactorWeight: 0,
         PersistenceWeight: 5,
         CombinationSynergy: 15,
         FireThreshold: 100,

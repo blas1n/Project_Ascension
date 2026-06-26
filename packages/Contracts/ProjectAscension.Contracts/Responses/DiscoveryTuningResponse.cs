@@ -7,7 +7,9 @@ namespace ProjectAscension.Contracts.Responses
     /// and verifying runtime edits.</summary>
     public record DiscoveryTuningResponse(
         IReadOnlyDictionary<string, int> BehaviorWeights,
+        IReadOnlyDictionary<string, int> FactorWeights,
         int DefaultBehaviorWeight,
+        int DefaultFactorWeight,
         int PersistenceWeight,
         int CombinationSynergy,
         int FireThreshold,

@@ -12,5 +12,6 @@ namespace ProjectAscension.Domain.Interfaces
     {
         Task<DiscoveryTuningSettings?> GetSettingsAsync(CancellationToken ct = default);
         Task<IReadOnlyList<BehaviorWeight>> GetBehaviorWeightsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<FactorWeight>> GetFactorWeightsAsync(CancellationToken ct = default);
     }
 }

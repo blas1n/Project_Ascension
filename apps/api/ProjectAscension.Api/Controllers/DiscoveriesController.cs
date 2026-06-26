@@ -62,7 +62,8 @@ public class DiscoveriesController : ControllerBase
     {
         var t = await _tuning.GetAsync(ct);
         return Ok(new DiscoveryTuningResponse(
-            t.BehaviorWeights, t.DefaultBehaviorWeight, t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
+            t.BehaviorWeights, t.FactorWeights, t.DefaultBehaviorWeight, t.DefaultFactorWeight,
+            t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
             t.BudgetBase, t.BudgetPerScore, t.BudgetMin, t.BudgetMax,
             t.UncommonScore, t.RareScore, t.EpicScore, t.LegendaryScore));
     }
