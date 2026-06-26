@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using ProjectAscension.Contracts.Requests;
 using ProjectAscension.Contracts.Responses;
@@ -15,15 +16,21 @@ public class SkillCompositionService : ISkillCompositionService
     private readonly IDiscoveryRepository _discoveries;
     private readonly IDiscoverySkillRepository _skills;
     private readonly ISkillComposer _composer;
+    private readonly CompositionMetrics _metrics;
+    private readonly ILogger<SkillCompositionService> _logger;
 
     public SkillCompositionService(
         IDiscoveryRepository discoveries,
         IDiscoverySkillRepository skills,
-        ISkillComposer composer)
+        ISkillComposer composer,
+        CompositionMetrics metrics,
+        ILogger<SkillCompositionService> logger)
     {
         _discoveries = discoveries;
         _skills = skills;
         _composer = composer;
+        _metrics = metrics;
+        _logger = logger;
     }
 
     public async Task<Guid> TriggerAsync(TriggerDiscoveryRequest request, CancellationToken ct = default)
@@ -75,7 +82,9 @@ public class SkillCompositionService : ISkillCompositionService
                 continue;
             }
 
+            var startedAt = Stopwatch.GetTimestamp();
             var outcome = await CompositionPipeline.ForgeAsync(request, _composer, MaxComposeAttempts, ct);
+            var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
             skill.Attempts += outcome.Attempts;
 
             if (outcome.Forged && outcome.Skill is not null)
@@ -86,8 +95,20 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
+
+                _metrics.Completed(outcome.Attempts, elapsedMs);
+                _logger.LogInformation(
+                    "Composed \"{Name}\" for discovery {DiscoveryId} in {Attempts} attempt(s), {ElapsedMs:F0}ms (cost {Cost}/{Budget}).",
+                    skill.Name, skill.DiscoveryId, outcome.Attempts, elapsedMs, skill.PowerCost, skill.PowerBudget);
             }
-            // else: leave Pending — retried on a later pass (defer, no fallback).
+            else
+            {
+                // Leave Pending — retried on a later pass (defer, no fallback).
+                _metrics.Deferred(outcome.Attempts, elapsedMs);
+                _logger.LogWarning(
+                    "Deferred composition for discovery {DiscoveryId} after {Attempts} attempt(s): {Error}.",
+                    skill.DiscoveryId, outcome.Attempts, outcome.LastValidation.Error);
+            }
 
             await _skills.UpdateAsync(skill, ct);
         }
