@@ -12,6 +12,7 @@ namespace ProjectAscension.Api.Services;
 public interface ISkillCompositionService
 {
     Task<Guid> TriggerAsync(TriggerDiscoveryRequest request, CancellationToken ct = default);
+    Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default);
     Task<DiscoverySkillResponse?> GetByDiscoveryAsync(Guid discoveryId, CancellationToken ct = default);
     Task ComposePendingAsync(int batchSize, CancellationToken ct = default);
 }

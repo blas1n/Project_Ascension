@@ -42,6 +42,16 @@ public class DiscoveriesController : ControllerBase
         return AcceptedAtAction(nameof(GetSkill), new { discoveryId }, new { discoveryId, status = "Pending" });
     }
 
+    /// <summary>Scores a behavior signature; if it crosses the significance threshold
+    /// the rule engine fires a discovery (ADR 0002 core 4 — a function, not a catalog).
+    /// Returns whether it fired, the score, and the new discovery id.</summary>
+    [HttpPost("evaluate")]
+    public async Task<IActionResult> Evaluate([FromBody] EvaluateTriggerRequest request, CancellationToken ct)
+    {
+        var result = await _composition.EvaluateAndTriggerAsync(request, ct);
+        return Ok(result);
+    }
+
     /// <summary>Polls a discovery's content: Pending until the AI composes it, then
     /// the frozen skill.</summary>
     [HttpGet("{discoveryId:guid}/skill")]

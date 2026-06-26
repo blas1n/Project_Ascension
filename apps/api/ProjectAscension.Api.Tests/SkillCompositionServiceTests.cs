@@ -147,4 +147,42 @@ public class SkillCompositionServiceTests
         Assert.Equal(actor, owned.OwnerActorId);
         Assert.Equal(id, owned.DiscoveryId);
     }
+
+    private static EvaluateTriggerRequest Eval(int frequency, Guid? actor = null)
+        => new(actor ?? Guid.NewGuid(), Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile",
+            frequency, Persistence: 0, Difficulty: 0, Combination: 1);
+
+    [Fact]
+    public async Task Evaluate_BelowThreshold_DoesNotFire()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        using var metrics = new CompositionMetrics();
+
+        var result = await Service(discoveries, new FakeSkillRepo(), new FakeKnowledgeRepo(), metrics)
+            .EvaluateAndTriggerAsync(Eval(frequency: 10));
+
+        Assert.False(result.Fired);
+        Assert.Null(result.DiscoveryId);
+        Assert.Empty(discoveries.Discoveries);
+    }
+
+    [Fact]
+    public async Task Evaluate_AboveThreshold_FiresAndIsIdempotentPerRegion()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        var req = Eval(frequency: 200); // well past the fire threshold
+
+        var first = await service.EvaluateAndTriggerAsync(req);
+        var again = await service.EvaluateAndTriggerAsync(req); // same region → claimed once
+
+        Assert.True(first.Fired);
+        Assert.NotNull(first.DiscoveryId);
+        Assert.Equal(first.DiscoveryId, again.DiscoveryId);
+        Assert.Single(discoveries.Discoveries);
+        Assert.Single(skills.Skills);
+    }
 }
