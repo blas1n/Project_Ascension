@@ -78,10 +78,10 @@ namespace ProjectAscension.Game
             var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill, _requiredEquipment);
             GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
-            // A command is invoked by re-performing its discovery combo — register it.
+            // A command is invoked by the button combo the engine assigned it — register it.
             if (_manifestation == ManifestationKind.Command)
             {
-                var combo = ComboBuilder.FromBehaviors(dto.behaviors ?? new string[0]);
+                var combo = InputCombo.Parse(dto.invocationCombo ?? new string[0]);
                 FindAnyObjectByType<ComboInvoker>()?.RegisterCommand(combo, discovered);
             }
 

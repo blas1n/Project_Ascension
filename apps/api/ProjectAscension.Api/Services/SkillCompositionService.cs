@@ -258,7 +258,17 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
                 // a weapon; everything else a command (design note / discovery.md).
-                skill.Manifestation = SkillManifest.Classify(outcome.Skill).ToString();
+                var manifestation = SkillManifest.Classify(outcome.Skill);
+                skill.Manifestation = manifestation.ToString();
+
+                // A command is invoked by a button combo the rule engine assigns
+                // deterministically (decoupled from the discovery behaviors — even a
+                // single-behavior discovery like double jump gets one). Weapons fire on
+                // the attack input, so they need no combo.
+                skill.InvocationComboJson = manifestation == ManifestationKind.Command
+                    ? JsonSerializer.Serialize(ComboAssigner.Assign(skill.DiscoveryId.ToString()).Select(t => t.ToString()).ToList())
+                    : "[]";
+
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
 
@@ -291,10 +301,11 @@ public class SkillCompositionService : ISkillCompositionService
 
         var contextTags = DeserializeTags(skill.ContextTagsJson);
         var behaviors = DeserializeTags(skill.BehaviorsJson);
+        var invocationCombo = DeserializeTags(skill.InvocationComboJson);
 
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives,
-            skill.Manifestation, contextTags, behaviors);
+            skill.Manifestation, contextTags, behaviors, invocationCombo);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)

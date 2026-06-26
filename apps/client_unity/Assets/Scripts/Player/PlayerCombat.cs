@@ -30,19 +30,29 @@ namespace ProjectAscension.Player
                 return;
             }
 
-            _input.AttackPressed += FireRight;
-            _input.AttackLeftPressed += FireLeft;
+            _input.AttackPressed += OnLeftClick;
+            _input.AttackLeftPressed += OnRightClick;
         }
 
         private void OnDestroy()
         {
             if (_input == null) return;
-            _input.AttackPressed -= FireRight;
-            _input.AttackLeftPressed -= FireLeft;
+            _input.AttackPressed -= OnLeftClick;
+            _input.AttackLeftPressed -= OnRightClick;
         }
 
-        private void FireRight() => Fire(loadout != null ? loadout.RightSlot : null);
-        private void FireLeft() => Fire(loadout != null ? loadout.LeftSlot : null);
+        // Raise the raw click (for command combos) then fire the weapon.
+        private void OnLeftClick()
+        {
+            GameplayEvents.RaiseLeftClicked();
+            Fire(loadout != null ? loadout.RightSlot : null);
+        }
+
+        private void OnRightClick()
+        {
+            GameplayEvents.RaiseRightClicked();
+            Fire(loadout != null ? loadout.LeftSlot : null);
+        }
 
         private void Fire(EquipmentSlot slot)
         {
