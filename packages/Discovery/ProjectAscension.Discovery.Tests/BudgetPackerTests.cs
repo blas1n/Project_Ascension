@@ -98,4 +98,17 @@ public class BudgetPackerTests
         Assert.NotEmpty(packed);
         Assert.True(CompositionValidator.Validate(new SkillComposition("x", "d", packed), new PowerBudget(40)).IsValid);
     }
+
+    [Fact]
+    public void Parameters_ArePackedWithinBudget()
+    {
+        var packed = BudgetPacker.Pack(
+            new[] { new ComposedPrimitive(PrimitiveKind.Projectile, 2, Range: 2, Duration: 2) },
+            new PowerBudget(30));
+
+        var p = Assert.Single(packed);
+        Assert.True(CompositionValidator.CostOf(p) <= 30);
+        // Leftover budget was spent raising potency and/or parameters past the base.
+        Assert.True(p.Magnitude > 1 || p.Range > 0 || p.Duration > 0);
+    }
 }

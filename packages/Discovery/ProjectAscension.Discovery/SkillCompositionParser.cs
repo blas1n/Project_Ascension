@@ -14,7 +14,7 @@ public static class SkillCompositionParser
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
     private sealed record Dto(string? Name, string? Description, PrimitiveDto[]? Primitives);
-    private sealed record PrimitiveDto(string? Kind, int Magnitude);
+    private sealed record PrimitiveDto(string? Kind, int Magnitude, int Range, int Duration);
 
     public static SkillComposition? TryParse(string? text)
     {
@@ -38,7 +38,7 @@ public static class SkillCompositionParser
         {
             if (p?.Kind is null) return null;
             if (!Enum.TryParse<PrimitiveKind>(p.Kind, ignoreCase: true, out var kind)) return null;
-            primitives.Add(new ComposedPrimitive(kind, p.Magnitude));
+            primitives.Add(new ComposedPrimitive(kind, p.Magnitude, p.Range, p.Duration));
         }
 
         return new SkillComposition(dto.Name ?? string.Empty, dto.Description ?? string.Empty, primitives);

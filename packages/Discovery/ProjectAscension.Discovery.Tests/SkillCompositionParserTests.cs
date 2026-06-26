@@ -40,6 +40,25 @@ public class SkillCompositionParserTests
         Assert.Equal(PrimitiveKind.Dash, skill!.Primitives[0].Kind);
     }
 
+    [Fact]
+    public void ParsesRangeAndDuration()
+    {
+        const string json =
+            """{"name":"x","description":"d","primitives":[{"kind":"Area","magnitude":1,"range":2,"duration":3}]}""";
+        var skill = SkillCompositionParser.TryParse(json);
+        Assert.Equal(2, skill!.Primitives[0].Range);
+        Assert.Equal(3, skill.Primitives[0].Duration);
+    }
+
+    [Fact]
+    public void MissingParameters_DefaultToZero()
+    {
+        const string json = """{"name":"x","description":"d","primitives":[{"kind":"Dash","magnitude":1}]}""";
+        var skill = SkillCompositionParser.TryParse(json);
+        Assert.Equal(0, skill!.Primitives[0].Range);
+        Assert.Equal(0, skill.Primitives[0].Duration);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

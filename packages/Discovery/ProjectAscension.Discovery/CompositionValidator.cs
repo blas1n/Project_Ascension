@@ -7,6 +7,7 @@ public enum CompositionError
     EmptyComposition,
     UnknownPrimitive,
     InvalidMagnitude,
+    InvalidParameter,
     OverBudget,
 }
 
@@ -27,6 +28,13 @@ public sealed record ValidationResult(bool IsValid, CompositionError Error, int 
 public static class CompositionValidator
 {
     public const int MaxMagnitude = 5;
+    public const int MaxParameterTier = 3;
+    public const int ParameterTierCost = 2;
+
+    /// <summary>Power cost of one primitive: base × magnitude plus a flat cost per
+    /// range/duration tier. Assumes a known kind (guarded by Validate).</summary>
+    public static int CostOf(ComposedPrimitive p)
+        => PrimitiveCatalog.BaseCostOf(p.Kind) * p.Magnitude + (p.Range + p.Duration) * ParameterTierCost;
 
     public static ValidationResult Validate(SkillComposition? composition, PowerBudget budget)
     {
@@ -40,7 +48,9 @@ public static class CompositionValidator
         {
             if (!PrimitiveCatalog.IsKnown(p.Kind)) return ValidationResult.Fail(CompositionError.UnknownPrimitive);
             if (p.Magnitude < 1 || p.Magnitude > MaxMagnitude) return ValidationResult.Fail(CompositionError.InvalidMagnitude);
-            total += PrimitiveCatalog.BaseCostOf(p.Kind) * p.Magnitude;
+            if (p.Range < 0 || p.Range > MaxParameterTier || p.Duration < 0 || p.Duration > MaxParameterTier)
+                return ValidationResult.Fail(CompositionError.InvalidParameter);
+            total += CostOf(p);
         }
 
         return total > budget.Total

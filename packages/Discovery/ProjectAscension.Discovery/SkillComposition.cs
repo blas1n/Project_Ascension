@@ -4,9 +4,13 @@ namespace ProjectAscension.SkillForge;
 /// Derived by the rule engine (flat for now; from rarity/context later).</summary>
 public sealed record PowerBudget(int Total);
 
-/// <summary>One primitive chosen for a skill, scaled by <see cref="Magnitude"/>
-/// (1..N). Cost = base cost × magnitude.</summary>
-public sealed record ComposedPrimitive(PrimitiveKind Kind, int Magnitude);
+/// <summary>
+/// One primitive chosen for a skill, with its scaling parameters:
+/// <see cref="Magnitude"/> is potency (1..MaxMagnitude); <see cref="Range"/> is
+/// reach/area and <see cref="Duration"/> is persistence (0..MaxParameterTier tiers,
+/// 0 = base). Cost = base cost × magnitude + (range + duration) × tier cost.
+/// </summary>
+public sealed record ComposedPrimitive(PrimitiveKind Kind, int Magnitude, int Range = 0, int Duration = 0);
 
 /// <summary>
 /// A composed skill: AI-authored identity (name/description) over a whitelisted,
