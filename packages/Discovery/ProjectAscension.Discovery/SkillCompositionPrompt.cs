@@ -29,6 +29,7 @@ Rules:
 - List 1 to 4 primitives in PRIORITY ORDER (most important first), each with a desired magnitude from 1 to {CompositionValidator.MaxMagnitude}.
 - Center the skill on the primary behavior's mechanic.
 - You do NOT need to do the budget math: the engine scales magnitudes down to fit the power budget, keeping your highest-priority primitives. Focus on a cohesive composition and an evocative name + one-sentence description.
+- Write the name and description in English.
 
 Respond with ONLY a JSON object — no prose, no markdown fences:
 {{""name"":""..."",""description"":""..."",""primitives"":[{{""kind"":""Projectile"",""magnitude"":1}}]}}
