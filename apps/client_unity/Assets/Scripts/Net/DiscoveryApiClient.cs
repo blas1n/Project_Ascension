@@ -47,6 +47,7 @@ namespace ProjectAscension.Net
         public string description;
         public int powerCost;
         public string[] primitives; // e.g. "Projectile x2 r1"
+        public string manifestation; // "Weapon" | "Command"
     }
 
     /// <summary>

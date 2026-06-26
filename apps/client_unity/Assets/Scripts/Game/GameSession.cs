@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.Equipment;
+using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
 {
@@ -19,6 +20,10 @@ namespace ProjectAscension.Game
         public PlayerStateService PlayerState { get; private set; }
         public DiscoveryService Discovery { get; private set; }
 
+        /// <summary>Skills the player has discovered, split into weapons (synthesized
+        /// magic) and commands (techniques). Populated as discoveries are fetched.</summary>
+        public DiscoveredSkillSet DiscoveredSkills { get; private set; }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -33,6 +38,7 @@ namespace ProjectAscension.Game
             Contracts = new ContractService();
             PlayerState = new PlayerStateService(ownedWeapons ?? new WeaponData[0]);
             Discovery = new DiscoveryService();
+            DiscoveredSkills = new DiscoveredSkillSet();
         }
     }
 }
