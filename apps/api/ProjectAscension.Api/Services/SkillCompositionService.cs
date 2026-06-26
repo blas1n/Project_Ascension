@@ -35,6 +35,14 @@ public class SkillCompositionService : ISkillCompositionService
 
     public async Task<Guid> TriggerAsync(TriggerDiscoveryRequest request, CancellationToken ct = default)
     {
+        // Idempotent retry: a trigger repeating a key returns the existing discovery
+        // instead of creating a duplicate (covers client/network retries).
+        if (!string.IsNullOrEmpty(request.IdempotencyKey))
+        {
+            var existing = await _skills.GetByIdempotencyKeyAsync(request.IdempotencyKey, ct);
+            if (existing is not null) return existing.DiscoveryId;
+        }
+
         // Rule engine fixes the fact instantly (ADR 0002): who/where/when, deterministic.
         var discovery = new Discovery
         {
@@ -63,6 +71,7 @@ public class SkillCompositionService : ISkillCompositionService
             ContextTagsJson = JsonSerializer.Serialize(request.ContextTags),
             PrimaryBehavior = request.PrimaryBehavior,
             PowerBudget = budget.Total,
+            IdempotencyKey = request.IdempotencyKey,
             CreatedAt = DateTime.UtcNow,
         };
         await _skills.AddAsync(skill, ct);

@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProjectAscension.Api.Services;
+using ProjectAscension.Contracts.Requests;
 using ProjectAscension.Domain.Entities;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Domain.Interfaces;
@@ -23,6 +24,9 @@ public class SkillCompositionServiceTests
         public Task<DiscoverySkill?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
             => Task.FromResult(Skills.FirstOrDefault(s => s.DiscoveryId == discoveryId));
 
+        public Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default)
+            => Task.FromResult(Skills.FirstOrDefault(s => s.IdempotencyKey == key));
+
         public Task<IReadOnlyList<DiscoverySkill>> GetPendingAsync(int limit, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DiscoverySkill>>(
                 Skills.Where(s => s.Status == DiscoveryContentStatus.Pending).Take(limit).ToList());
@@ -30,13 +34,27 @@ public class SkillCompositionServiceTests
         public Task UpdateAsync(DiscoverySkill skill, CancellationToken ct = default) => Task.CompletedTask; // mutated in place
     }
 
-    private sealed class UnusedDiscoveryRepo : IDiscoveryRepository
+    private sealed class FakeDiscoveryRepo : IDiscoveryRepository
     {
-        public Task AddAsync(Discovery discovery, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<Discovery>> GetByActorAsync(Guid actorId, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<DiscoveryProgress?> GetProgressAsync(Guid actorId, Guid candidateId, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task UpsertProgressAsync(DiscoveryProgress progress, CancellationToken ct = default) => throw new NotSupportedException();
+        public List<Discovery> Discoveries { get; } = new();
+
+        public Task AddAsync(Discovery discovery, CancellationToken ct = default)
+        {
+            Discoveries.Add(discovery);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<Discovery>> GetByActorAsync(Guid actorId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Discovery>>(Discoveries.Where(d => d.DiscovererActorId == actorId).ToList());
+
+        public Task<DiscoveryProgress?> GetProgressAsync(Guid actorId, Guid candidateId, CancellationToken ct = default)
+            => Task.FromResult<DiscoveryProgress?>(null);
+
+        public Task UpsertProgressAsync(DiscoveryProgress progress, CancellationToken ct = default) => Task.CompletedTask;
     }
+
+    private static SkillCompositionService Service(FakeDiscoveryRepo discoveries, FakeSkillRepo skills, CompositionMetrics metrics)
+        => new(discoveries, skills, new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -67,14 +85,32 @@ public class SkillCompositionServiceTests
         listener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref completed, value));
         listener.Start();
 
-        var service = new SkillCompositionService(
-            new UnusedDiscoveryRepo(), skills, new StubSkillComposer(), metrics,
-            NullLogger<SkillCompositionService>.Instance);
-
-        await service.ComposePendingAsync(10);
+        await Service(new FakeDiscoveryRepo(), skills, metrics).ComposePendingAsync(10);
 
         Assert.Equal(DiscoveryContentStatus.Ready, skills.Skills[0].Status);
         Assert.False(string.IsNullOrEmpty(skills.Skills[0].Name));
         Assert.Equal(1, completed);
+    }
+
+    [Fact]
+    public async Task Trigger_IsIdempotentByKey()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, metrics);
+
+        var req = new TriggerDiscoveryRequest(
+            Guid.NewGuid(), Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile", "Rare",
+            IdempotencyKey: "k1");
+
+        var first = await service.TriggerAsync(req);
+        var again = await service.TriggerAsync(req);                          // same key
+        var other = await service.TriggerAsync(req with { IdempotencyKey = "k2" });
+
+        Assert.Equal(first, again);              // same discovery returned, not a duplicate
+        Assert.NotEqual(first, other);           // a different key makes a new discovery
+        Assert.Equal(2, skills.Skills.Count);    // only k1 and k2 created
+        Assert.Equal(2, discoveries.Discoveries.Count);
     }
 }

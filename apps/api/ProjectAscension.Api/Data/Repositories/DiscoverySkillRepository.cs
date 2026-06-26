@@ -19,6 +19,9 @@ public class DiscoverySkillRepository : IDiscoverySkillRepository
     public Task<DiscoverySkill?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
         => _db.DiscoverySkills.FirstOrDefaultAsync(s => s.DiscoveryId == discoveryId, ct);
 
+    public Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default)
+        => _db.DiscoverySkills.FirstOrDefaultAsync(s => s.IdempotencyKey == key, ct);
+
     public async Task<IReadOnlyList<DiscoverySkill>> GetPendingAsync(int limit, CancellationToken ct = default)
         => await _db.DiscoverySkills
             .Where(s => s.Status == DiscoveryContentStatus.Pending)
