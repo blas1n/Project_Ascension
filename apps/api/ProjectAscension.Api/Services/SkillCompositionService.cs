@@ -91,6 +91,32 @@ public class SkillCompositionService : ISkillCompositionService
         return discovery.Id;
     }
 
+    public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
+    {
+        // The trigger is a function, not a catalog (ADR 0002 core 4): score the
+        // behavior signature; fire only when it crosses the significance threshold.
+        var signature = new BehaviorSignature(request.Frequency, request.Persistence, request.Difficulty, request.Combination);
+        var outcome = TriggerEvaluator.Evaluate(signature);
+        if (!outcome.Fires)
+            return new EvaluateTriggerResponse(false, outcome.Score, null);
+
+        // Claim the behavior region once (first-discoverer) via an idempotency key,
+        // so repeated evaluations of a still-growing signature don't re-fire it.
+        var discoveryId = await TriggerAsync(new TriggerDiscoveryRequest(
+            request.ActorId, request.RegionId, request.Type, request.Theme,
+            request.ContextTags, request.PrimaryBehavior, outcome.Rarity.ToString(), RegionKey(request)), ct);
+
+        return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
+    }
+
+    private static string RegionKey(EvaluateTriggerRequest r)
+    {
+        var tags = r.ContextTags.Count == 0
+            ? "-"
+            : string.Join(",", r.ContextTags.OrderBy(t => t, StringComparer.Ordinal));
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}";
+    }
+
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
     {
         var pending = await _skills.GetPendingAsync(batchSize, ct);
