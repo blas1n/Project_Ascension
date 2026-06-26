@@ -15,5 +15,5 @@ namespace ProjectAscension.Contracts.Requests
         string Theme,
         IReadOnlyList<string> ContextTags,
         string PrimaryBehavior,
-        int PowerBudget);
+        string Rarity);
 }
