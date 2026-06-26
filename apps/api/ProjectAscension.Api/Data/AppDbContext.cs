@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<Knowledge> Knowledge => Set<Knowledge>();
     public DbSet<DiscoveryCandidate> DiscoveryCandidates => Set<DiscoveryCandidate>();
     public DbSet<DiscoveryProgress> DiscoveryProgresses => Set<DiscoveryProgress>();
+    public DbSet<BehaviorWeight> BehaviorWeights => Set<BehaviorWeight>();
+    public DbSet<DiscoveryTuningSettings> DiscoveryTuningSettings => Set<DiscoveryTuningSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
