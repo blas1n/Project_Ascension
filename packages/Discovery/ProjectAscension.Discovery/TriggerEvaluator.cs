@@ -1,12 +1,17 @@
 namespace ProjectAscension.SkillForge;
 
 /// <summary>
-/// What the player actually did: how many times each behavior was performed
-/// (server-owned weights turn these into difficulty), and how sustained the pattern
-/// was (<see cref="Persistence"/>). The counts are observed facts reported by the
-/// client; the significance they carry is decided here, server-side.
+/// What the player actually did and where: how many times each behavior was
+/// performed (<see cref="Behaviors"/>), the surrounding context factors —
+/// environment / equipment / knowledge (<see cref="Factors"/>) — and how sustained
+/// the pattern was (<see cref="Persistence"/>). The counts and factors are observed
+/// facts reported by the client; the significance they carry is decided here,
+/// server-side.
 /// </summary>
-public sealed record BehaviorSignature(IReadOnlyDictionary<string, int> Behaviors, int Persistence);
+public sealed record BehaviorSignature(
+    IReadOnlyDictionary<string, int> Behaviors,
+    IReadOnlyList<string> Factors,
+    int Persistence);
 
 /// <summary>Whether a behavior signature fires a discovery, the derived rarity, and
 /// the raw significance score (for observability/tuning).</summary>
@@ -30,18 +35,32 @@ public static class TriggerEvaluator
 {
     public static TriggerOutcome Evaluate(BehaviorSignature signature, DiscoveryTuning tuning)
     {
-        int frequencyScore = 0;
+        int behaviorScore = 0;
         int distinct = 0;
         foreach (var (behavior, count) in signature.Behaviors)
         {
             if (count <= 0) continue;
             int weight = tuning.BehaviorWeights.TryGetValue(behavior, out var w) ? w : tuning.DefaultBehaviorWeight;
-            frequencyScore += count * weight;
+            behaviorScore += count * weight;
+            distinct++;
+        }
+
+        // Context factors (environment / equipment / knowledge) add their own
+        // significance, and combining them with the behavior counts toward synergy —
+        // the 5-factor interaction that makes the same behavior discover differently
+        // by where and how it happens (discovery.md).
+        int contextScore = 0;
+        foreach (var factor in signature.Factors)
+        {
+            int weight = tuning.FactorWeights.TryGetValue(factor, out var w) ? w : tuning.DefaultFactorWeight;
+            if (weight == 0) continue;
+            contextScore += weight;
             distinct++;
         }
 
         int score =
-            frequencyScore
+            behaviorScore
+            + contextScore
             + Math.Max(0, distinct - 1) * tuning.CombinationSynergy
             + signature.Persistence * tuning.PersistenceWeight;
 

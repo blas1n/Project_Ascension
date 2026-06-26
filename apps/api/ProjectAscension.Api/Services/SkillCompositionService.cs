@@ -58,7 +58,7 @@ public class SkillCompositionService : ISkillCompositionService
         // scores the actual behavior combination against the runtime tuning and fires
         // only when it crosses the significance threshold.
         var tuning = await _tuning.GetAsync(ct);
-        var signature = new BehaviorSignature(ToBehaviorCounts(request.Behaviors), request.Persistence);
+        var signature = new BehaviorSignature(ToBehaviorCounts(request.Behaviors), request.ContextTags, request.Persistence);
         var outcome = TriggerEvaluator.Evaluate(signature, tuning);
         if (!outcome.Fires)
             return new EvaluateTriggerResponse(false, outcome.Score, null);

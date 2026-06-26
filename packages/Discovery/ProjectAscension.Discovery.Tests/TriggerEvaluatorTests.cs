@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using ProjectAscension.SkillForge;
 
@@ -8,7 +9,10 @@ public class TriggerEvaluatorTests
     private static readonly DiscoveryTuning Tuning = DiscoveryTuning.Default;
 
     private static BehaviorSignature Sig(int persistence, params (string Behavior, int Count)[] behaviors)
-        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), persistence);
+        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), Array.Empty<string>(), persistence);
+
+    private static BehaviorSignature SigF(string[] factors, params (string Behavior, int Count)[] behaviors)
+        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), factors, 0);
 
     [Fact]
     public void BelowThreshold_DoesNotFire()
@@ -63,6 +67,33 @@ public class TriggerEvaluatorTests
     {
         // Jump×10 + persistence 4 × 5 = 10 + 20 = 30.
         Assert.Equal(30, TriggerEvaluator.Evaluate(Sig(4, ("Jump", 10)), Tuning).Score);
+    }
+
+    [Fact]
+    public void ContextFactors_AddSignificanceAndSynergy()
+    {
+        // Same behavior, no factors vs at a waterfall (weight 10):
+        // bare = 50; with factor = 50 + 10 + (2 distinct − 1) × 15 synergy = 75.
+        var bare = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 50)), Tuning);
+        var withFactor = TriggerEvaluator.Evaluate(SigF(new[] { "waterfall" }, ("Jump", 50)), Tuning);
+        Assert.Equal(50, bare.Score);
+        Assert.Equal(75, withFactor.Score);
+    }
+
+    [Fact]
+    public void SameBehavior_DifferentEnvironment_ScoresDifferently()
+    {
+        // jungle (8) vs crystal_desert (12) — the same behavior discovers differently.
+        var jungle = TriggerEvaluator.Evaluate(SigF(new[] { "jungle" }, ("Jump", 50)), Tuning);
+        var desert = TriggerEvaluator.Evaluate(SigF(new[] { "crystal_desert" }, ("Jump", 50)), Tuning);
+        Assert.NotEqual(jungle.Score, desert.Score);
+    }
+
+    [Fact]
+    public void UnknownFactor_DoesNotAffectScore()
+    {
+        // "arcane" is not a weighted factor → no score change, no synergy.
+        Assert.Equal(50, TriggerEvaluator.Evaluate(SigF(new[] { "arcane" }, ("Jump", 50)), Tuning).Score);
     }
 
     [Fact]

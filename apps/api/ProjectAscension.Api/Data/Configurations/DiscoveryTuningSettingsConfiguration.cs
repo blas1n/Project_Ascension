@@ -16,6 +16,7 @@ public class DiscoveryTuningSettingsConfiguration : IEntityTypeConfiguration<Dis
         {
             Id = 1,
             DefaultBehaviorWeight = 1,
+            DefaultFactorWeight = 0,
             PersistenceWeight = 5,
             CombinationSynergy = 15,
             FireThreshold = 100,

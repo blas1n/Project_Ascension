@@ -15,4 +15,7 @@ public class DiscoveryTuningRepository : IDiscoveryTuningRepository
 
     public async Task<IReadOnlyList<BehaviorWeight>> GetBehaviorWeightsAsync(CancellationToken ct = default)
         => await _db.BehaviorWeights.AsNoTracking().ToListAsync(ct);
+
+    public async Task<IReadOnlyList<FactorWeight>> GetFactorWeightsAsync(CancellationToken ct = default)
+        => await _db.FactorWeights.AsNoTracking().ToListAsync(ct);
 }

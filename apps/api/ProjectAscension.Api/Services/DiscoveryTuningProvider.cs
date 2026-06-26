@@ -20,10 +20,14 @@ public class DiscoveryTuningProvider : IDiscoveryTuningProvider
 
         var weights = await _repo.GetBehaviorWeightsAsync(ct);
         var behaviorWeights = weights.ToDictionary(w => w.Behavior, w => w.Weight);
+        var factors = await _repo.GetFactorWeightsAsync(ct);
+        var factorWeights = factors.ToDictionary(f => f.Key, f => f.Weight);
 
         return new DiscoveryTuning(
             behaviorWeights,
+            factorWeights,
             settings.DefaultBehaviorWeight,
+            settings.DefaultFactorWeight,
             settings.PersistenceWeight,
             settings.CombinationSynergy,
             settings.FireThreshold,
