@@ -11,6 +11,7 @@ namespace ProjectAscension.Domain.Interfaces
     {
         Task AddAsync(DiscoverySkill skill, CancellationToken ct = default);
         Task<DiscoverySkill?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default);
+        Task<IReadOnlyList<DiscoverySkill>> GetByDiscoveryIdsAsync(IEnumerable<Guid> discoveryIds, CancellationToken ct = default);
         Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default);
         Task<IReadOnlyList<DiscoverySkill>> GetPendingAsync(int limit, CancellationToken ct = default);
         Task UpdateAsync(DiscoverySkill skill, CancellationToken ct = default);

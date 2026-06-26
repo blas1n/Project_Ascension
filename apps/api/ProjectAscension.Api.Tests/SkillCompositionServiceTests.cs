@@ -24,6 +24,12 @@ public class SkillCompositionServiceTests
         public Task<DiscoverySkill?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
             => Task.FromResult(Skills.FirstOrDefault(s => s.DiscoveryId == discoveryId));
 
+        public Task<IReadOnlyList<DiscoverySkill>> GetByDiscoveryIdsAsync(IEnumerable<Guid> discoveryIds, CancellationToken ct = default)
+        {
+            var ids = discoveryIds.ToHashSet();
+            return Task.FromResult<IReadOnlyList<DiscoverySkill>>(Skills.Where(s => ids.Contains(s.DiscoveryId)).ToList());
+        }
+
         public Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default)
             => Task.FromResult(Skills.FirstOrDefault(s => s.IdempotencyKey == key));
 
@@ -72,9 +78,25 @@ public class SkillCompositionServiceTests
         public Task<DiscoveryTuning> GetAsync(CancellationToken ct = default) => Task.FromResult(DiscoveryTuning.Default);
     }
 
+    private sealed class FakeLineageRepo : IDiscoveryLineageRepository
+    {
+        public List<DiscoveryLineage> Edges { get; } = new();
+
+        public Task AddEdgesAsync(IEnumerable<DiscoveryLineage> edges, CancellationToken ct = default)
+        {
+            Edges.AddRange(edges);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<DiscoveryLineage>> GetByChildAsync(Guid childDiscoveryId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<DiscoveryLineage>>(Edges.Where(e => e.ChildDiscoveryId == childDiscoveryId).ToList());
+    }
+
     private static SkillCompositionService Service(
-        FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics)
-        => new(discoveries, skills, knowledge, new FakeTuningProvider(), new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+        FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics,
+        FakeLineageRepo? lineage = null)
+        => new(discoveries, skills, knowledge, lineage ?? new FakeLineageRepo(), new FakeTuningProvider(),
+            new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -189,5 +211,55 @@ public class SkillCompositionServiceTests
         Assert.Equal(first.DiscoveryId, again.DiscoveryId);
         Assert.Single(discoveries.Discoveries);
         Assert.Single(skills.Skills);
+    }
+
+    private static EvaluateTriggerRequest EvalCtx(Guid actor, string[] contextTags, int jumpCount)
+        => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", contextTags, "Projectile",
+            new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
+
+    [Fact]
+    public async Task Evaluate_RecordsLineageFromPriorKnowledge()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        var knowledge = new FakeKnowledgeRepo();
+        var lineage = new FakeLineageRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, knowledge, metrics, lineage);
+        var actor = Guid.NewGuid();
+
+        // First discovery in the "fire" space — no prior knowledge, so no parents.
+        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 200));
+        // Second in the same space (shares "fire") — builds on the first.
+        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 200));
+
+        Assert.True(first.Fired);
+        Assert.True(second.Fired);
+        Assert.NotEqual(first.DiscoveryId, second.DiscoveryId);
+
+        var edge = Assert.Single(lineage.Edges);
+        Assert.Equal(second.DiscoveryId, edge.ChildDiscoveryId);
+        Assert.Equal(first.DiscoveryId, edge.ParentDiscoveryId);
+    }
+
+    [Fact]
+    public async Task GetLineage_ReturnsAncestorsNearestFirst()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        var knowledge = new FakeKnowledgeRepo();
+        var lineage = new FakeLineageRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, knowledge, metrics, lineage);
+        var actor = Guid.NewGuid();
+
+        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 200));
+        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 200));
+
+        var result = await service.GetLineageAsync(second.DiscoveryId!.Value);
+
+        Assert.Equal(second.DiscoveryId, result.DiscoveryId);
+        var ancestor = Assert.Single(result.Ancestors);
+        Assert.Equal(first.DiscoveryId, ancestor.DiscoveryId);
     }
 }

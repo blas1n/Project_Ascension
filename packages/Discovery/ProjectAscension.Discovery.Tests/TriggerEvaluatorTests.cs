@@ -9,10 +9,13 @@ public class TriggerEvaluatorTests
     private static readonly DiscoveryTuning Tuning = DiscoveryTuning.Default;
 
     private static BehaviorSignature Sig(int persistence, params (string Behavior, int Count)[] behaviors)
-        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), Array.Empty<string>(), persistence);
+        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), Array.Empty<string>(), 0, persistence);
 
     private static BehaviorSignature SigF(string[] factors, params (string Behavior, int Count)[] behaviors)
-        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), factors, 0);
+        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), factors, 0, 0);
+
+    private static BehaviorSignature SigD(int knowledgeDepth, params (string Behavior, int Count)[] behaviors)
+        => new(behaviors.ToDictionary(b => b.Behavior, b => b.Count), Array.Empty<string>(), knowledgeDepth, 0);
 
     [Fact]
     public void BelowThreshold_DoesNotFire()
@@ -94,6 +97,18 @@ public class TriggerEvaluatorTests
     {
         // "arcane" is not a weighted factor → no score change, no synergy.
         Assert.Equal(50, TriggerEvaluator.Evaluate(SigF(new[] { "arcane" }, ("Jump", 50)), Tuning).Score);
+    }
+
+    [Fact]
+    public void KnowledgeDepth_DeepensDiscovery()
+    {
+        // Jump×50 alone = 50; owning 2 relevant prior discoveries adds
+        // 2 × 12 depth + (2 distinct − 1) × 15 synergy = 50 + 24 + 15 = 89.
+        var shallow = TriggerEvaluator.Evaluate(SigD(0, ("Jump", 50)), Tuning);
+        var deep = TriggerEvaluator.Evaluate(SigD(2, ("Jump", 50)), Tuning);
+        Assert.Equal(50, shallow.Score);
+        Assert.Equal(89, deep.Score);
+        Assert.True(deep.Score > shallow.Score);
     }
 
     [Fact]

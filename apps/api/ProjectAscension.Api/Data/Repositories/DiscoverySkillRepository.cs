@@ -19,6 +19,13 @@ public class DiscoverySkillRepository : IDiscoverySkillRepository
     public Task<DiscoverySkill?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
         => _db.DiscoverySkills.FirstOrDefaultAsync(s => s.DiscoveryId == discoveryId, ct);
 
+    public async Task<IReadOnlyList<DiscoverySkill>> GetByDiscoveryIdsAsync(IEnumerable<Guid> discoveryIds, CancellationToken ct = default)
+    {
+        var ids = discoveryIds.ToList();
+        if (ids.Count == 0) return new List<DiscoverySkill>();
+        return await _db.DiscoverySkills.AsNoTracking().Where(s => ids.Contains(s.DiscoveryId)).ToListAsync(ct);
+    }
+
     public Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default)
         => _db.DiscoverySkills.FirstOrDefaultAsync(s => s.IdempotencyKey == key, ct);
 
