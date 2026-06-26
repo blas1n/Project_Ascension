@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ProjectAscension.Api.Services;
 using ProjectAscension.Contracts.Requests;
+using ProjectAscension.Contracts.Responses;
 
 namespace ProjectAscension.Api.Controllers;
 
@@ -10,11 +11,13 @@ public class DiscoveriesController : ControllerBase
 {
     private readonly IDiscoveryService _service;
     private readonly ISkillCompositionService _composition;
+    private readonly IDiscoveryTuningProvider _tuning;
 
-    public DiscoveriesController(IDiscoveryService service, ISkillCompositionService composition)
+    public DiscoveriesController(IDiscoveryService service, ISkillCompositionService composition, IDiscoveryTuningProvider tuning)
     {
         _service = service;
         _composition = composition;
+        _tuning = tuning;
     }
 
     [HttpGet]
@@ -50,6 +53,18 @@ public class DiscoveriesController : ControllerBase
     {
         var result = await _composition.EvaluateAndTriggerAsync(request, ct);
         return Ok(result);
+    }
+
+    /// <summary>The current discovery balance values (read-only) — for inspection and
+    /// verifying runtime edits to the tuning rows.</summary>
+    [HttpGet("tuning")]
+    public async Task<IActionResult> GetTuning(CancellationToken ct)
+    {
+        var t = await _tuning.GetAsync(ct);
+        return Ok(new DiscoveryTuningResponse(
+            t.BehaviorWeights, t.DefaultBehaviorWeight, t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
+            t.BudgetBase, t.BudgetPerScore, t.BudgetMin, t.BudgetMax,
+            t.UncommonScore, t.RareScore, t.EpicScore, t.LegendaryScore));
     }
 
     /// <summary>Polls a discovery's content: Pending until the AI composes it, then

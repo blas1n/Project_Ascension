@@ -16,6 +16,7 @@ public class SkillCompositionService : ISkillCompositionService
     private readonly IDiscoveryRepository _discoveries;
     private readonly IDiscoverySkillRepository _skills;
     private readonly IKnowledgeRepository _knowledge;
+    private readonly IDiscoveryTuningProvider _tuning;
     private readonly ISkillComposer _composer;
     private readonly CompositionMetrics _metrics;
     private readonly ILogger<SkillCompositionService> _logger;
@@ -24,6 +25,7 @@ public class SkillCompositionService : ISkillCompositionService
         IDiscoveryRepository discoveries,
         IDiscoverySkillRepository skills,
         IKnowledgeRepository knowledge,
+        IDiscoveryTuningProvider tuning,
         ISkillComposer composer,
         CompositionMetrics metrics,
         ILogger<SkillCompositionService> logger)
@@ -31,6 +33,7 @@ public class SkillCompositionService : ISkillCompositionService
         _discoveries = discoveries;
         _skills = skills;
         _knowledge = knowledge;
+        _tuning = tuning;
         _composer = composer;
         _metrics = metrics;
         _logger = logger;
@@ -38,11 +41,50 @@ public class SkillCompositionService : ISkillCompositionService
 
     public async Task<Guid> TriggerAsync(TriggerDiscoveryRequest request, CancellationToken ct = default)
     {
-        // Idempotent retry: a trigger repeating a key returns the existing discovery
-        // instead of creating a duplicate (covers client/network retries).
-        if (!string.IsNullOrEmpty(request.IdempotencyKey))
+        // Manual path: rarity is supplied; the rule engine maps it to a budget on the
+        // tuned curve (numbers stay server-authoritative, ADR 0002).
+        var tuning = await _tuning.GetAsync(ct);
+        var rarity = Enum.TryParse<Rarity>(request.Rarity, ignoreCase: true, out var parsed) ? parsed : Rarity.Common;
+        var budget = BudgetRules.FromRarity(rarity, tuning);
+
+        return await CreateDiscoveryAsync(
+            request.ActorId, request.RegionId, request.Type, request.Theme,
+            request.ContextTags, request.PrimaryBehavior, budget.Total, request.IdempotencyKey, ct);
+    }
+
+    public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
+    {
+        // The trigger is a function, not a catalog (ADR 0002 core 4): the rule engine
+        // scores the actual behavior combination against the runtime tuning and fires
+        // only when it crosses the significance threshold.
+        var tuning = await _tuning.GetAsync(ct);
+        var signature = new BehaviorSignature(ToBehaviorCounts(request.Behaviors), request.Persistence);
+        var outcome = TriggerEvaluator.Evaluate(signature, tuning);
+        if (!outcome.Fires)
+            return new EvaluateTriggerResponse(false, outcome.Score, null);
+
+        // Budget scales with the score, so a stronger pattern yields a richer skill.
+        var budget = BudgetRules.FromScore(outcome.Score, tuning);
+
+        // Claim the behavior region once (first-discoverer) via an idempotency key,
+        // so repeated evaluations of a still-growing signature don't re-fire it.
+        var discoveryId = await CreateDiscoveryAsync(
+            request.ActorId, request.RegionId, request.Type, request.Theme,
+            request.ContextTags, request.PrimaryBehavior, budget.Total, RegionKey(request), ct);
+
+        return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
+    }
+
+    private async Task<Guid> CreateDiscoveryAsync(
+        Guid actorId, Guid regionId, DiscoveryType type, string theme,
+        IReadOnlyList<string> contextTags, string primaryBehavior, int budget, string? idempotencyKey,
+        CancellationToken ct)
+    {
+        // Idempotent: a repeated key returns the existing discovery instead of a
+        // duplicate (covers client/network retries and re-evaluated regions).
+        if (!string.IsNullOrEmpty(idempotencyKey))
         {
-            var existing = await _skills.GetByIdempotencyKeyAsync(request.IdempotencyKey, ct);
+            var existing = await _skills.GetByIdempotencyKeyAsync(idempotencyKey, ct);
             if (existing is not null) return existing.DiscoveryId;
         }
 
@@ -50,10 +92,10 @@ public class SkillCompositionService : ISkillCompositionService
         var discovery = new Discovery
         {
             Id = Guid.NewGuid(),
-            Type = request.Type,
-            DiscovererActorId = request.ActorId,
-            RegionId = request.RegionId,
-            Title = string.IsNullOrWhiteSpace(request.Theme) ? "Discovery" : request.Theme,
+            Type = type,
+            DiscovererActorId = actorId,
+            RegionId = regionId,
+            Title = string.IsNullOrWhiteSpace(theme) ? "Discovery" : theme,
             Description = string.Empty,
             DiscoveredAt = DateTime.UtcNow,
         };
@@ -65,14 +107,9 @@ public class SkillCompositionService : ISkillCompositionService
         {
             Id = Guid.NewGuid(),
             DiscoveryId = discovery.Id,
-            OwnerActorId = request.ActorId,
+            OwnerActorId = actorId,
             CreatedAt = DateTime.UtcNow,
         }, ct);
-
-        // The rule engine owns the power budget — derived from rarity, never sent by
-        // the client (ADR 0002: numbers are server-authoritative).
-        var rarity = Enum.TryParse<Rarity>(request.Rarity, ignoreCase: true, out var parsed) ? parsed : Rarity.Common;
-        var budget = BudgetRules.Derive(rarity);
 
         // Content starts Pending; the AI fills it asynchronously.
         var skill = new DiscoverySkill
@@ -80,33 +117,23 @@ public class SkillCompositionService : ISkillCompositionService
             Id = Guid.NewGuid(),
             DiscoveryId = discovery.Id,
             Status = DiscoveryContentStatus.Pending,
-            Theme = request.Theme,
-            ContextTagsJson = JsonSerializer.Serialize(request.ContextTags),
-            PrimaryBehavior = request.PrimaryBehavior,
-            PowerBudget = budget.Total,
-            IdempotencyKey = request.IdempotencyKey,
+            Theme = theme,
+            ContextTagsJson = JsonSerializer.Serialize(contextTags),
+            PrimaryBehavior = primaryBehavior,
+            PowerBudget = budget,
+            IdempotencyKey = idempotencyKey,
             CreatedAt = DateTime.UtcNow,
         };
         await _skills.AddAsync(skill, ct);
         return discovery.Id;
     }
 
-    public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
+    private static IReadOnlyDictionary<string, int> ToBehaviorCounts(IReadOnlyList<BehaviorCount> behaviors)
     {
-        // The trigger is a function, not a catalog (ADR 0002 core 4): score the
-        // behavior signature; fire only when it crosses the significance threshold.
-        var signature = new BehaviorSignature(request.Frequency, request.Persistence, request.Difficulty, request.Combination);
-        var outcome = TriggerEvaluator.Evaluate(signature);
-        if (!outcome.Fires)
-            return new EvaluateTriggerResponse(false, outcome.Score, null);
-
-        // Claim the behavior region once (first-discoverer) via an idempotency key,
-        // so repeated evaluations of a still-growing signature don't re-fire it.
-        var discoveryId = await TriggerAsync(new TriggerDiscoveryRequest(
-            request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, outcome.Rarity.ToString(), RegionKey(request)), ct);
-
-        return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
+        var counts = new Dictionary<string, int>();
+        foreach (var b in behaviors)
+            counts[b.Behavior] = counts.GetValueOrDefault(b.Behavior) + b.Count;
+        return counts;
     }
 
     private static string RegionKey(EvaluateTriggerRequest r)

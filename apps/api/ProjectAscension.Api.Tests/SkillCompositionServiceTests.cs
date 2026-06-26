@@ -67,9 +67,14 @@ public class SkillCompositionServiceTests
             => Task.FromResult<IReadOnlyList<Knowledge>>(Items.Where(k => k.OwnerActorId == ownerActorId).ToList());
     }
 
+    private sealed class FakeTuningProvider : IDiscoveryTuningProvider
+    {
+        public Task<DiscoveryTuning> GetAsync(CancellationToken ct = default) => Task.FromResult(DiscoveryTuning.Default);
+    }
+
     private static SkillCompositionService Service(
         FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics)
-        => new(discoveries, skills, knowledge, new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+        => new(discoveries, skills, knowledge, new FakeTuningProvider(), new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -148,9 +153,9 @@ public class SkillCompositionServiceTests
         Assert.Equal(id, owned.DiscoveryId);
     }
 
-    private static EvaluateTriggerRequest Eval(int frequency, Guid? actor = null)
+    private static EvaluateTriggerRequest Eval(int jumpCount, Guid? actor = null)
         => new(actor ?? Guid.NewGuid(), Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile",
-            frequency, Persistence: 0, Difficulty: 0, Combination: 1);
+            new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
 
     [Fact]
     public async Task Evaluate_BelowThreshold_DoesNotFire()
@@ -159,7 +164,7 @@ public class SkillCompositionServiceTests
         using var metrics = new CompositionMetrics();
 
         var result = await Service(discoveries, new FakeSkillRepo(), new FakeKnowledgeRepo(), metrics)
-            .EvaluateAndTriggerAsync(Eval(frequency: 10));
+            .EvaluateAndTriggerAsync(Eval(jumpCount: 10));
 
         Assert.False(result.Fired);
         Assert.Null(result.DiscoveryId);
@@ -174,7 +179,7 @@ public class SkillCompositionServiceTests
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
-        var req = Eval(frequency: 200); // well past the fire threshold
+        var req = Eval(jumpCount: 200); // well past the fire threshold
 
         var first = await service.EvaluateAndTriggerAsync(req);
         var again = await service.EvaluateAndTriggerAsync(req); // same region → claimed once
