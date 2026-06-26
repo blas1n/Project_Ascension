@@ -29,6 +29,7 @@ namespace ProjectAscension.Game
 
         private DiscoveryApiClient _api;
         private HitReceiver _self;
+        private SkillEffects _effects;
         private Skill _skill;
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
@@ -37,6 +38,7 @@ namespace ProjectAscension.Game
         private void Awake()
         {
             _self = GetComponent<HitReceiver>();
+            _effects = GetComponent<SkillEffects>(); // optional presentation stub
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
@@ -89,15 +91,33 @@ namespace ProjectAscension.Game
                 if (hit.Damage > 0f) target.TakeDamage(hit.Damage, gameObject);
                 if (hit.DamageOverTimePerTick > 0f && hit.DamageOverTimeTicks > 0)
                     StartCoroutine(DamageOverTime(target, hit.DamageOverTimePerTick, hit.DamageOverTimeTicks));
-                if (hit.Control != ControlKind.None)
-                    Debug.Log($"[SkillCaster] {hit.Control} on target {hit.TargetIndex} (visual stub — Task 3).");
+                if (hit.Control != ControlKind.None) PlayControl(target, hit.Control);
             }
 
             if (resolution.SelfHeal > 0f) _self.Heal(resolution.SelfHeal);
-            if (resolution.SelfShield > 0f)
-                Debug.Log($"[SkillCaster] Shield {resolution.SelfShield:F0} (visual stub — Task 3).");
-            if (resolution.DashDistance > 0f)
-                Debug.Log($"[SkillCaster] Dash {resolution.DashDistance:F0} (visual stub — Task 3).");
+            if (resolution.SelfShield > 0f) GrantShield(resolution.SelfShield);
+            if (resolution.DashDistance > 0f) PlayDash(resolution.DashDistance);
+        }
+
+        // Non-damage effects need assets — route to the SkillEffects stub layer, or log
+        // if it is absent (Task 3 placeholder).
+        private void PlayControl(IDamageable target, ControlKind kind)
+        {
+            if (_effects != null) _effects.PlayControl(target, kind);
+            else Debug.Log($"[SkillCaster] {kind} on target (stub).");
+        }
+
+        private void GrantShield(float amount)
+        {
+            if (_effects != null) _effects.GrantShield(amount);
+            else Debug.Log($"[SkillCaster] Shield {amount:F0} (stub).");
+        }
+
+        private void PlayDash(float distance)
+        {
+            var direction = aimSource != null ? aimSource.forward : transform.forward;
+            if (_effects != null) _effects.PlayDash(direction, distance);
+            else Debug.Log($"[SkillCaster] Dash {distance:F0} (stub).");
         }
 
         private IEnumerator DamageOverTime(IDamageable target, float perTick, int ticks)
