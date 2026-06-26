@@ -11,12 +11,14 @@ using ProjectAscension.Net;
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// Reports the player's behavior signature to the server's discovery trigger
-    /// (POST /api/discoveries/evaluate) — the authoritative functional trigger
-    /// (ADR 0002 core 4), alongside the local catalog driven by
-    /// <see cref="BehaviorTracker"/>. Subscribes the same gameplay facts, accumulates
-    /// counts (<see cref="BehaviorAccumulator"/>), and flushes on an interval.
-    /// Disabled when no <see cref="serverUrl"/> is set, so offline play is unaffected.
+    /// SLICE SCAFFOLDING (ADR 0004). Reports the player's behavior signature to the
+    /// server's discovery trigger (POST /api/discoveries/evaluate) by accumulating
+    /// gameplay facts client-side and flushing on an interval. This exists only because
+    /// the slice has no authoritative server simulation — in the MMO the server runs
+    /// GameSimulation and observes behavior directly, so this reporter (and the client
+    /// REST path) is DELETED and the trigger subscribes to server-sim events instead.
+    /// Client-asserted behavior is not authoritative; the slice trades that for a
+    /// playable loop. Disabled when no <see cref="serverUrl"/> is set.
     /// </summary>
     public sealed class DiscoveryReporter : MonoBehaviour
     {

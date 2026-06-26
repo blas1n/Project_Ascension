@@ -5,7 +5,8 @@
     "ProjectAscension.Domain",
     "ProjectAscension.Equipment",
     "ProjectAscension.Combat",
-    "ProjectAscension.GameSimulation"
+    "ProjectAscension.GameSimulation",
+    "ProjectAscension.Net"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -52,7 +52,9 @@ namespace ProjectAscension.Net
     /// <summary>
     /// Thin UnityWebRequest client for the discovery API. Coroutine-based so callers
     /// can drive it from MonoBehaviours. Logic stays server-side / in GameSimulation;
-    /// this is just IO.
+    /// this is just IO. NOTE: the /evaluate path is slice scaffolding (ADR 0004) — in
+    /// the MMO the server observes its own simulation and the client never POSTs
+    /// behavior. GetSkill (reading frozen discovered content) stays valid either way.
     /// </summary>
     public sealed class DiscoveryApiClient
     {
