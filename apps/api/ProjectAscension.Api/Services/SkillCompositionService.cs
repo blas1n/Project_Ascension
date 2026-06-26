@@ -266,7 +266,9 @@ public class SkillCompositionService : ISkillCompositionService
                 // single-behavior discovery like double jump gets one). Weapons fire on
                 // the attack input, so they need no combo.
                 skill.InvocationComboJson = manifestation == ManifestationKind.Command
-                    ? JsonSerializer.Serialize(ComboAssigner.Assign(skill.DiscoveryId.ToString()).Select(t => t.ToString()).ToList())
+                    ? JsonSerializer.Serialize(ComboAssigner
+                        .Assign(DeserializeTags(skill.BehaviorsJson), skill.DiscoveryId.ToString())
+                        .Select(t => t.ToString()).ToList())
                     : "[]";
 
                 skill.Status = DiscoveryContentStatus.Ready;

@@ -13,11 +13,12 @@ public enum InputToken
 
 /// <summary>
 /// Assigns a command its invocation combo — the button sequence the player performs
-/// to invoke it. The combo is decided by the rule engine (deterministic, not by the
-/// AI and not tied to the behaviors that discovered it): the discovery is the
-/// "incantation"'s seed, so the same discovery always maps to the same combo, and a
-/// single-behavior discovery (double jump) gets a combo just like a multi-behavior one
-/// — all active non-weapon skills are invoked the same way.
+/// to invoke it. The rule engine derives it from the behaviors that discovered the
+/// skill, mapped to buttons, so the combo reads naturally (jump → "jump, jump";
+/// dodge-then-attack → "dodge, left-click"). A single behavior is repeated — double
+/// jump is invoked by jumping again, the conventional feel. When no behaviors are
+/// recorded (e.g. a manually triggered discovery) it falls back to a deterministic
+/// hash of the seed. Deterministic and server-authoritative (not the AI's call).
 /// </summary>
 public static class ComboAssigner
 {
@@ -27,7 +28,36 @@ public static class ComboAssigner
     public const int MinLength = 2;
     public const int MaxLength = 4;
 
-    public static IReadOnlyList<InputToken> Assign(string seed)
+    public static IReadOnlyList<InputToken> Assign(IEnumerable<string>? behaviors, string seed)
+    {
+        var combo = new List<InputToken>();
+        if (behaviors is not null)
+        {
+            foreach (var behavior in behaviors)
+            {
+                if (!TryMap(behavior, out var token)) continue;          // skip derived/unknown (e.g. DodgeAttack)
+                if (combo.Count > 0 && combo[^1] == token) continue;     // no immediate repeat
+                combo.Add(token);
+            }
+        }
+
+        if (combo.Count == 0) return FromSeed(seed);   // no behaviors → deterministic fallback
+        if (combo.Count == 1) combo.Add(combo[0]);     // single behavior → repeat (double jump = jump, jump)
+        return combo;
+    }
+
+    private static bool TryMap(string behavior, out InputToken token)
+    {
+        token = default;
+        if (string.IsNullOrEmpty(behavior)) return false;
+        if (behavior.Equals("Jump", StringComparison.OrdinalIgnoreCase)) { token = InputToken.Jump; return true; }
+        if (behavior.Equals("Dodge", StringComparison.OrdinalIgnoreCase)) { token = InputToken.Dodge; return true; }
+        if (behavior.Equals("MeleeAttack", StringComparison.OrdinalIgnoreCase)) { token = InputToken.LeftClick; return true; }
+        if (behavior.Equals("RangedAttack", StringComparison.OrdinalIgnoreCase)) { token = InputToken.RightClick; return true; }
+        return false;
+    }
+
+    private static IReadOnlyList<InputToken> FromSeed(string seed)
     {
         uint hash = Fnv(seed ?? string.Empty);
         int length = MinLength + (int)(hash % (uint)(MaxLength - MinLength + 1));
@@ -38,8 +68,7 @@ public static class ComboAssigner
             hash = (hash ^ (uint)(i + 1)) * 16777619u;
             int index = (int)(hash % (uint)Vocabulary.Length);
             var token = Vocabulary[index];
-            // Avoid a trivial immediate repeat (e.g. Jump, Jump) for a cleaner combo.
-            if (combo.Count > 0 && token == combo[combo.Count - 1])
+            if (combo.Count > 0 && token == combo[^1])
                 token = Vocabulary[(index + 1) % Vocabulary.Length];
             combo.Add(token);
         }
