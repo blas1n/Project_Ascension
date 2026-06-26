@@ -72,9 +72,17 @@ public sealed class StubSkillComposer : ISkillComposer
             PrimitiveKind.Pierce => "Lance",
             PrimitiveKind.Area => "Burst",
             PrimitiveKind.DamageOverTime => "Brand",
-            PrimitiveKind.Dash => "Step",
+            PrimitiveKind.Chain => "Arc",
+            PrimitiveKind.Fork => "Split",
+            PrimitiveKind.Beam => "Ray",
             PrimitiveKind.Knockback => "Shove",
+            PrimitiveKind.Slow => "Mire",
+            PrimitiveKind.Stun => "Jolt",
+            PrimitiveKind.Dash => "Step",
+            PrimitiveKind.Blink => "Flicker",
             PrimitiveKind.Shield => "Ward",
+            PrimitiveKind.Barrier => "Wall",
+            PrimitiveKind.Leech => "Drain",
             _ => "Art",
         };
         return $"{adj} {noun}";

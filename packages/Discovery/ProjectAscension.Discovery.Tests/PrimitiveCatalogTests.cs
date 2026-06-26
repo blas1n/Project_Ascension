@@ -31,4 +31,31 @@ public class PrimitiveCatalogTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => PrimitiveCatalog.BaseCostOf((PrimitiveKind)999));
     }
+
+    [Fact]
+    public void Catalog_CoversAllCategories()
+    {
+        var categories = PrimitiveCatalog.All.Select(d => d.Category).Distinct().ToList();
+        Assert.Contains(PrimitiveCategory.Offensive, categories);
+        Assert.Contains(PrimitiveCategory.Control, categories);
+        Assert.Contains(PrimitiveCategory.Mobility, categories);
+        Assert.Contains(PrimitiveCategory.Defensive, categories);
+    }
+
+    [Fact]
+    public void EveryDefinedKindIsInTheCatalog()
+    {
+        // Guards against adding a PrimitiveKind enum value without a catalog entry.
+        foreach (PrimitiveKind kind in Enum.GetValues<PrimitiveKind>())
+            Assert.True(PrimitiveCatalog.IsKnown(kind), $"{kind} missing from catalog");
+    }
+
+    [Theory]
+    [InlineData(PrimitiveKind.Chain)]
+    [InlineData(PrimitiveKind.Beam)]
+    [InlineData(PrimitiveKind.Stun)]
+    [InlineData(PrimitiveKind.Blink)]
+    [InlineData(PrimitiveKind.Barrier)]
+    [InlineData(PrimitiveKind.Leech)]
+    public void ExpandedPrimitivesAreKnown(PrimitiveKind kind) => Assert.True(PrimitiveCatalog.IsKnown(kind));
 }
