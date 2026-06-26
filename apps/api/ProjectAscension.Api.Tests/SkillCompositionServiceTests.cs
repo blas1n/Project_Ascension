@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProjectAscension.Api.Services;
 using ProjectAscension.Contracts.Requests;
@@ -92,11 +93,23 @@ public class SkillCompositionServiceTests
             => Task.FromResult<IReadOnlyList<DiscoveryLineage>>(Edges.Where(e => e.ChildDiscoveryId == childDiscoveryId).ToList());
     }
 
+    private sealed class CapturingComposer : ISkillComposer
+    {
+        private readonly StubSkillComposer _inner = new();
+        public CompositionRequest? Last { get; private set; }
+
+        public Task<SkillComposition> ComposeAsync(CompositionRequest request, CancellationToken ct = default)
+        {
+            Last = request;
+            return _inner.ComposeAsync(request, ct);
+        }
+    }
+
     private static SkillCompositionService Service(
         FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics,
-        FakeLineageRepo? lineage = null)
+        FakeLineageRepo? lineage = null, ISkillComposer? composer = null)
         => new(discoveries, skills, knowledge, lineage ?? new FakeLineageRepo(), new FakeTuningProvider(),
-            new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+            composer ?? new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -261,5 +274,52 @@ public class SkillCompositionServiceTests
         Assert.Equal(second.DiscoveryId, result.DiscoveryId);
         var ancestor = Assert.Single(result.Ancestors);
         Assert.Equal(first.DiscoveryId, ancestor.DiscoveryId);
+    }
+
+    [Fact]
+    public async Task ComposePending_InjectsLineageFromGraph()
+    {
+        var skills = new FakeSkillRepo();
+        var lineage = new FakeLineageRepo();
+        using var metrics = new CompositionMetrics();
+        var composer = new CapturingComposer();
+
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+
+        // A composed (Ready) ancestor and a pending child that builds on it.
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = parentId,
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Flame Bullet",
+            Description = "A small fiery dart.",
+            PrimitivesJson = JsonSerializer.Serialize(new[] { new ComposedPrimitive(PrimitiveKind.Projectile, 2) }),
+            Theme = "fire",
+            ContextTagsJson = "[\"fire\"]",
+            PrimaryBehavior = "Projectile",
+            PowerBudget = 30,
+            CreatedAt = DateTime.UtcNow,
+        });
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = childId,
+            Status = DiscoveryContentStatus.Pending,
+            Theme = "compressed fire",
+            ContextTagsJson = "[\"fire\"]",
+            PrimaryBehavior = "Projectile",
+            PowerBudget = 30,
+            CreatedAt = DateTime.UtcNow,
+        });
+        lineage.Edges.Add(new DiscoveryLineage { ChildDiscoveryId = childId, ParentDiscoveryId = parentId });
+
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, lineage, composer)
+            .ComposePendingAsync(10);
+
+        Assert.NotNull(composer.Last);
+        var prior = Assert.Single(composer.Last!.Lineage!);
+        Assert.Equal("Flame Bullet", prior.Name);
     }
 }

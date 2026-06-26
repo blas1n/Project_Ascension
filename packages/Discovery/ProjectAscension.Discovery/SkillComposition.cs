@@ -20,12 +20,22 @@ public sealed record ComposedPrimitive(PrimitiveKind Kind, int Magnitude, int Ra
 public sealed record SkillComposition(string Name, string Description, IReadOnlyList<ComposedPrimitive> Primitives);
 
 /// <summary>
-/// The seed a composer works from: the triggered discovery's theme/context and a
-/// power budget. The composer proposes a <see cref="SkillComposition"/>;
+/// A prior discovered skill this discovery builds on — retrieved from the lineage
+/// graph and fed to the composer as context (RAG-style), so a new discovery genuinely
+/// extends what came before instead of being composed in isolation
+/// (discovery.md 발견 그래프).
+/// </summary>
+public sealed record PriorArt(string Name, string Description, IReadOnlyList<ComposedPrimitive> Primitives);
+
+/// <summary>
+/// The seed a composer works from: the triggered discovery's theme/context, a power
+/// budget, and the <see cref="Lineage"/> of prior discoveries it builds on. The
+/// composer proposes a <see cref="SkillComposition"/>;
 /// <see cref="CompositionValidator"/> enforces the guardrails.
 /// </summary>
 public sealed record CompositionRequest(
     string Theme,
     IReadOnlyList<string> ContextTags,
     PrimitiveKind PrimaryBehavior,
-    PowerBudget Budget);
+    PowerBudget Budget,
+    IReadOnlyList<PriorArt>? Lineage = null);

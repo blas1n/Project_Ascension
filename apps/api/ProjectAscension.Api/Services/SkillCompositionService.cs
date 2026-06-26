@@ -12,6 +12,7 @@ namespace ProjectAscension.Api.Services;
 public class SkillCompositionService : ISkillCompositionService
 {
     private const int MaxComposeAttempts = 3;
+    private const int MaxLineageContext = 4;
 
     private readonly IDiscoveryRepository _discoveries;
     private readonly IDiscoverySkillRepository _skills;
@@ -231,6 +232,10 @@ public class SkillCompositionService : ISkillCompositionService
                 continue;
             }
 
+            // RAG: retrieve the composed lineage so the AI extends prior discoveries
+            // (discovery.md 발견 그래프 — the graph is used, not just recorded).
+            request = request with { Lineage = await RetrieveLineageAsync(skill.DiscoveryId, ct) };
+
             var startedAt = Stopwatch.GetTimestamp();
             var outcome = await CompositionPipeline.ForgeAsync(request, _composer, MaxComposeAttempts, ct);
             var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
@@ -294,6 +299,31 @@ public class SkillCompositionService : ISkillCompositionService
 
         request = new CompositionRequest(skill.Theme, tags ?? new List<string>(), primary, new PowerBudget(skill.PowerBudget));
         return true;
+    }
+
+    private async Task<IReadOnlyList<PriorArt>> RetrieveLineageAsync(Guid discoveryId, CancellationToken ct)
+    {
+        // Pull the immediate composed ancestors — the strongest, bounded context for
+        // the composer to build on (RAG over the discovery graph).
+        var edges = await _lineage.GetByChildAsync(discoveryId, ct);
+        if (edges.Count == 0) return Array.Empty<PriorArt>();
+
+        var parents = await _skills.GetByDiscoveryIdsAsync(edges.Select(e => e.ParentDiscoveryId), ct);
+
+        var priorArt = new List<PriorArt>();
+        foreach (var s in parents)
+        {
+            // Only Ready ancestors carry composed content to build on.
+            if (s.Status != DiscoveryContentStatus.Ready || s.Name is null || s.PrimitivesJson is null) continue;
+
+            List<ComposedPrimitive>? prims;
+            try { prims = JsonSerializer.Deserialize<List<ComposedPrimitive>>(s.PrimitivesJson); }
+            catch (JsonException) { continue; }
+
+            priorArt.Add(new PriorArt(s.Name, s.Description ?? string.Empty, prims ?? new List<ComposedPrimitive>()));
+            if (priorArt.Count >= MaxLineageContext) break;
+        }
+        return priorArt;
     }
 
     private static IReadOnlyList<string> DescribePrimitives(string json)
