@@ -47,7 +47,10 @@ public class DiscoveriesController : ControllerBase
 
     /// <summary>Scores a behavior signature; if it crosses the significance threshold
     /// the rule engine fires a discovery (ADR 0002 core 4 — a function, not a catalog).
-    /// Returns whether it fired, the score, and the new discovery id.</summary>
+    /// Returns whether it fired, the score, and the new discovery id.
+    /// NOTE (ADR 0004): in production the trigger is fed by the authoritative server
+    /// simulation observing behavior directly; this client-facing REST entry point is
+    /// slice scaffolding for tooling and the no-server-sim slice.</summary>
     [HttpPost("evaluate")]
     public async Task<IActionResult> Evaluate([FromBody] EvaluateTriggerRequest request, CancellationToken ct)
     {
