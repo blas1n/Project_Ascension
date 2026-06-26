@@ -24,13 +24,16 @@ namespace ProjectAscension.GameSimulation.Combat
         }
 
         /// <summary>Whether the skill can be used with the currently equipped gear: the
-        /// loadout must hold every piece of the skill's required equipment (ADR 0005 —
-        /// a discovery is bound to the weapon it was discovered with).</summary>
+        /// loadout's equipment must be the SAME SET the skill was discovered with —
+        /// both hands match, hand position irrelevant (ADR 0005). Empty binding (e.g. a
+        /// no-equipment movement discovery) is always usable.</summary>
         public static bool Usable(DiscoveredSkill skill, IReadOnlyCollection<string> equipped)
         {
-            if (skill.RequiredEquipment is null || skill.RequiredEquipment.Count == 0) return true;
-            foreach (var required in skill.RequiredEquipment)
-                if (!equipped.Contains(required)) return false;
+            var required = skill.RequiredEquipment;
+            if (required is null || required.Count == 0) return true;
+            if (equipped.Count != required.Count) return false; // no extra / no missing
+            foreach (var tag in required)
+                if (!equipped.Contains(tag)) return false;
             return true;
         }
 

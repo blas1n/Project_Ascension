@@ -89,7 +89,8 @@ namespace ProjectAscension.Game
             if (!HasSkill) return false;
             if (_requiredEquipment == null || _requiredEquipment.Length == 0) return true;
             var equipped = EquipmentTags.CurrentTags(_loadout);
-            return _requiredEquipment.All(equipped.Contains);
+            // Both hands must be the exact equipment the skill was discovered with.
+            return equipped.Count == _requiredEquipment.Length && _requiredEquipment.All(equipped.Contains);
         }
 
         /// <summary>Execute the equipped skill against nearby targets.</summary>
