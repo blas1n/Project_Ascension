@@ -174,7 +174,11 @@ public class SkillCompositionService : ISkillCompositionService
         try
         {
             var primitives = JsonSerializer.Deserialize<List<ComposedPrimitive>>(json) ?? new List<ComposedPrimitive>();
-            return primitives.Select(p => $"{p.Kind} x{p.Magnitude}").ToList();
+            return primitives.Select(p =>
+            {
+                var extra = (p.Range > 0 ? $" r{p.Range}" : string.Empty) + (p.Duration > 0 ? $" d{p.Duration}" : string.Empty);
+                return $"{p.Kind} x{p.Magnitude}{extra}";
+            }).ToList();
         }
         catch (JsonException)
         {

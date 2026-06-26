@@ -70,4 +70,22 @@ public class CompositionValidatorTests
         var skill = Skill(new ComposedPrimitive(PrimitiveKind.Dash, magnitude));
         Assert.Equal(CompositionError.InvalidMagnitude, CompositionValidator.Validate(skill, new PowerBudget(100)).Error);
     }
+
+    [Fact]
+    public void Parameters_AddToCost()
+    {
+        // Projectile(10)*1 + (range 2 + duration 1) * 2 = 10 + 6 = 16
+        var skill = Skill(new ComposedPrimitive(PrimitiveKind.Projectile, 1, Range: 2, Duration: 1));
+        Assert.Equal(16, CompositionValidator.Validate(skill, new PowerBudget(30)).TotalCost);
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(CompositionValidator.MaxParameterTier + 1, 0)]
+    [InlineData(0, CompositionValidator.MaxParameterTier + 1)]
+    public void OutOfRangeParameters_Fail(int range, int duration)
+    {
+        var skill = Skill(new ComposedPrimitive(PrimitiveKind.Dash, 1, range, duration));
+        Assert.Equal(CompositionError.InvalidParameter, CompositionValidator.Validate(skill, new PowerBudget(100)).Error);
+    }
 }
