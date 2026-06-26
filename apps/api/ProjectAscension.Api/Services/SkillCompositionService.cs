@@ -53,7 +53,8 @@ public class SkillCompositionService : ISkillCompositionService
 
         return await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, budget.Total, Array.Empty<Guid>(), request.IdempotencyKey, ct);
+            request.ContextTags, request.PrimaryBehavior, Array.Empty<string>(), budget.Total,
+            Array.Empty<Guid>(), request.IdempotencyKey, ct);
     }
 
     public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
@@ -77,16 +78,17 @@ public class SkillCompositionService : ISkillCompositionService
 
         // Claim the behavior region once (first-discoverer) via an idempotency key,
         // so repeated evaluations of a still-growing signature don't re-fire it.
+        var behaviors = request.Behaviors.Select(b => b.Behavior).ToList();
         var discoveryId = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, budget.Total, parents, RegionKey(request), ct);
+            request.ContextTags, request.PrimaryBehavior, behaviors, budget.Total, parents, RegionKey(request), ct);
 
         return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
     }
 
     private async Task<Guid> CreateDiscoveryAsync(
         Guid actorId, Guid regionId, DiscoveryType type, string theme,
-        IReadOnlyList<string> contextTags, string primaryBehavior, int budget,
+        IReadOnlyList<string> contextTags, string primaryBehavior, IReadOnlyList<string> behaviors, int budget,
         IReadOnlyList<Guid> parentDiscoveryIds, string? idempotencyKey,
         CancellationToken ct)
     {
@@ -130,6 +132,7 @@ public class SkillCompositionService : ISkillCompositionService
             Theme = theme,
             ContextTagsJson = JsonSerializer.Serialize(contextTags),
             PrimaryBehavior = primaryBehavior,
+            BehaviorsJson = JsonSerializer.Serialize(behaviors),
             PowerBudget = budget,
             IdempotencyKey = idempotencyKey,
             CreatedAt = DateTime.UtcNow,
@@ -201,6 +204,12 @@ public class SkillCompositionService : ISkillCompositionService
             .Select(a => new LineageEntry(a, nameById.TryGetValue(a, out var n) ? n : string.Empty))
             .ToList();
         return new DiscoveryLineageResponse(discoveryId, entries);
+    }
+
+    private static List<string> DeserializeTags(string json)
+    {
+        try { return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
+        catch (JsonException) { return new List<string>(); }
     }
 
     private static IReadOnlyDictionary<string, int> ToBehaviorCounts(IReadOnlyList<BehaviorCount> behaviors)
@@ -280,13 +289,12 @@ public class SkillCompositionService : ISkillCompositionService
             ? new List<string>()
             : DescribePrimitives(skill.PrimitivesJson);
 
-        List<string> contextTags;
-        try { contextTags = JsonSerializer.Deserialize<List<string>>(skill.ContextTagsJson) ?? new List<string>(); }
-        catch (JsonException) { contextTags = new List<string>(); }
+        var contextTags = DeserializeTags(skill.ContextTagsJson);
+        var behaviors = DeserializeTags(skill.BehaviorsJson);
 
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives,
-            skill.Manifestation, contextTags);
+            skill.Manifestation, contextTags, behaviors);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)

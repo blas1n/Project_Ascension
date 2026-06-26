@@ -27,6 +27,11 @@ namespace ProjectAscension.Domain.Entities
         public string Theme { get; set; } = string.Empty;
         public string ContextTagsJson { get; set; } = "[]";
         public string PrimaryBehavior { get; set; } = string.Empty; // PrimitiveKind name
+
+        /// <summary>The player behaviors that triggered this discovery (e.g. ["Dodge",
+        /// "MeleeAttack"]) — a Command is invoked by re-performing this combo. JSON array.</summary>
+        public string BehaviorsJson { get; set; } = "[]";
+
         public int PowerBudget { get; set; }
 
         // Content (filled when Ready).

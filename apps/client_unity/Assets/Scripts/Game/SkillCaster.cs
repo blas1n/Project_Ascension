@@ -75,8 +75,15 @@ namespace ProjectAscension.Game
                 .ToArray();
 
             // Register into the session's set — weapon (synthesized magic) or command.
-            var set = GameSession.Instance?.DiscoveredSkills;
-            set?.Add(new DiscoveredSkill(_skill.Name, _manifestation, _skill, _requiredEquipment));
+            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill, _requiredEquipment);
+            GameSession.Instance?.DiscoveredSkills?.Add(discovered);
+
+            // A command is invoked by re-performing its discovery combo — register it.
+            if (_manifestation == ManifestationKind.Command)
+            {
+                var combo = ComboBuilder.FromBehaviors(dto.behaviors ?? new string[0]);
+                FindAnyObjectByType<ComboInvoker>()?.RegisterCommand(combo, discovered);
+            }
 
             var bind = _requiredEquipment.Length > 0 ? string.Join("+", _requiredEquipment) : "any";
             Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} (needs {bind}, {_skill.Primitives.Count} primitives).");
@@ -93,7 +100,7 @@ namespace ProjectAscension.Game
             return equipped.Count == _requiredEquipment.Length && _requiredEquipment.All(equipped.Contains);
         }
 
-        /// <summary>Execute the equipped skill against nearby targets.</summary>
+        /// <summary>Execute the equipped weapon skill against nearby targets.</summary>
         public void Cast()
         {
             if (!HasSkill) return;
@@ -103,8 +110,17 @@ namespace ProjectAscension.Game
                 return;
             }
 
+            ExecuteSkill(_skill);
+        }
+
+        /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
+        /// by weapon fire (<see cref="Cast"/>) and combo-invoked commands
+        /// (<see cref="ComboInvoker"/>); the caller is responsible for equipment gating.</summary>
+        public void ExecuteSkill(Skill skill)
+        {
+            if (skill == null) return;
             var targets = FindTargets();
-            var resolution = SkillResolver.Resolve(_skill, targets.Count);
+            var resolution = SkillResolver.Resolve(skill, targets.Count);
             Apply(resolution, targets);
         }
 
