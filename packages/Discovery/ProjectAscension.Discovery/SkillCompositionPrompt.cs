@@ -10,8 +10,10 @@ public static class SkillCompositionPrompt
 {
     public static string Build(CompositionRequest request)
     {
-        var primitives = string.Join(
-            "\n", PrimitiveCatalog.All.Select(p => $"- {p.Kind} (cost {p.BaseCost}): {p.Blurb}"));
+        var primitives = string.Join("\n\n", PrimitiveCatalog.All
+            .GroupBy(p => p.Category)
+            .Select(g => $"{g.Key}:\n" + string.Join(
+                "\n", g.Select(p => $"- {p.Kind} (cost {p.BaseCost}): {p.Blurb}"))));
         var tags = request.ContextTags.Count > 0 ? string.Join(", ", request.ContextTags) : "none";
 
         return

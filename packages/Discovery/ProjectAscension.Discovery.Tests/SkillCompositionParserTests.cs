@@ -66,6 +66,8 @@ public class SkillCompositionPromptTests
         Assert.Contains("30", prompt);
         Assert.Contains("Projectile", prompt);
         Assert.Contains("arcane", prompt);
+        Assert.Contains("Offensive", prompt); // primitives are grouped by category
+        Assert.Contains("Defensive", prompt);
         foreach (var def in PrimitiveCatalog.All)
             Assert.Contains(def.Kind.ToString(), prompt);
     }
