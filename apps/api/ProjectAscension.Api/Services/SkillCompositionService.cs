@@ -16,6 +16,7 @@ public class SkillCompositionService : ISkillCompositionService
     private readonly IDiscoveryRepository _discoveries;
     private readonly IDiscoverySkillRepository _skills;
     private readonly IKnowledgeRepository _knowledge;
+    private readonly IDiscoveryLineageRepository _lineage;
     private readonly IDiscoveryTuningProvider _tuning;
     private readonly ISkillComposer _composer;
     private readonly CompositionMetrics _metrics;
@@ -25,6 +26,7 @@ public class SkillCompositionService : ISkillCompositionService
         IDiscoveryRepository discoveries,
         IDiscoverySkillRepository skills,
         IKnowledgeRepository knowledge,
+        IDiscoveryLineageRepository lineage,
         IDiscoveryTuningProvider tuning,
         ISkillComposer composer,
         CompositionMetrics metrics,
@@ -33,6 +35,7 @@ public class SkillCompositionService : ISkillCompositionService
         _discoveries = discoveries;
         _skills = skills;
         _knowledge = knowledge;
+        _lineage = lineage;
         _tuning = tuning;
         _composer = composer;
         _metrics = metrics;
@@ -49,7 +52,7 @@ public class SkillCompositionService : ISkillCompositionService
 
         return await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, budget.Total, request.IdempotencyKey, ct);
+            request.ContextTags, request.PrimaryBehavior, budget.Total, Array.Empty<Guid>(), request.IdempotencyKey, ct);
     }
 
     public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
@@ -58,7 +61,12 @@ public class SkillCompositionService : ISkillCompositionService
         // scores the actual behavior combination against the runtime tuning and fires
         // only when it crosses the significance threshold.
         var tuning = await _tuning.GetAsync(ct);
-        var signature = new BehaviorSignature(ToBehaviorCounts(request.Behaviors), request.ContextTags, request.Persistence);
+
+        // Prior owned discoveries in this space become the new discovery's parents and
+        // deepen it (discovery.md 발견 그래프: "발견은 다음 발견의 시작").
+        var parents = await ComputeParentsAsync(request.ActorId, request.ContextTags, request.PrimaryBehavior, ct);
+        var signature = new BehaviorSignature(
+            ToBehaviorCounts(request.Behaviors), request.ContextTags, parents.Count, request.Persistence);
         var outcome = TriggerEvaluator.Evaluate(signature, tuning);
         if (!outcome.Fires)
             return new EvaluateTriggerResponse(false, outcome.Score, null);
@@ -70,14 +78,15 @@ public class SkillCompositionService : ISkillCompositionService
         // so repeated evaluations of a still-growing signature don't re-fire it.
         var discoveryId = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, budget.Total, RegionKey(request), ct);
+            request.ContextTags, request.PrimaryBehavior, budget.Total, parents, RegionKey(request), ct);
 
         return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
     }
 
     private async Task<Guid> CreateDiscoveryAsync(
         Guid actorId, Guid regionId, DiscoveryType type, string theme,
-        IReadOnlyList<string> contextTags, string primaryBehavior, int budget, string? idempotencyKey,
+        IReadOnlyList<string> contextTags, string primaryBehavior, int budget,
+        IReadOnlyList<Guid> parentDiscoveryIds, string? idempotencyKey,
         CancellationToken ct)
     {
         // Idempotent: a repeated key returns the existing discovery instead of a
@@ -125,7 +134,72 @@ public class SkillCompositionService : ISkillCompositionService
             CreatedAt = DateTime.UtcNow,
         };
         await _skills.AddAsync(skill, ct);
+
+        // Record the lineage edges — permanent discovery graph (discovery.md 발견 계보).
+        if (parentDiscoveryIds.Count > 0)
+            await _lineage.AddEdgesAsync(
+                parentDiscoveryIds.Select(p => new DiscoveryLineage { ChildDiscoveryId = discovery.Id, ParentDiscoveryId = p }), ct);
+
         return discovery.Id;
+    }
+
+    private async Task<IReadOnlyList<Guid>> ComputeParentsAsync(
+        Guid actorId, IReadOnlyList<string> contextTags, string primaryBehavior, CancellationToken ct)
+    {
+        var owned = await _knowledge.GetByOwnerAsync(actorId, ct);
+        if (owned.Count == 0) return Array.Empty<Guid>();
+
+        var ownedSkills = await _skills.GetByDiscoveryIdsAsync(owned.Select(k => k.DiscoveryId), ct);
+        var tagSet = new HashSet<string>(contextTags, StringComparer.OrdinalIgnoreCase);
+
+        var parents = new List<Guid>();
+        foreach (var s in ownedSkills)
+        {
+            // A prior discovery is a parent if it sits in the same knowledge space
+            // (shares a context tag) or the same skill line (same primary behavior).
+            bool sameBehavior = string.Equals(s.PrimaryBehavior, primaryBehavior, StringComparison.OrdinalIgnoreCase);
+            bool sharedTag = false;
+            try
+            {
+                var tags = JsonSerializer.Deserialize<List<string>>(s.ContextTagsJson) ?? new List<string>();
+                sharedTag = tags.Any(tagSet.Contains);
+            }
+            catch (JsonException) { }
+
+            if (sameBehavior || sharedTag) parents.Add(s.DiscoveryId);
+        }
+        return parents;
+    }
+
+    public async Task<DiscoveryLineageResponse> GetLineageAsync(Guid discoveryId, CancellationToken ct = default)
+    {
+        // Walk parent edges upward (graph, nearest-first), guarding against cycles.
+        var ancestors = new List<Guid>();
+        var visited = new HashSet<Guid> { discoveryId };
+        var frontier = new Queue<Guid>();
+        frontier.Enqueue(discoveryId);
+
+        int guard = 0;
+        while (frontier.Count > 0 && guard++ < 256)
+        {
+            var edges = await _lineage.GetByChildAsync(frontier.Dequeue(), ct);
+            foreach (var e in edges)
+            {
+                if (!visited.Add(e.ParentDiscoveryId)) continue;
+                ancestors.Add(e.ParentDiscoveryId);
+                frontier.Enqueue(e.ParentDiscoveryId);
+            }
+        }
+
+        if (ancestors.Count == 0)
+            return new DiscoveryLineageResponse(discoveryId, new List<LineageEntry>());
+
+        var skills = await _skills.GetByDiscoveryIdsAsync(ancestors, ct);
+        var nameById = skills.ToDictionary(s => s.DiscoveryId, s => s.Name ?? s.Theme);
+        var entries = ancestors
+            .Select(a => new LineageEntry(a, nameById.TryGetValue(a, out var n) ? n : string.Empty))
+            .ToList();
+        return new DiscoveryLineageResponse(discoveryId, entries);
     }
 
     private static IReadOnlyDictionary<string, int> ToBehaviorCounts(IReadOnlyList<BehaviorCount> behaviors)

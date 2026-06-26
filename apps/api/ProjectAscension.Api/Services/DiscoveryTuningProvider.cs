@@ -28,6 +28,7 @@ public class DiscoveryTuningProvider : IDiscoveryTuningProvider
             factorWeights,
             settings.DefaultBehaviorWeight,
             settings.DefaultFactorWeight,
+            settings.KnowledgeDepthWeight,
             settings.PersistenceWeight,
             settings.CombinationSynergy,
             settings.FireThreshold,

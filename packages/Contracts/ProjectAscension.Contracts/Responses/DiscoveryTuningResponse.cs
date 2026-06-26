@@ -10,6 +10,7 @@ namespace ProjectAscension.Contracts.Responses
         IReadOnlyDictionary<string, int> FactorWeights,
         int DefaultBehaviorWeight,
         int DefaultFactorWeight,
+        int KnowledgeDepthWeight,
         int PersistenceWeight,
         int CombinationSynergy,
         int FireThreshold,

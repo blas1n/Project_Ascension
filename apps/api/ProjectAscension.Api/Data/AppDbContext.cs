@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Discovery> Discoveries => Set<Discovery>();
     public DbSet<DiscoverySkill> DiscoverySkills => Set<DiscoverySkill>();
     public DbSet<Knowledge> Knowledge => Set<Knowledge>();
+    public DbSet<DiscoveryLineage> DiscoveryLineages => Set<DiscoveryLineage>();
     public DbSet<DiscoveryCandidate> DiscoveryCandidates => Set<DiscoveryCandidate>();
     public DbSet<DiscoveryProgress> DiscoveryProgresses => Set<DiscoveryProgress>();
     public DbSet<BehaviorWeight> BehaviorWeights => Set<BehaviorWeight>();

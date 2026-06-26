@@ -63,10 +63,16 @@ public class DiscoveriesController : ControllerBase
         var t = await _tuning.GetAsync(ct);
         return Ok(new DiscoveryTuningResponse(
             t.BehaviorWeights, t.FactorWeights, t.DefaultBehaviorWeight, t.DefaultFactorWeight,
-            t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
+            t.KnowledgeDepthWeight, t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
             t.BudgetBase, t.BudgetPerScore, t.BudgetMin, t.BudgetMax,
             t.UncommonScore, t.RareScore, t.EpicScore, t.LegendaryScore));
     }
+
+    /// <summary>The discovery's recorded lineage — the prior discoveries it was built
+    /// on (discovery.md 발견 계보), nearest first.</summary>
+    [HttpGet("{discoveryId:guid}/lineage")]
+    public async Task<IActionResult> GetLineage(Guid discoveryId, CancellationToken ct)
+        => Ok(await _composition.GetLineageAsync(discoveryId, ct));
 
     /// <summary>Polls a discovery's content: Pending until the AI composes it, then
     /// the frozen skill.</summary>

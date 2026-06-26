@@ -3,14 +3,16 @@ namespace ProjectAscension.SkillForge;
 /// <summary>
 /// What the player actually did and where: how many times each behavior was
 /// performed (<see cref="Behaviors"/>), the surrounding context factors —
-/// environment / equipment / knowledge (<see cref="Factors"/>) — and how sustained
-/// the pattern was (<see cref="Persistence"/>). The counts and factors are observed
-/// facts reported by the client; the significance they carry is decided here,
-/// server-side.
+/// environment / equipment / knowledge (<see cref="Factors"/>), how much relevant
+/// prior knowledge the player already owns here (<see cref="KnowledgeDepth"/>), and
+/// how sustained the pattern was (<see cref="Persistence"/>). The counts and factors
+/// are observed facts reported by the client; the significance they carry is decided
+/// here, server-side.
 /// </summary>
 public sealed record BehaviorSignature(
     IReadOnlyDictionary<string, int> Behaviors,
     IReadOnlyList<string> Factors,
+    int KnowledgeDepth,
     int Persistence);
 
 /// <summary>Whether a behavior signature fires a discovery, the derived rarity, and
@@ -58,9 +60,16 @@ public static class TriggerEvaluator
             distinct++;
         }
 
+        // Prior knowledge the player owns in this space deepens a discovery — mastered
+        // discoveries are the material for the next one (discovery.md 발견 그래프:
+        // "발견은 다음 발견의 시작"). Depth adds significance and counts as an element.
+        int depthScore = signature.KnowledgeDepth * tuning.KnowledgeDepthWeight;
+        if (signature.KnowledgeDepth > 0) distinct++;
+
         int score =
             behaviorScore
             + contextScore
+            + depthScore
             + Math.Max(0, distinct - 1) * tuning.CombinationSynergy
             + signature.Persistence * tuning.PersistenceWeight;
 

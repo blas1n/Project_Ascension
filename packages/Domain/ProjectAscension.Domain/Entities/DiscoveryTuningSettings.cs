@@ -15,6 +15,7 @@ namespace ProjectAscension.Domain.Entities
         // Significance scoring.
         public int DefaultBehaviorWeight { get; set; }
         public int DefaultFactorWeight { get; set; }
+        public int KnowledgeDepthWeight { get; set; }
         public int PersistenceWeight { get; set; }
         public int CombinationSynergy { get; set; }
         public int FireThreshold { get; set; }

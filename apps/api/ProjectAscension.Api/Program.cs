@@ -23,6 +23,7 @@ builder.Services.AddScoped<IContractRepository, ContractRepository>();
 builder.Services.AddScoped<IDiscoveryRepository, DiscoveryRepository>();
 builder.Services.AddScoped<IDiscoverySkillRepository, DiscoverySkillRepository>();
 builder.Services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
+builder.Services.AddScoped<IDiscoveryLineageRepository, DiscoveryLineageRepository>();
 builder.Services.AddScoped<IDiscoveryTuningRepository, DiscoveryTuningRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
