@@ -40,6 +40,8 @@ if (string.Equals(composerProvider, "Ollama", StringComparison.OrdinalIgnoreCase
 {
     var endpoint = builder.Configuration["SkillForge:Ollama:Endpoint"] ?? "http://localhost:11434";
     var model = builder.Configuration["SkillForge:Ollama:Model"] ?? "llama3.2:3b";
+    var timeoutSeconds = builder.Configuration.GetValue("SkillForge:Ollama:TimeoutSeconds", 30);
+    builder.Services.AddSingleton(new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(timeoutSeconds) });
     builder.Services.AddSingleton<IChatClient>(_ => new OllamaApiClient(new Uri(endpoint), model));
     builder.Services.AddSingleton<ISkillComposer, LlmSkillComposer>();
 }
