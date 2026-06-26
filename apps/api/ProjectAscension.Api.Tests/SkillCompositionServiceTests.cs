@@ -53,8 +53,23 @@ public class SkillCompositionServiceTests
         public Task UpsertProgressAsync(DiscoveryProgress progress, CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    private static SkillCompositionService Service(FakeDiscoveryRepo discoveries, FakeSkillRepo skills, CompositionMetrics metrics)
-        => new(discoveries, skills, new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+    private sealed class FakeKnowledgeRepo : IKnowledgeRepository
+    {
+        public List<Knowledge> Items { get; } = new();
+
+        public Task AddAsync(Knowledge knowledge, CancellationToken ct = default)
+        {
+            Items.Add(knowledge);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<Knowledge>> GetByOwnerAsync(Guid ownerActorId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Knowledge>>(Items.Where(k => k.OwnerActorId == ownerActorId).ToList());
+    }
+
+    private static SkillCompositionService Service(
+        FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics)
+        => new(discoveries, skills, knowledge, new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -85,7 +100,7 @@ public class SkillCompositionServiceTests
         listener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref completed, value));
         listener.Start();
 
-        await Service(new FakeDiscoveryRepo(), skills, metrics).ComposePendingAsync(10);
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics).ComposePendingAsync(10);
 
         Assert.Equal(DiscoveryContentStatus.Ready, skills.Skills[0].Status);
         Assert.False(string.IsNullOrEmpty(skills.Skills[0].Name));
@@ -97,8 +112,9 @@ public class SkillCompositionServiceTests
     {
         var discoveries = new FakeDiscoveryRepo();
         var skills = new FakeSkillRepo();
+        var knowledge = new FakeKnowledgeRepo();
         using var metrics = new CompositionMetrics();
-        var service = Service(discoveries, skills, metrics);
+        var service = Service(discoveries, skills, knowledge, metrics);
 
         var req = new TriggerDiscoveryRequest(
             Guid.NewGuid(), Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile", "Rare",
@@ -112,5 +128,23 @@ public class SkillCompositionServiceTests
         Assert.NotEqual(first, other);           // a different key makes a new discovery
         Assert.Equal(2, skills.Skills.Count);    // only k1 and k2 created
         Assert.Equal(2, discoveries.Discoveries.Count);
+        Assert.Equal(2, knowledge.Items.Count);  // ownership created per new discovery, not on the idempotent repeat
+    }
+
+    [Fact]
+    public async Task Trigger_MakesDiscovererTheOwner()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        var knowledge = new FakeKnowledgeRepo();
+        using var metrics = new CompositionMetrics();
+        var actor = Guid.NewGuid();
+
+        var id = await Service(discoveries, skills, knowledge, metrics).TriggerAsync(new TriggerDiscoveryRequest(
+            actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile", "Rare"));
+
+        var owned = Assert.Single(knowledge.Items);
+        Assert.Equal(actor, owned.OwnerActorId);
+        Assert.Equal(id, owned.DiscoveryId);
     }
 }

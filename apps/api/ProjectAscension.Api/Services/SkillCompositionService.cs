@@ -15,6 +15,7 @@ public class SkillCompositionService : ISkillCompositionService
 
     private readonly IDiscoveryRepository _discoveries;
     private readonly IDiscoverySkillRepository _skills;
+    private readonly IKnowledgeRepository _knowledge;
     private readonly ISkillComposer _composer;
     private readonly CompositionMetrics _metrics;
     private readonly ILogger<SkillCompositionService> _logger;
@@ -22,12 +23,14 @@ public class SkillCompositionService : ISkillCompositionService
     public SkillCompositionService(
         IDiscoveryRepository discoveries,
         IDiscoverySkillRepository skills,
+        IKnowledgeRepository knowledge,
         ISkillComposer composer,
         CompositionMetrics metrics,
         ILogger<SkillCompositionService> logger)
     {
         _discoveries = discoveries;
         _skills = skills;
+        _knowledge = knowledge;
         _composer = composer;
         _metrics = metrics;
         _logger = logger;
@@ -55,6 +58,16 @@ public class SkillCompositionService : ISkillCompositionService
             DiscoveredAt = DateTime.UtcNow,
         };
         await _discoveries.AddAsync(discovery, ct);
+
+        // The first discoverer is the first owner — knowledge as an asset
+        // (discovery.md 소유권 생성). Architecture hook; the economy is out of scope.
+        await _knowledge.AddAsync(new Knowledge
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = discovery.Id,
+            OwnerActorId = request.ActorId,
+            CreatedAt = DateTime.UtcNow,
+        }, ct);
 
         // The rule engine owns the power budget — derived from rarity, never sent by
         // the client (ADR 0002: numbers are server-authoritative).
