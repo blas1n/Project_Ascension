@@ -1,4 +1,4 @@
-namespace ProjectAscension.Discovery;
+namespace ProjectAscension.SkillForge;
 
 public enum CompositionError
 {

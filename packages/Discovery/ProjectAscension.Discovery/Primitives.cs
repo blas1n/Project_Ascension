@@ -1,4 +1,4 @@
-namespace ProjectAscension.Discovery;
+namespace ProjectAscension.SkillForge;
 
 /// <summary>
 /// The atomic mechanics the engine can actually execute. AI composition builds a

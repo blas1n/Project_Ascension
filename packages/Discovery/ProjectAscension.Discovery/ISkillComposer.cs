@@ -1,4 +1,4 @@
-namespace ProjectAscension.Discovery;
+namespace ProjectAscension.SkillForge;
 
 /// <summary>
 /// Composes a skill for a triggered discovery. Implementations: a deterministic

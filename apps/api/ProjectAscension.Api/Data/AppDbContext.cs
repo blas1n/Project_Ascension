@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<MonsterSpecies> MonsterSpecies => Set<MonsterSpecies>();
     public DbSet<Monster> Monsters => Set<Monster>();
     public DbSet<Discovery> Discoveries => Set<Discovery>();
+    public DbSet<DiscoverySkill> DiscoverySkills => Set<DiscoverySkill>();
     public DbSet<DiscoveryCandidate> DiscoveryCandidates => Set<DiscoveryCandidate>();
     public DbSet<DiscoveryProgress> DiscoveryProgresses => Set<DiscoveryProgress>();
 

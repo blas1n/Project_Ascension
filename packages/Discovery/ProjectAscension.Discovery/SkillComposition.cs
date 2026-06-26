@@ -1,4 +1,4 @@
-namespace ProjectAscension.Discovery;
+namespace ProjectAscension.SkillForge;
 
 /// <summary>The total power a discovery's skill may spend across its primitives.
 /// Derived by the rule engine (flat for now; from rarity/context later).</summary>

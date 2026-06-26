@@ -1,6 +1,6 @@
-using ProjectAscension.Discovery;
+using ProjectAscension.SkillForge;
 
-namespace ProjectAscension.Discovery.Tests;
+namespace ProjectAscension.SkillForge.Tests;
 
 public class CompositionValidatorTests
 {
