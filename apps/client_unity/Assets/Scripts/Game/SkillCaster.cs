@@ -35,6 +35,12 @@ namespace ProjectAscension.Game
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
         public string SkillName => _skill?.Name ?? "(none)";
 
+        /// <summary>A synthesized-magic weapon (aim + fire) vs an invoked command —
+        /// the input layer binds it accordingly.</summary>
+        public bool IsWeapon => _manifestation == ManifestationKind.Weapon;
+
+        private ManifestationKind _manifestation = ManifestationKind.Command;
+
         private void Awake()
         {
             _self = GetComponent<HitReceiver>();
@@ -53,7 +59,15 @@ namespace ProjectAscension.Game
         {
             if (dto == null || dto.primitives == null || dto.status != "Ready") return; // still Pending → ignore
             _skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
-            Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" ({_skill.Primitives.Count} primitives).");
+            _manifestation = System.Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
+                ? kind
+                : ManifestationKind.Command;
+
+            // Register into the session's set — weapon (synthesized magic) or command.
+            var set = GameSession.Instance?.DiscoveredSkills;
+            set?.Add(new DiscoveredSkill(_skill.Name, _manifestation, _skill));
+
+            Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
         }
 
         /// <summary>Execute the equipped skill against nearby targets.</summary>

@@ -13,6 +13,7 @@ public class DiscoverySkillConfiguration : IEntityTypeConfiguration<DiscoverySki
         builder.Property(s => s.Theme).HasMaxLength(200);
         builder.Property(s => s.PrimaryBehavior).HasMaxLength(50);
         builder.Property(s => s.Name).HasMaxLength(200);
+        builder.Property(s => s.Manifestation).HasMaxLength(20);
         builder.Property(s => s.IdempotencyKey).HasMaxLength(128);
 
         builder.HasIndex(s => s.DiscoveryId).IsUnique();

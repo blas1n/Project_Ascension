@@ -35,6 +35,11 @@ namespace ProjectAscension.Domain.Entities
         public string? PrimitivesJson { get; set; }
         public int? PowerCost { get; set; }
 
+        /// <summary>How the skill is wielded — "Weapon" (a synthesized-magic weapon) or
+        /// "Command" (an invoked technique). Classified deterministically at compose
+        /// time. Stored as a string so the Domain stays free of the SkillForge package.</summary>
+        public string? Manifestation { get; set; }
+
         public int Attempts { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ComposedAt { get; set; }

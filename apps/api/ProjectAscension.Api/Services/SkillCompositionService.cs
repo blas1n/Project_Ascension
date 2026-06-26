@@ -247,6 +247,9 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.Description = outcome.Skill.Description;
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
+                // Deterministic, server-authoritative: a synthesized-magic skill becomes
+                // a weapon; everything else a command (design note / discovery.md).
+                skill.Manifestation = SkillManifest.Classify(outcome.Skill).ToString();
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
 
@@ -278,7 +281,7 @@ public class SkillCompositionService : ISkillCompositionService
             : DescribePrimitives(skill.PrimitivesJson);
 
         return new DiscoverySkillResponse(
-            skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives);
+            skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives, skill.Manifestation);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)
