@@ -18,6 +18,11 @@ namespace ProjectAscension.Domain.Entities
         public Guid DiscoveryId { get; set; }
         public DiscoveryContentStatus Status { get; set; } = DiscoveryContentStatus.Pending;
 
+        /// <summary>Optional client-supplied key for idempotent triggers — a retried
+        /// trigger with the same key returns the existing discovery instead of a
+        /// duplicate. Unique when present (Postgres treats NULLs as distinct).</summary>
+        public string? IdempotencyKey { get; set; }
+
         // Seed (captured at trigger).
         public string Theme { get; set; } = string.Empty;
         public string ContextTagsJson { get; set; } = "[]";

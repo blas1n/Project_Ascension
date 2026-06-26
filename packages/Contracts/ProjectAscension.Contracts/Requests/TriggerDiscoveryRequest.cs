@@ -15,5 +15,6 @@ namespace ProjectAscension.Contracts.Requests
         string Theme,
         IReadOnlyList<string> ContextTags,
         string PrimaryBehavior,
-        string Rarity);
+        string Rarity,
+        string? IdempotencyKey = null);
 }
