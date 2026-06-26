@@ -31,6 +31,7 @@ builder.Services.AddScoped<IDiscoveryService, DiscoveryService>();
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ILoadoutService, LoadoutService>();
 builder.Services.AddScoped<ISkillCompositionService, SkillCompositionService>();
+builder.Services.AddSingleton<CompositionMetrics>();
 
 // AI skill composition. Provider-agnostic via Microsoft.Extensions.AI IChatClient:
 // "Ollama" (default endpoint per config) uses the LLM composer; anything else
