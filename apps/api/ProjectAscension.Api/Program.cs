@@ -1,4 +1,7 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
 using ProjectAscension.Api.Data;
 using ProjectAscension.Api.Data.Repositories;
 using ProjectAscension.Api.Middleware;
@@ -8,7 +11,9 @@ using ProjectAscension.SkillForge;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Serialize/accept enums as their names (e.g. "Skill", "Ready") rather than ints.
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
@@ -27,9 +32,21 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ILoadoutService, LoadoutService>();
 builder.Services.AddScoped<ISkillCompositionService, SkillCompositionService>();
 
-// AI skill composition: the stub composer for now; the LLM-backed composer
-// (Microsoft.Extensions.AI → Ollama/OpenAI/Claude) swaps in here (Stage 1.6).
-builder.Services.AddSingleton<ISkillComposer, StubSkillComposer>();
+// AI skill composition. Provider-agnostic via Microsoft.Extensions.AI IChatClient:
+// "Ollama" (default endpoint per config) uses the LLM composer; anything else
+// (e.g. "Stub") uses the deterministic stub — handy for offline/CI and tests.
+var composerProvider = builder.Configuration["SkillForge:Provider"] ?? "Stub";
+if (string.Equals(composerProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
+{
+    var endpoint = builder.Configuration["SkillForge:Ollama:Endpoint"] ?? "http://localhost:11434";
+    var model = builder.Configuration["SkillForge:Ollama:Model"] ?? "llama3.2:3b";
+    builder.Services.AddSingleton<IChatClient>(_ => new OllamaApiClient(new Uri(endpoint), model));
+    builder.Services.AddSingleton<ISkillComposer, LlmSkillComposer>();
+}
+else
+{
+    builder.Services.AddSingleton<ISkillComposer, StubSkillComposer>();
+}
 builder.Services.AddHostedService<SkillCompositionWorker>();
 
 var app = builder.Build();
