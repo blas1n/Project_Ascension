@@ -48,6 +48,7 @@ namespace ProjectAscension.Net
         public int powerCost;
         public string[] primitives; // e.g. "Projectile x2 r1"
         public string manifestation; // "Weapon" | "Command"
+        public string[] contextTags; // discovery context — equipment tags bind use (ADR 0005)
     }
 
     /// <summary>

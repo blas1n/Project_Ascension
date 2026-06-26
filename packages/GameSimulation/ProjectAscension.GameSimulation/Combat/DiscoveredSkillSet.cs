@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectAscension.GameSimulation.Combat
 {
@@ -22,9 +23,23 @@ namespace ProjectAscension.GameSimulation.Combat
             else _commands.Add(skill);
         }
 
+        /// <summary>Whether the skill can be used with the currently equipped gear: the
+        /// loadout must hold every piece of the skill's required equipment (ADR 0005 —
+        /// a discovery is bound to the weapon it was discovered with).</summary>
+        public static bool Usable(DiscoveredSkill skill, IReadOnlyCollection<string> equipped)
+        {
+            if (skill.RequiredEquipment is null || skill.RequiredEquipment.Count == 0) return true;
+            foreach (var required in skill.RequiredEquipment)
+                if (!equipped.Contains(required)) return false;
+            return true;
+        }
+
         /// <summary>Execute a discovered skill against the targets in range
-        /// (index 0 = primary). Weapon or command resolves identically.</summary>
-        public SkillResolution Use(DiscoveredSkill skill, int availableTargets)
-            => SkillResolver.Resolve(skill.Skill, availableTargets);
+        /// (index 0 = primary) — only if the equipped gear satisfies its binding;
+        /// otherwise no effect. Weapon or command resolves identically.</summary>
+        public SkillResolution Use(DiscoveredSkill skill, IReadOnlyCollection<string> equipped, int availableTargets)
+            => Usable(skill, equipped)
+                ? SkillResolver.Resolve(skill.Skill, availableTargets)
+                : SkillResolution.Empty;
     }
 }
