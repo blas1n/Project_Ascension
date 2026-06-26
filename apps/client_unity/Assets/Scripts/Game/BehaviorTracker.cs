@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Combat;
-using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Discovery;
 
@@ -66,24 +65,11 @@ namespace ProjectAscension.Game
 
         private void BuildContext()
         {
-            // Equipment tags now; environment/target tags plug in here later without
-            // touching the domain systems or the engine signature.
+            // Equipment tags now (shared vocabulary, EquipmentTags); environment/target
+            // tags plug in here later without touching the domain systems or the engine.
             _context.Clear();
-            if (_loadout == null) return;
-            AddTags(_loadout.LeftSlot?.Current?.Data);
-            AddTags(_loadout.RightSlot?.Current?.Data);
-        }
-
-        private void AddTags(WeaponData data)
-        {
-            if (data == null) return;
-            switch (data.EquipmentType)
-            {
-                case EquipmentType.Weapon: _context.Add("melee"); break;
-                case EquipmentType.Firearm: _context.Add("firearm"); break;
-                case EquipmentType.Bow: _context.Add("bow"); break;
-                case EquipmentType.Catalyst: _context.Add("arcane"); break;
-            }
+            foreach (var tag in EquipmentTags.CurrentTags(_loadout))
+                _context.Add(tag);
         }
     }
 }

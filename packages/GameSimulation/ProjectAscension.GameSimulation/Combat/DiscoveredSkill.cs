@@ -11,6 +11,12 @@ namespace ProjectAscension.GameSimulation.Combat
 
     /// <summary>A discovered, executable skill plus how the player wields it — a
     /// synthesized-magic <see cref="ManifestationKind.Weapon"/> or an invoked
-    /// <see cref="ManifestationKind.Command"/>.</summary>
-    public sealed record DiscoveredSkill(string Name, ManifestationKind Manifestation, Skill Skill);
+    /// <see cref="ManifestationKind.Command"/> — and the equipment it is bound to
+    /// (<see cref="RequiredEquipment"/>, ADR 0005). The skill is usable only while the
+    /// loadout holds that equipment; empty = no requirement.</summary>
+    public sealed record DiscoveredSkill(
+        string Name,
+        ManifestationKind Manifestation,
+        Skill Skill,
+        System.Collections.Generic.IReadOnlyList<string>? RequiredEquipment = null);
 }

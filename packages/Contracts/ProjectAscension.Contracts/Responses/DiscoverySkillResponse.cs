@@ -14,5 +14,6 @@ namespace ProjectAscension.Contracts.Responses
         string? Description,
         int? PowerCost,
         IReadOnlyList<string> Primitives,
-        string? Manifestation);
+        string? Manifestation,
+        IReadOnlyList<string> ContextTags);
 }

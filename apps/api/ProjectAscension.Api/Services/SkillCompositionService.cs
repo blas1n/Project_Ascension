@@ -280,8 +280,13 @@ public class SkillCompositionService : ISkillCompositionService
             ? new List<string>()
             : DescribePrimitives(skill.PrimitivesJson);
 
+        List<string> contextTags;
+        try { contextTags = JsonSerializer.Deserialize<List<string>>(skill.ContextTagsJson) ?? new List<string>(); }
+        catch (JsonException) { contextTags = new List<string>(); }
+
         return new DiscoverySkillResponse(
-            skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives, skill.Manifestation);
+            skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives,
+            skill.Manifestation, contextTags);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)
