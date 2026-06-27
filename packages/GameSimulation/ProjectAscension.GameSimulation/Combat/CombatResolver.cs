@@ -1,9 +1,10 @@
 namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
-    /// Deterministic combat outcomes. Unity handles spatial hit detection
-    /// (raycast/overlap) and reports hits; the actual damage/health/death result
-    /// is resolved here so it is authoritative and testable.
+    /// Combat outcomes. The renderer/engine handles spatial hit detection
+    /// (raycast/overlap) and reports hits; the actual damage/health/death result is
+    /// resolved here so it is server-authoritative and testable (ADR 0004/0006 — the
+    /// server resolves and replicates the result; the client renders it).
     /// </summary>
     public static class CombatResolver
     {
