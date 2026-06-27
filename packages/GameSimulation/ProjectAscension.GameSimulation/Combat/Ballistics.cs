@@ -3,13 +3,15 @@ using System.Numerics;
 namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
-    /// Deterministic projectile motion — the authoritative core for a projectile's
-    /// trajectory (arc under gravity), so server and client compute the SAME path from
-    /// the same launch. Advanced in a <see cref="FixedStep"/> increment (not frame time)
-    /// so the arc is framerate-independent. Spatial hit detection stays in the renderer
-    /// (it owns the geometry), but it queries along this deterministic trajectory and
-    /// resolves the outcome through <see cref="CombatResolver"/>. Uses
-    /// System.Numerics.Vector3 so it has no engine dependency.
+    /// The authoritative core for a projectile's trajectory (arc under gravity). The
+    /// SERVER runs this to own where the projectile is; clients render the replicated
+    /// result (ADR 0006 — server-authoritative replication, not lockstep, so a client's
+    /// local copy is a correctable view, not a bit-exact re-simulation). Advanced in a
+    /// <see cref="FixedStep"/> increment (the sim tick, not frame time) so the arc is
+    /// framerate-independent. Spatial hit detection stays in the renderer (it owns the
+    /// geometry, ADR 0004) but queries along this trajectory; the outcome resolves
+    /// through <see cref="CombatResolver"/>. Uses System.Numerics.Vector3 — no engine
+    /// dependency.
     /// </summary>
     public static class Ballistics
     {

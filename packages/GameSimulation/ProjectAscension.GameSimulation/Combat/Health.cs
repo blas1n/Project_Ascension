@@ -1,8 +1,8 @@
 namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
-    /// Pure health state. Shared by player and monsters so damage resolution is
-    /// deterministic and identical on server and client.
+    /// Pure health state. Shared by player and monsters; the server owns it
+    /// authoritatively and replicates it to clients (ADR 0006).
     /// </summary>
     public record Health(float Current, float Max)
     {

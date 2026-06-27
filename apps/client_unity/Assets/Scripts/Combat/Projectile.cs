@@ -6,10 +6,11 @@ namespace ProjectAscension.Combat
 {
     /// <summary>
     /// A projectile (arrow / spell bolt). Its trajectory — the arc under gravity — is
-    /// advanced by the deterministic, framerate-independent <see cref="Ballistics"/>
-    /// core (so server and client agree on the path, not Unity frame time). Unity still
-    /// owns spatial hit detection; the damage outcome is resolved deterministically.
-    /// Spawn via <see cref="ProjectileFactory"/>.
+    /// advanced by the framerate-independent <see cref="Ballistics"/> core (a fixed sim
+    /// tick, not Unity frame time). In the MMO the server owns this and replicates the
+    /// path; this client copy is a view/prediction (ADR 0006). Unity owns spatial hit
+    /// detection; the damage outcome resolves through the core. Spawn via
+    /// <see cref="ProjectileFactory"/>.
     /// </summary>
     [RequireComponent(typeof(Collider), typeof(Rigidbody))]
     public sealed class Projectile : MonoBehaviour
