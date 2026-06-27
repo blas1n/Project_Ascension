@@ -165,7 +165,7 @@ namespace ProjectAscension.Game
                 if (hit.Damage > 0f) target.TakeDamage(hit.Damage, gameObject);
                 if (hit.DamageOverTimePerTick > 0f && hit.DamageOverTimeTicks > 0)
                     StartCoroutine(DamageOverTime(target, hit.DamageOverTimePerTick, hit.DamageOverTimeTicks));
-                if (hit.Control != ControlKind.None) PlayControl(target, hit.Control);
+                if (hit.Control != ControlKind.None) PlayControl(target, hit.Control, hit.ControlDuration);
             }
 
             if (resolution.SelfHeal > 0f) _self.Heal(resolution.SelfHeal);
@@ -177,12 +177,13 @@ namespace ProjectAscension.Game
                 _self.Heal(resolution.ImmediateDamage * _passives.Lifesteal);
         }
 
-        // Non-damage effects need assets — route to the SkillEffects stub layer, or log
-        // if it is absent (Task 3 placeholder).
-        private void PlayControl(IDamageable target, ControlKind kind)
+        // Apply the control to the target's status receiver (real slow/stun/knockback);
+        // the SkillEffects stub still plays placeholder VFX.
+        private void PlayControl(IDamageable target, ControlKind kind, float duration)
         {
+            if (target is Component c && c.TryGetComponent<IStatusReceiver>(out var receiver))
+                receiver.ApplyControl(kind, duration, transform.position);
             if (_effects != null) _effects.PlayControl(target, kind);
-            else Debug.Log($"[SkillCaster] {kind} on target (stub).");
         }
 
         private void GrantShield(float amount)

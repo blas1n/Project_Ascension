@@ -13,13 +13,15 @@ namespace ProjectAscension.GameSimulation.Combat
     }
 
     /// <summary>What a skill does to one target: immediate damage, a damage-over-time
-    /// stream, and any control. Indexed back to the caller's target list.</summary>
+    /// stream, and any control (with its duration in seconds). Indexed back to the
+    /// caller's target list.</summary>
     public sealed record TargetEffect(
         int TargetIndex,
         float Damage,
         float DamageOverTimePerTick,
         int DamageOverTimeTicks,
-        ControlKind Control);
+        ControlKind Control,
+        float ControlDuration);
 
     /// <summary>
     /// The deterministic outcome of executing a skill: per-target effects plus

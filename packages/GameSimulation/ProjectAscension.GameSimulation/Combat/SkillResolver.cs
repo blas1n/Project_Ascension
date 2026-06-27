@@ -26,6 +26,7 @@ namespace ProjectAscension.GameSimulation.Combat
         private const float ShieldPerMagnitude = 12f;
         private const float DashPerMagnitude = 2f;
         private const float LeechFractionPerMagnitude = 0.15f;
+        private const float ControlDurationPerMagnitude = 0.6f; // seconds of slow/stun per control magnitude
 
         public static SkillResolution Resolve(Skill skill, int availableTargets)
         {
@@ -38,6 +39,7 @@ namespace ProjectAscension.GameSimulation.Combat
             int spread = 0;        // how many extra targets the focused damage reaches
             int leech = 0, shield = 0, dash = 0;
             var control = ControlKind.None;
+            int controlMagnitude = 0;
 
             foreach (var p in skill.Primitives)
             {
@@ -53,9 +55,9 @@ namespace ProjectAscension.GameSimulation.Combat
                     case SkillPrimitiveKind.Chain:
                     case SkillPrimitiveKind.Fork:
                     case SkillPrimitiveKind.Pierce: spread += p.Magnitude + p.Range; break;
-                    case SkillPrimitiveKind.Knockback: control = Max(control, ControlKind.Knockback); break;
-                    case SkillPrimitiveKind.Slow: control = Max(control, ControlKind.Slow); break;
-                    case SkillPrimitiveKind.Stun: control = Max(control, ControlKind.Stun); break;
+                    case SkillPrimitiveKind.Knockback: Promote(ref control, ref controlMagnitude, ControlKind.Knockback, p.Magnitude); break;
+                    case SkillPrimitiveKind.Slow: Promote(ref control, ref controlMagnitude, ControlKind.Slow, p.Magnitude); break;
+                    case SkillPrimitiveKind.Stun: Promote(ref control, ref controlMagnitude, ControlKind.Stun, p.Magnitude); break;
                     case SkillPrimitiveKind.Shield:
                     case SkillPrimitiveKind.Barrier: shield += p.Magnitude; break;
                     case SkillPrimitiveKind.Dash:
@@ -67,6 +69,7 @@ namespace ProjectAscension.GameSimulation.Combat
 
             bool hasArea = area > 0f;
             int dotTicks = (dotPerTick > 0f) ? BaseDotTicks + dotDuration : 0;
+            float controlDuration = controlMagnitude * ControlDurationPerMagnitude;
             int hitCount = hasArea ? availableTargets : Math.Min(availableTargets, 1 + spread);
 
             var hits = new List<TargetEffect>(hitCount);
@@ -81,13 +84,17 @@ namespace ProjectAscension.GameSimulation.Combat
                 if (dmg <= 0f && dotPerTick <= 0f && control == ControlKind.None) continue;
 
                 directTotal += dmg;
-                hits.Add(new TargetEffect(i, dmg, dotPerTick, dotTicks, control));
+                hits.Add(new TargetEffect(i, dmg, dotPerTick, dotTicks, control, controlDuration));
             }
 
             float selfHeal = directTotal * (leech * LeechFractionPerMagnitude);
             return new SkillResolution(hits, selfHeal, shield * ShieldPerMagnitude, dash * DashPerMagnitude);
         }
 
-        private static ControlKind Max(ControlKind a, ControlKind b) => (ControlKind)Math.Max((int)a, (int)b);
+        // The strongest control wins (Stun > Slow > Knockback); keep its magnitude for duration.
+        private static void Promote(ref ControlKind control, ref int magnitude, ControlKind kind, int mag)
+        {
+            if ((int)kind > (int)control) { control = kind; magnitude = mag; }
+        }
     }
 }

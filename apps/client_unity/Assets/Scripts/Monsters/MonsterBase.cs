@@ -1,15 +1,17 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Monsters
 {
     /// <summary>
     /// Shared monster AI: Idle -> Chase -> Attack -> Dead. Targets the "Player"
     /// tagged object. Movement is simple XZ MoveTowards (no navmesh for the slice).
-    /// Subclasses implement the actual attack.
+    /// Subclasses implement the actual attack. Receives control statuses from skills
+    /// (slowed = moves slower, stunned = can't act, knocked back = pushed).
     /// </summary>
     [RequireComponent(typeof(HitReceiver))]
-    public abstract class MonsterBase : MonoBehaviour
+    public abstract class MonsterBase : MonoBehaviour, IStatusReceiver
     {
         private enum State { Idle, Chase, Attack, Dead }
 
@@ -20,11 +22,17 @@ namespace ProjectAscension.Monsters
         protected float Damage = 8f;
         protected float ProjectileSpeed = 0f;
 
+        private const float SlowFactor = 0.5f;
+        private const float KnockbackSpeed = 8f;
+        private const float KnockbackDecay = 30f;
+
         private State _state = State.Idle;
         private Transform _target;
         private IDamageable _targetDamageable;
         private HitReceiver _health;
         private float _nextAttackTime;
+        private StatusState _status = StatusState.None;
+        private Vector3 _knockback;
 
         protected Transform Target => _target;
         protected IDamageable TargetDamageable => _targetDamageable;
@@ -57,7 +65,13 @@ namespace ProjectAscension.Monsters
 
         private void Update()
         {
-            if (_state == State.Dead || _target == null) return;
+            if (_state == State.Dead) return;
+
+            _status = StatusRules.Tick(_status, Time.deltaTime);
+            ApplyKnockback();
+
+            // Stunned (or no target): no chasing or attacking — but knockback still pushes.
+            if (_target == null || _status.IsStunned) return;
 
             float dist = Vector3.Distance(transform.position, _target.position);
             switch (_state)
@@ -88,8 +102,32 @@ namespace ProjectAscension.Monsters
         {
             var p = transform.position;
             var goal = new Vector3(_target.position.x, p.y, _target.position.z);
-            transform.position = Vector3.MoveTowards(p, goal, _moveSpeed * Time.deltaTime);
+            float speed = _moveSpeed * _status.SpeedMultiplier(SlowFactor); // slowed = move less
+            transform.position = Vector3.MoveTowards(p, goal, speed * Time.deltaTime);
             FaceTarget();
+        }
+
+        private void ApplyKnockback()
+        {
+            if (_knockback.sqrMagnitude < 0.01f) return;
+            transform.position += _knockback * Time.deltaTime;
+            _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, KnockbackDecay * Time.deltaTime);
+        }
+
+        /// <summary>Receive a control status from a skill.</summary>
+        public void ApplyControl(ControlKind kind, float duration, Vector3 sourcePosition)
+        {
+            if (_state == State.Dead) return;
+            if (kind == ControlKind.Knockback)
+            {
+                var away = transform.position - sourcePosition;
+                away.y = 0f;
+                _knockback = (away.sqrMagnitude > 0.0001f ? away.normalized : transform.forward) * KnockbackSpeed;
+            }
+            else
+            {
+                _status = StatusRules.Apply(_status, kind, duration);
+            }
         }
 
         protected void FaceTarget()
