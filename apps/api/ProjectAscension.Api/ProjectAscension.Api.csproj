@@ -5,6 +5,7 @@
     <ProjectReference Include="..\..\..\packages\Contracts\ProjectAscension.Contracts\ProjectAscension.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\Shared\ProjectAscension.Shared\ProjectAscension.Shared.csproj" />
     <ProjectReference Include="..\..\..\packages\Discovery\ProjectAscension.Discovery\ProjectAscension.Discovery.csproj" />
+    <ProjectReference Include="..\..\..\packages\GameSimulation\ProjectAscension.GameSimulation\ProjectAscension.GameSimulation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
