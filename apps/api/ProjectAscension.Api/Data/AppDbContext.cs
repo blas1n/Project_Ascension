@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<BehaviorWeight> BehaviorWeights => Set<BehaviorWeight>();
     public DbSet<FactorWeight> FactorWeights => Set<FactorWeight>();
     public DbSet<DiscoveryTuningSettings> DiscoveryTuningSettings => Set<DiscoveryTuningSettings>();
+    public DbSet<CombatTuningSettings> CombatTuningSettings => Set<CombatTuningSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

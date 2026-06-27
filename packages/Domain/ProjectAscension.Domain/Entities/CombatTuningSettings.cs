@@ -1,0 +1,38 @@
+#nullable enable
+
+namespace ProjectAscension.Domain.Entities
+{
+    /// <summary>
+    /// The single-row tunable weights for combat resolution — per-magnitude damage,
+    /// defensive conversions, control duration, and focus cost. Server-managed balance
+    /// data, editable at runtime (no redeploy). Whoever runs the resolvers reads these,
+    /// so a discovered (created) weapon's combat output is fully data-driven — a balance
+    /// edit reshapes every created weapon without code changes.
+    /// </summary>
+    public class CombatTuningSettings
+    {
+        public int Id { get; set; } // fixed singleton key (1)
+
+        // Offensive (per magnitude).
+        public float ProjectileDamage { get; set; }
+        public float BeamDamage { get; set; }
+        public float AreaDamage { get; set; }
+        public float DotDamagePerTick { get; set; }
+        public float SpreadFalloff { get; set; }
+        public int BaseDotTicks { get; set; }
+
+        // Defensive / utility (per magnitude).
+        public float ShieldPerMagnitude { get; set; }
+        public float DashPerMagnitude { get; set; }
+        public float LeechFractionPerMagnitude { get; set; }
+        public float ControlDurationPerMagnitude { get; set; }
+
+        // Passive (always-on) conversions.
+        public float PassiveShieldReduction { get; set; }
+        public float PassiveBarrierReduction { get; set; }
+        public float PassiveLeech { get; set; }
+
+        // Resource.
+        public float FocusCostPerPoint { get; set; }
+    }
+}

@@ -25,6 +25,7 @@ builder.Services.AddScoped<IDiscoverySkillRepository, DiscoverySkillRepository>(
 builder.Services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
 builder.Services.AddScoped<IDiscoveryLineageRepository, DiscoveryLineageRepository>();
 builder.Services.AddScoped<IDiscoveryTuningRepository, DiscoveryTuningRepository>();
+builder.Services.AddScoped<ICombatTuningRepository, CombatTuningRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
@@ -35,6 +36,7 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ILoadoutService, LoadoutService>();
 builder.Services.AddScoped<ISkillCompositionService, SkillCompositionService>();
 builder.Services.AddScoped<IDiscoveryTuningProvider, DiscoveryTuningProvider>();
+builder.Services.AddScoped<ICombatTuningProvider, CombatTuningProvider>();
 builder.Services.AddScoped<IKnowledgeService, KnowledgeService>();
 builder.Services.AddSingleton<CompositionMetrics>();
 

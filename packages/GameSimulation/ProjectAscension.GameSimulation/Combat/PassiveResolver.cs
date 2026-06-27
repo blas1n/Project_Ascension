@@ -10,21 +10,19 @@ namespace ProjectAscension.GameSimulation.Combat
     /// </summary>
     public static class PassiveResolver
     {
-        private const float ShieldReductionPerMagnitude = 0.06f;
-        private const float BarrierReductionPerMagnitude = 0.08f;
-        private const float LeechPerMagnitude = 0.05f;
-
-        public static PassiveEffect Resolve(Skill skill)
+        // Conversions come from CombatTuning (DB-driven); Default mirrors the seeded values.
+        public static PassiveEffect Resolve(Skill skill, CombatTuning tuning = null)
         {
+            var t = tuning ?? CombatTuning.Default;
             float reduction = 0f;
             float lifesteal = 0f;
             foreach (var p in skill.Primitives)
             {
                 switch (p.Kind)
                 {
-                    case SkillPrimitiveKind.Shield: reduction += p.Magnitude * ShieldReductionPerMagnitude; break;
-                    case SkillPrimitiveKind.Barrier: reduction += p.Magnitude * BarrierReductionPerMagnitude; break;
-                    case SkillPrimitiveKind.Leech: lifesteal += p.Magnitude * LeechPerMagnitude; break;
+                    case SkillPrimitiveKind.Shield: reduction += p.Magnitude * t.PassiveShieldReduction; break;
+                    case SkillPrimitiveKind.Barrier: reduction += p.Magnitude * t.PassiveBarrierReduction; break;
+                    case SkillPrimitiveKind.Leech: lifesteal += p.Magnitude * t.PassiveLeech; break;
                 }
             }
 

@@ -6,14 +6,13 @@ namespace ProjectAscension.GameSimulation.Combat
     /// </summary>
     public static class FocusCost
     {
-        public const float PerPoint = 4f;
-
-        public static float Of(Skill skill)
+        // Cost-per-point comes from CombatTuning (DB-driven); Default mirrors the seed.
+        public static float Of(Skill skill, CombatTuning tuning = null)
         {
             float points = 0f;
             foreach (var p in skill.Primitives)
                 points += p.Magnitude + p.Range + p.Duration;
-            return points * PerPoint;
+            return points * (tuning ?? CombatTuning.Default).FocusCostPerPoint;
         }
     }
 }

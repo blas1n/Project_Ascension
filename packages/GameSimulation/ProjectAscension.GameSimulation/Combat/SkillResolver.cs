@@ -16,21 +16,12 @@ namespace ProjectAscension.GameSimulation.Combat
     /// </summary>
     public static class SkillResolver
     {
-        // Damage weights (per magnitude) — combat balance constants.
-        private const float ProjectileDamage = 10f;
-        private const float BeamDamage = 9f;
-        private const float AreaDamage = 8f;
-        private const float DotDamagePerTick = 3f;
-        private const float SpreadFalloff = 0.6f;   // chained/pierced targets take less
-        private const int BaseDotTicks = 2;          // + duration tier
-        private const float ShieldPerMagnitude = 12f;
-        private const float DashPerMagnitude = 2f;
-        private const float LeechFractionPerMagnitude = 0.15f;
-        private const float ControlDurationPerMagnitude = 0.6f; // seconds of slow/stun per control magnitude
-
-        public static SkillResolution Resolve(Skill skill, int availableTargets)
+        // Per-magnitude weights come from CombatTuning (DB-driven); Default mirrors the
+        // seeded values, so existing callers/tests keep the same numbers.
+        public static SkillResolution Resolve(Skill skill, int availableTargets, CombatTuning tuning = null)
         {
             if (skill.Primitives.Count == 0 || availableTargets <= 0) return SkillResolution.Empty;
+            var t = tuning ?? CombatTuning.Default;
 
             float single = 0f;     // focused single-target damage (projectile/beam)
             float area = 0f;       // damage to every target in range
@@ -45,11 +36,11 @@ namespace ProjectAscension.GameSimulation.Combat
             {
                 switch (p.Kind)
                 {
-                    case SkillPrimitiveKind.Projectile: single += p.Magnitude * ProjectileDamage; spread += p.Range; break;
-                    case SkillPrimitiveKind.Beam: single += p.Magnitude * BeamDamage; spread += p.Range; break;
-                    case SkillPrimitiveKind.Area: area += p.Magnitude * AreaDamage; break;
+                    case SkillPrimitiveKind.Projectile: single += p.Magnitude * t.ProjectileDamage; spread += p.Range; break;
+                    case SkillPrimitiveKind.Beam: single += p.Magnitude * t.BeamDamage; spread += p.Range; break;
+                    case SkillPrimitiveKind.Area: area += p.Magnitude * t.AreaDamage; break;
                     case SkillPrimitiveKind.DamageOverTime:
-                        dotPerTick += p.Magnitude * DotDamagePerTick;
+                        dotPerTick += p.Magnitude * t.DotDamagePerTick;
                         dotDuration = Math.Max(dotDuration, p.Duration);
                         break;
                     case SkillPrimitiveKind.Chain:
@@ -68,8 +59,8 @@ namespace ProjectAscension.GameSimulation.Combat
             }
 
             bool hasArea = area > 0f;
-            int dotTicks = (dotPerTick > 0f) ? BaseDotTicks + dotDuration : 0;
-            float controlDuration = controlMagnitude * ControlDurationPerMagnitude;
+            int dotTicks = (dotPerTick > 0f) ? t.BaseDotTicks + dotDuration : 0;
+            float controlDuration = controlMagnitude * t.ControlDurationPerMagnitude;
             int hitCount = hasArea ? availableTargets : Math.Min(availableTargets, 1 + spread);
 
             var hits = new List<TargetEffect>(hitCount);
@@ -78,7 +69,7 @@ namespace ProjectAscension.GameSimulation.Combat
             {
                 float dmg = 0f;
                 if (i == 0) dmg += single;                       // primary takes the focused hit
-                else if (i <= spread) dmg += single * SpreadFalloff; // chained/pierced
+                else if (i <= spread) dmg += single * t.SpreadFalloff; // chained/pierced
                 if (hasArea) dmg += area;
 
                 if (dmg <= 0f && dotPerTick <= 0f && control == ControlKind.None) continue;
@@ -87,8 +78,8 @@ namespace ProjectAscension.GameSimulation.Combat
                 hits.Add(new TargetEffect(i, dmg, dotPerTick, dotTicks, control, controlDuration));
             }
 
-            float selfHeal = directTotal * (leech * LeechFractionPerMagnitude);
-            return new SkillResolution(hits, selfHeal, shield * ShieldPerMagnitude, dash * DashPerMagnitude);
+            float selfHeal = directTotal * (leech * t.LeechFractionPerMagnitude);
+            return new SkillResolution(hits, selfHeal, shield * t.ShieldPerMagnitude, dash * t.DashPerMagnitude);
         }
 
         // The strongest control wins (Stun > Slow > Knockback); keep its magnitude for duration.
