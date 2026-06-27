@@ -19,4 +19,8 @@ MonoBehaviour:
   range: 60
   projectileSpeed: 0
   cooldown: 0.25
+  spreadMin: 1
+  spreadMax: 9
+  spreadPerShot: 1.4
+  spreadRecovery: 7
   discoveryWeight: 0

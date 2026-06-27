@@ -8,7 +8,7 @@ namespace ProjectAscension.Equipment
     {
         protected override void OnPrimary(AttackContext ctx, float charge)
         {
-            var dir = ctx.Direction.normalized;
+            var dir = SpreadDirection(ctx.Direction.normalized); // deviate by sustained-fire bloom
             var origin = ctx.Origin + dir * 0.5f; // clear the attacker
             var end = ctx.Origin + dir * Data.Range;
 

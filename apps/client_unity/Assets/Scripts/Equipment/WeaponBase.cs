@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Equipment
 {
@@ -12,10 +13,22 @@ namespace ProjectAscension.Equipment
         private WeaponData _data;
         private float _nextReadyTime;
         private float _chargeStart = -1f;
+        private Spread _spread;
 
         public WeaponData Data => _data;
 
-        public void Configure(WeaponData data) => _data = data;
+        public void Configure(WeaponData data)
+        {
+            _data = data;
+            _spread = Spread.From(data.SpreadMin, data.SpreadMax);
+        }
+
+        private void Update()
+        {
+            // Recover accuracy over time when not firing (firearms only).
+            if (_data != null && _data.HasSpread)
+                _spread = SpreadRules.Recover(_spread, _data.SpreadRecovery, Time.deltaTime);
+        }
 
         public virtual void OnEquip(Transform handAnchor)
         {
@@ -50,8 +63,19 @@ namespace ProjectAscension.Equipment
         {
             if (Time.time < _nextReadyTime) return false;
             _nextReadyTime = Time.time + _data.Cooldown;
+            if (_data.HasSpread) _spread = SpreadRules.Bloom(_spread, _data.SpreadPerShot); // bloom on each shot
             OnPrimary(ctx, charge);
             return true;
+        }
+
+        /// <summary>Deviate an aim direction by the current spread cone (a no-op for
+        /// precise weapons). Firing subclasses use this for their shot direction.</summary>
+        protected Vector3 SpreadDirection(Vector3 direction)
+        {
+            if (_data == null || !_data.HasSpread || _spread.Current <= 0f) return direction;
+            float a = _spread.Current;
+            var deviation = Quaternion.Euler(Random.Range(-a, a), Random.Range(-a, a), 0f);
+            return (Quaternion.LookRotation(direction) * deviation * Vector3.forward).normalized;
         }
 
         /// <summary>Execute the attack. <paramref name="charge"/> is 0..1 (0 for instant

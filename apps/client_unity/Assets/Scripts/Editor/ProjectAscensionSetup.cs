@@ -112,7 +112,9 @@ namespace ProjectAscension.Editor
             CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either, damage: 25f, range: 2.2f, projectileSpeed: 0f, cooldown: 0.5f);
             // Bow: a two-handed charge weapon (hold to draw, release to loose).
             CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.TwoHand, damage: 18f, range: 60f, projectileSpeed: 28f, cooldown: 0.6f, chargeTime: 0.8f, maxChargeMultiplier: 2.5f);
-            CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either, damage: 12f, range: 60f, projectileSpeed: 0f, cooldown: 0.25f);
+            // Pistol: a firearm whose accuracy blooms under sustained fire (spread).
+            CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either, damage: 12f, range: 60f, projectileSpeed: 0f, cooldown: 0.25f,
+                spreadMin: 1f, spreadMax: 9f, spreadPerShot: 1.4f, spreadRecovery: 7f);
             CreateWeapon("Catalyst", "Arcane Catalyst", EquipmentType.Catalyst, SlotType.Either, damage: 22f, range: 50f, projectileSpeed: 18f, cooldown: 0.8f);
 
             var config = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
@@ -136,7 +138,8 @@ namespace ProjectAscension.Editor
 
         private static void CreateWeapon(string assetName, string displayName, EquipmentType equipmentType, SlotType slotType,
             float damage, float range, float projectileSpeed, float cooldown,
-            float chargeTime = 0f, float maxChargeMultiplier = 1f)
+            float chargeTime = 0f, float maxChargeMultiplier = 1f,
+            float spreadMin = 0f, float spreadMax = 0f, float spreadPerShot = 0f, float spreadRecovery = 0f)
         {
             var path = $"{WeaponsDir}/{assetName}.asset";
             var data = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
@@ -155,6 +158,10 @@ namespace ProjectAscension.Editor
             so.FindProperty("cooldown").floatValue = cooldown;
             so.FindProperty("chargeTime").floatValue = chargeTime;
             so.FindProperty("maxChargeMultiplier").floatValue = maxChargeMultiplier;
+            so.FindProperty("spreadMin").floatValue = spreadMin;
+            so.FindProperty("spreadMax").floatValue = spreadMax;
+            so.FindProperty("spreadPerShot").floatValue = spreadPerShot;
+            so.FindProperty("spreadRecovery").floatValue = spreadRecovery;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

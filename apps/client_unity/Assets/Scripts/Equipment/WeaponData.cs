@@ -28,6 +28,12 @@ namespace ProjectAscension.Equipment
         [SerializeField] private float chargeTime = 0f;            // seconds to full charge
         [SerializeField] private float maxChargeMultiplier = 1f;   // damage/speed at full charge
 
+        [Header("Spread / accuracy (firearms; 0 max = no spread)")]
+        [SerializeField] private float spreadMin = 0f;        // cone half-angle when fresh (deg)
+        [SerializeField] private float spreadMax = 0f;        // cap under sustained fire (deg)
+        [SerializeField] private float spreadPerShot = 0f;    // bloom added per shot (deg)
+        [SerializeField] private float spreadRecovery = 0f;   // tightening per second when not firing (deg)
+
         [Header("Discovery (later phase hook — unused)")]
         [SerializeField] private float discoveryWeight = 0f;
 
@@ -41,6 +47,13 @@ namespace ProjectAscension.Equipment
         public float DiscoveryWeight => discoveryWeight;
         public float ChargeTime => chargeTime;
         public float MaxChargeMultiplier => maxChargeMultiplier;
+        public float SpreadMin => spreadMin;
+        public float SpreadMax => spreadMax;
+        public float SpreadPerShot => spreadPerShot;
+        public float SpreadRecovery => spreadRecovery;
+
+        /// <summary>Only firearms spread; melee, magic, and the bow are precise.</summary>
+        public bool HasSpread => spreadMax > 0f;
 
         /// <summary>Melee weapons strike in range; everything else is ranged.</summary>
         public bool IsMelee => equipmentType == EquipmentType.Weapon;
