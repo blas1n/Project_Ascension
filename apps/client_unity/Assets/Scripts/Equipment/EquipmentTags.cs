@@ -22,6 +22,9 @@ namespace ProjectAscension.Equipment
         public static string For(WeaponData data)
         {
             if (data == null) return null;
+            // A discovered weapon contributes its own context tag, so equipping it opens
+            // further discoveries — discover → weapon → discover-again loop (ADR 0005).
+            if (!string.IsNullOrEmpty(data.ContextTag)) return data.ContextTag;
             switch (data.EquipmentType)
             {
                 case EquipmentType.Weapon: return Melee;

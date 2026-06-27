@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.Net;
 
@@ -50,6 +52,10 @@ namespace ProjectAscension.Game
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
+        // A discovered weapon (SpellWeapon) routes its cast here when fired.
+        private void OnEnable() => GameplayEvents.SkillCastRequested += ExecuteSkill;
+        private void OnDisable() => GameplayEvents.SkillCastRequested -= ExecuteSkill;
+
         /// <summary>Fetch a discovered skill from the server and equip it for casting.</summary>
         public void LoadSkill(string discoveryId)
         {
@@ -79,14 +85,37 @@ namespace ProjectAscension.Game
             {
                 FindAnyObjectByType<PassiveModifiers>()?.Refresh();
             }
+            else if (_manifestation == ManifestationKind.Weapon)
+            {
+                // Mint a new equippable weapon, add it to inventory, select it (so it
+                // persists across City<->Frontier), and equip it now — equipping
+                // contributes its context tag, opening further discoveries (the loop).
+                var weapon = WeaponData.CreateDiscovered(_skill.Name, _skill, "spell:" + Slug(_skill.Name));
+                var state = GameSession.Instance?.PlayerState;
+                if (state != null)
+                {
+                    state.AddWeapon(weapon);
+                    state.SetLeft(weapon);
+                }
+                FindAnyObjectByType<Loadout>()?.EquipLeft(weapon);
+            }
 
-            Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
+            Debug.Log($"[SkillCaster] Discovered \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
         }
 
         /// <summary>Execute the equipped weapon skill against nearby targets.</summary>
         public void Cast()
         {
             if (HasSkill) ExecuteSkill(_skill);
+        }
+
+        private static string Slug(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "discovery";
+            var sb = new StringBuilder(name.Length);
+            foreach (var c in name)
+                sb.Append(char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '-');
+            return sb.ToString();
         }
 
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Combat
 {
@@ -23,6 +24,10 @@ namespace ProjectAscension.Combat
         public static event Action LeftClicked;
         public static event Action RightClicked;
 
+        // A discovered weapon asks the skill executor to run its skill (routing event;
+        // the weapon lives in the Equipment assembly, the executor in Game).
+        public static event Action<Skill> SkillCastRequested;
+
         // World facts (argument is the subject GameObject).
         public static event Action<GameObject> MonsterKilled;
         public static event Action<GameObject> SampleCollected;
@@ -34,6 +39,8 @@ namespace ProjectAscension.Combat
 
         public static void RaiseLeftClicked() => LeftClicked?.Invoke();
         public static void RaiseRightClicked() => RightClicked?.Invoke();
+
+        public static void RaiseSkillCastRequested(Skill skill) => SkillCastRequested?.Invoke(skill);
 
         public static void RaiseMonsterKilled(GameObject monster) => MonsterKilled?.Invoke(monster);
         public static void RaiseSampleCollected(GameObject sample) => SampleCollected?.Invoke(sample);
