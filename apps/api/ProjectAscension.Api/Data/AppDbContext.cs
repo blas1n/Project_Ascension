@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<FactorWeight> FactorWeights => Set<FactorWeight>();
     public DbSet<DiscoveryTuningSettings> DiscoveryTuningSettings => Set<DiscoveryTuningSettings>();
     public DbSet<CombatTuningSettings> CombatTuningSettings => Set<CombatTuningSettings>();
+    public DbSet<WeaponDefinition> WeaponDefinitions => Set<WeaponDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

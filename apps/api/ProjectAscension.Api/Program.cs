@@ -26,6 +26,7 @@ builder.Services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
 builder.Services.AddScoped<IDiscoveryLineageRepository, DiscoveryLineageRepository>();
 builder.Services.AddScoped<IDiscoveryTuningRepository, DiscoveryTuningRepository>();
 builder.Services.AddScoped<ICombatTuningRepository, CombatTuningRepository>();
+builder.Services.AddScoped<IWeaponDefinitionRepository, WeaponDefinitionRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
