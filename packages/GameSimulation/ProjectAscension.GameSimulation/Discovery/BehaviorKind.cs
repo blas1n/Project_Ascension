@@ -8,5 +8,6 @@ namespace ProjectAscension.GameSimulation.Discovery
         MeleeAttack,
         RangedAttack,
         DodgeAttack,
+        ChargedAttack, // a held/charged shot (e.g. a full bow draw) — drives charge discoveries
     }
 }

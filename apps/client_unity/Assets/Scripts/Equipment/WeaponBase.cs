@@ -17,6 +17,10 @@ namespace ProjectAscension.Equipment
 
         public WeaponData Data => _data;
 
+        /// <summary>Charge (0..1) of the most recent shot — 0 for instant weapons. Lets
+        /// the input layer announce a charged-attack fact for discovery.</summary>
+        public float LastCharge { get; private set; }
+
         public void Configure(WeaponData data)
         {
             _data = data;
@@ -63,6 +67,7 @@ namespace ProjectAscension.Equipment
         {
             if (Time.time < _nextReadyTime) return false;
             _nextReadyTime = Time.time + _data.Cooldown;
+            LastCharge = charge;
             if (_data.HasSpread) _spread = SpreadRules.Bloom(_spread, _data.SpreadPerShot); // bloom on each shot
             OnPrimary(ctx, charge);
             return true;

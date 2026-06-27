@@ -18,6 +18,7 @@ public class BehaviorWeightConfiguration : IEntityTypeConfiguration<BehaviorWeig
             new BehaviorWeight { Behavior = "MeleeAttack", Weight = 2 },
             new BehaviorWeight { Behavior = "RangedAttack", Weight = 2 },
             new BehaviorWeight { Behavior = "ChargeAttack", Weight = 3 },
-            new BehaviorWeight { Behavior = "DodgeAttack", Weight = 3 });
+            new BehaviorWeight { Behavior = "DodgeAttack", Weight = 3 },
+            new BehaviorWeight { Behavior = "ChargedAttack", Weight = 3 });
     }
 }
