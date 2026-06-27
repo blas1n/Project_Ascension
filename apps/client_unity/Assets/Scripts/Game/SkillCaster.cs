@@ -30,6 +30,7 @@ namespace ProjectAscension.Game
         private DiscoveryApiClient _api;
         private HitReceiver _self;
         private SkillEffects _effects;
+        private PassiveModifiers _passives;
         private Skill _skill;
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
@@ -45,6 +46,7 @@ namespace ProjectAscension.Game
         {
             _self = GetComponent<HitReceiver>();
             _effects = GetComponent<SkillEffects>(); // optional presentation stub
+            _passives = GetComponent<PassiveModifiers>(); // optional, for passive lifesteal
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
@@ -67,11 +69,15 @@ namespace ProjectAscension.Game
             var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill);
             GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
-            // A command is invoked by the button combo the engine assigned it — register it.
+            // A command is invoked by its assigned combo; a passive applies continuously.
             if (_manifestation == ManifestationKind.Command)
             {
                 var combo = InputCombo.Parse(dto.invocationCombo ?? new string[0]);
                 FindAnyObjectByType<ComboInvoker>()?.RegisterCommand(combo, discovered);
+            }
+            else if (_manifestation == ManifestationKind.Passive)
+            {
+                FindAnyObjectByType<PassiveModifiers>()?.Refresh();
             }
 
             Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
@@ -126,6 +132,10 @@ namespace ProjectAscension.Game
             if (resolution.SelfHeal > 0f) _self.Heal(resolution.SelfHeal);
             if (resolution.SelfShield > 0f) GrantShield(resolution.SelfShield);
             if (resolution.DashDistance > 0f) PlayDash(resolution.DashDistance);
+
+            // Passive lifesteal: a fraction of the damage dealt returns as health.
+            if (_passives != null && _passives.Lifesteal > 0f && resolution.ImmediateDamage > 0f)
+                _self.Heal(resolution.ImmediateDamage * _passives.Lifesteal);
         }
 
         // Non-damage effects need assets — route to the SkillEffects stub layer, or log

@@ -32,11 +32,30 @@ public class SkillManifestTests
     [Fact]
     public void UtilityDominantMix_IsCommand()
     {
-        // Dash 3 (mobility) + Shield 1 (defensive) outweigh Projectile 1.
+        // Dash 3 (mobility) outweighs Shield 1 (defensive) and Projectile 1 (offensive).
         var skill = Of(
             new ComposedPrimitive(PrimitiveKind.Dash, 3),
             new ComposedPrimitive(PrimitiveKind.Shield, 1),
             new ComposedPrimitive(PrimitiveKind.Projectile, 1));
         Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill));
+    }
+
+    [Fact]
+    public void DefensiveComposition_IsPassive()
+    {
+        var skill = Of(new ComposedPrimitive(PrimitiveKind.Leech, 2), new ComposedPrimitive(PrimitiveKind.Barrier, 1));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+    }
+
+    [Fact]
+    public void DefensiveDominantMix_IsPassive()
+    {
+        // Shield 3 + Leech 1 (defensive) outweigh Dash 1 (mobility) and Projectile 1.
+        var skill = Of(
+            new ComposedPrimitive(PrimitiveKind.Shield, 3),
+            new ComposedPrimitive(PrimitiveKind.Leech, 1),
+            new ComposedPrimitive(PrimitiveKind.Dash, 1),
+            new ComposedPrimitive(PrimitiveKind.Projectile, 1));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
     }
 }
