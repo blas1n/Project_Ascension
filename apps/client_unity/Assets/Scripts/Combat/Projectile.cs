@@ -1,18 +1,23 @@
 using UnityEngine;
+using ProjectAscension.GameSimulation.Combat;
+using NumVec3 = System.Numerics.Vector3;
 
 namespace ProjectAscension.Combat
 {
     /// <summary>
-    /// A projectile (arrow / spell bolt). Travels along its velocity, optionally arcing
-    /// under gravity (drop) — arrows arc, energy bolts fly straight. Applies damage to
-    /// the first IDamageable it overlaps, then despawns. Spawn via
-    /// <see cref="ProjectileFactory"/>.
+    /// A projectile (arrow / spell bolt). Its trajectory — the arc under gravity — is
+    /// advanced by the deterministic, framerate-independent <see cref="Ballistics"/>
+    /// core (so server and client agree on the path, not Unity frame time). Unity still
+    /// owns spatial hit detection; the damage outcome is resolved deterministically.
+    /// Spawn via <see cref="ProjectileFactory"/>.
     /// </summary>
     [RequireComponent(typeof(Collider), typeof(Rigidbody))]
     public sealed class Projectile : MonoBehaviour
     {
-        private Vector3 _velocity;
+        private NumVec3 _position;
+        private NumVec3 _velocity;
         private float _gravity;
+        private float _accumulator;
         private float _damage;
         private float _lifetime;
         private GameObject _owner;
@@ -22,8 +27,10 @@ namespace ProjectAscension.Combat
         {
             var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
             transform.forward = dir;
-            _velocity = dir * speed;
+            _position = ToNum(transform.position);
+            _velocity = ToNum(dir) * speed;
             _gravity = gravity;
+            _accumulator = 0f;
             _damage = damage;
             _owner = owner;
             _lifetime = lifetime;
@@ -32,13 +39,24 @@ namespace ProjectAscension.Combat
 
         private void Update()
         {
-            if (_gravity > 0f) _velocity += Vector3.down * (_gravity * Time.deltaTime); // drop
-            transform.position += _velocity * Time.deltaTime;
-            if (_velocity.sqrMagnitude > 0.0001f) transform.forward = _velocity.normalized; // point along the arc
+            // Advance the trajectory in fixed deterministic steps (not raw frame time),
+            // so the arc is identical regardless of framerate and reproducible on the server.
+            _accumulator += Time.deltaTime;
+            while (_accumulator >= Ballistics.FixedStep)
+            {
+                (_position, _velocity) = Ballistics.Step(_position, _velocity, _gravity, Ballistics.FixedStep);
+                _accumulator -= Ballistics.FixedStep;
+            }
+
+            transform.position = ToUnity(_position);
+            if (_velocity.LengthSquared() > 0.0001f) transform.forward = ToUnity(_velocity).normalized; // point along the arc
             _age += Time.deltaTime;
             if (_age >= _lifetime)
                 Destroy(gameObject);
         }
+
+        private static NumVec3 ToNum(Vector3 v) => new NumVec3(v.x, v.y, v.z);
+        private static Vector3 ToUnity(NumVec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         private void OnTriggerEnter(Collider other)
         {
