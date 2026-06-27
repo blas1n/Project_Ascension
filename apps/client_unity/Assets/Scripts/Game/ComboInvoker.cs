@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Combat;
-using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
@@ -20,13 +19,11 @@ namespace ProjectAscension.Game
         [SerializeField] private float comboWindow = ComboRecognizer.DefaultWindow;
 
         private ComboRecognizer _recognizer;
-        private Loadout _loadout;
         private SkillCaster _caster;
 
         private void Awake()
         {
             _recognizer = new ComboRecognizer(comboWindow);
-            _loadout = FindAnyObjectByType<Loadout>();
             _caster = GetComponent<SkillCaster>();
             if (_caster == null) _caster = FindAnyObjectByType<SkillCaster>();
         }
@@ -60,12 +57,6 @@ namespace ProjectAscension.Game
         {
             var command = _recognizer.Feed(token, Time.time);
             if (command == null) return;
-
-            if (!DiscoveredSkillSet.Usable(command, EquipmentTags.CurrentTags(_loadout)))
-            {
-                Debug.Log($"[ComboInvoker] \"{command.Name}\" combo matched but the bound equipment is not held.");
-                return;
-            }
 
             _caster?.ExecuteSkill(command.Skill);
             Debug.Log($"[ComboInvoker] Invoked \"{command.Name}\" via combo.");

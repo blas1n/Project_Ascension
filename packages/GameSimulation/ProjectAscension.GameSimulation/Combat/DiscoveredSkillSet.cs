@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectAscension.GameSimulation.Combat
 {
@@ -23,26 +22,10 @@ namespace ProjectAscension.GameSimulation.Combat
             else _commands.Add(skill);
         }
 
-        /// <summary>Whether the skill can be used with the currently equipped gear: the
-        /// loadout's equipment must be the SAME SET the skill was discovered with —
-        /// both hands match, hand position irrelevant (ADR 0005). Empty binding (e.g. a
-        /// no-equipment movement discovery) is always usable.</summary>
-        public static bool Usable(DiscoveredSkill skill, IReadOnlyCollection<string> equipped)
-        {
-            var required = skill.RequiredEquipment;
-            if (required is null || required.Count == 0) return true;
-            if (equipped.Count != required.Count) return false; // no extra / no missing
-            foreach (var tag in required)
-                if (!equipped.Contains(tag)) return false;
-            return true;
-        }
-
         /// <summary>Execute a discovered skill against the targets in range
-        /// (index 0 = primary) — only if the equipped gear satisfies its binding;
-        /// otherwise no effect. Weapon or command resolves identically.</summary>
-        public SkillResolution Use(DiscoveredSkill skill, IReadOnlyCollection<string> equipped, int availableTargets)
-            => Usable(skill, equipped)
-                ? SkillResolver.Resolve(skill.Skill, availableTargets)
-                : SkillResolution.Empty;
+        /// (index 0 = primary). A weapon (equipped + fired) or a command (combo-invoked)
+        /// resolves identically — there is no equipment use-gate (ADR 0005).</summary>
+        public SkillResolution Use(DiscoveredSkill skill, int availableTargets)
+            => SkillResolver.Resolve(skill.Skill, availableTargets);
     }
 }
