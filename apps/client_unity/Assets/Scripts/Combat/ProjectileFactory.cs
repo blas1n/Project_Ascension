@@ -5,7 +5,7 @@ namespace ProjectAscension.Combat
     /// <summary>Spawns a placeholder projectile (no art yet).</summary>
     public static class ProjectileFactory
     {
-        public static void Spawn(AttackContext ctx, float speed, float damage, Color color, float radius = 0.12f)
+        public static void Spawn(AttackContext ctx, float speed, float damage, Color color, float radius = 0.12f, float gravity = 0f)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "Projectile";
@@ -22,7 +22,7 @@ namespace ProjectAscension.Combat
             if (renderer != null)
                 renderer.material.color = color;
 
-            go.AddComponent<Projectile>().Launch(ctx.Direction, speed, damage, ctx.Attacker);
+            go.AddComponent<Projectile>().Launch(ctx.Direction, speed, damage, ctx.Attacker, gravity: gravity);
         }
     }
 }
