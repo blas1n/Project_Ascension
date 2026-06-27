@@ -22,6 +22,7 @@ namespace ProjectAscension.Equipment
         [SerializeField] private float damage = 10f;
         [SerializeField] private float range = 50f;
         [SerializeField] private float projectileSpeed = 0f; // 0 = hitscan/melee
+        [SerializeField] private float projectileGravity = 0f; // >0 = drops/arcs (arrow); 0 = straight (bolt)
         [SerializeField] private float cooldown = 0.4f;
 
         [Header("Charge (0 charge time = instant)")]
@@ -43,6 +44,7 @@ namespace ProjectAscension.Equipment
         public float Damage => damage;
         public float Range => range;
         public float ProjectileSpeed => projectileSpeed;
+        public float ProjectileGravity => projectileGravity;
         public float Cooldown => cooldown;
         public float DiscoveryWeight => discoveryWeight;
         public float ChargeTime => chargeTime;

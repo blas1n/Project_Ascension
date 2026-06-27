@@ -15,7 +15,8 @@ namespace ProjectAscension.Equipment
         {
             float mult = ChargeRules.Multiplier(charge, Data.MaxChargeMultiplier);
             var color = Color.Lerp(new Color(1f, 0.85f, 0.3f), new Color(1f, 0.4f, 0.1f), charge);
-            ProjectileFactory.Spawn(ctx, Data.ProjectileSpeed * mult, Data.Damage * mult, color);
+            // Arrows arc under gravity; a charged (faster) shot flies flatter.
+            ProjectileFactory.Spawn(ctx, Data.ProjectileSpeed * mult, Data.Damage * mult, color, gravity: Data.ProjectileGravity);
         }
     }
 }

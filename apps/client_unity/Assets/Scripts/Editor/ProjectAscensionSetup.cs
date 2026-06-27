@@ -110,8 +110,8 @@ namespace ProjectAscension.Editor
             // Create all weapons first, then save once, then load fresh references.
             // (Each CreateWeapon must not hold a reference across other writes.)
             CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either, damage: 25f, range: 2.2f, projectileSpeed: 0f, cooldown: 0.5f);
-            // Bow: a two-handed charge weapon (hold to draw, release to loose).
-            CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.TwoHand, damage: 18f, range: 60f, projectileSpeed: 28f, cooldown: 0.6f, chargeTime: 0.8f, maxChargeMultiplier: 2.5f);
+            // Bow: a two-handed charge weapon (hold to draw, release to loose) whose arrows arc.
+            CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.TwoHand, damage: 18f, range: 60f, projectileSpeed: 28f, cooldown: 0.6f, chargeTime: 0.8f, maxChargeMultiplier: 2.5f, projectileGravity: 9.8f);
             // Pistol: a firearm whose accuracy blooms under sustained fire (spread).
             CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either, damage: 12f, range: 60f, projectileSpeed: 0f, cooldown: 0.25f,
                 spreadMin: 1f, spreadMax: 9f, spreadPerShot: 1.4f, spreadRecovery: 7f);
@@ -139,7 +139,8 @@ namespace ProjectAscension.Editor
         private static void CreateWeapon(string assetName, string displayName, EquipmentType equipmentType, SlotType slotType,
             float damage, float range, float projectileSpeed, float cooldown,
             float chargeTime = 0f, float maxChargeMultiplier = 1f,
-            float spreadMin = 0f, float spreadMax = 0f, float spreadPerShot = 0f, float spreadRecovery = 0f)
+            float spreadMin = 0f, float spreadMax = 0f, float spreadPerShot = 0f, float spreadRecovery = 0f,
+            float projectileGravity = 0f)
         {
             var path = $"{WeaponsDir}/{assetName}.asset";
             var data = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
@@ -155,6 +156,7 @@ namespace ProjectAscension.Editor
             so.FindProperty("damage").floatValue = damage;
             so.FindProperty("range").floatValue = range;
             so.FindProperty("projectileSpeed").floatValue = projectileSpeed;
+            so.FindProperty("projectileGravity").floatValue = projectileGravity;
             so.FindProperty("cooldown").floatValue = cooldown;
             so.FindProperty("chargeTime").floatValue = chargeTime;
             so.FindProperty("maxChargeMultiplier").floatValue = maxChargeMultiplier;

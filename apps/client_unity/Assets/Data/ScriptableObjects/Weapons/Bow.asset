@@ -18,6 +18,7 @@ MonoBehaviour:
   damage: 18
   range: 60
   projectileSpeed: 28
+  projectileGravity: 9.8
   cooldown: 0.6
   chargeTime: 0.8
   maxChargeMultiplier: 2.5

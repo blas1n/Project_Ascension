@@ -3,22 +3,27 @@ using UnityEngine;
 namespace ProjectAscension.Combat
 {
     /// <summary>
-    /// Straight-line projectile (arrow / spell bolt). Applies damage to the first
-    /// IDamageable it overlaps, then despawns. Spawn via <see cref="ProjectileFactory"/>.
+    /// A projectile (arrow / spell bolt). Travels along its velocity, optionally arcing
+    /// under gravity (drop) — arrows arc, energy bolts fly straight. Applies damage to
+    /// the first IDamageable it overlaps, then despawns. Spawn via
+    /// <see cref="ProjectileFactory"/>.
     /// </summary>
     [RequireComponent(typeof(Collider), typeof(Rigidbody))]
     public sealed class Projectile : MonoBehaviour
     {
-        private float _speed;
+        private Vector3 _velocity;
+        private float _gravity;
         private float _damage;
         private float _lifetime;
         private GameObject _owner;
         private float _age;
 
-        public void Launch(Vector3 direction, float speed, float damage, GameObject owner, float lifetime = 5f)
+        public void Launch(Vector3 direction, float speed, float damage, GameObject owner, float lifetime = 5f, float gravity = 0f)
         {
-            transform.forward = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
-            _speed = speed;
+            var dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
+            transform.forward = dir;
+            _velocity = dir * speed;
+            _gravity = gravity;
             _damage = damage;
             _owner = owner;
             _lifetime = lifetime;
@@ -27,7 +32,9 @@ namespace ProjectAscension.Combat
 
         private void Update()
         {
-            transform.position += transform.forward * (_speed * Time.deltaTime);
+            if (_gravity > 0f) _velocity += Vector3.down * (_gravity * Time.deltaTime); // drop
+            transform.position += _velocity * Time.deltaTime;
+            if (_velocity.sqrMagnitude > 0.0001f) transform.forward = _velocity.normalized; // point along the arc
             _age += Time.deltaTime;
             if (_age >= _lifetime)
                 Destroy(gameObject);
