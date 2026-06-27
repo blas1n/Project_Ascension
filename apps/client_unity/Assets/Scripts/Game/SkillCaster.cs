@@ -127,15 +127,18 @@ namespace ProjectAscension.Game
         {
             if (skill == null) return;
 
+            // DB-driven combat balance (fetched at startup; Default offline).
+            var tuning = GameSession.Instance?.CombatTuning ?? CombatTuning.Default;
+
             // Skills cost focus (combat-framework 집중력); refuse the cast when short.
-            if (_focus != null && !_focus.TrySpend(FocusCost.Of(skill)))
+            if (_focus != null && !_focus.TrySpend(FocusCost.Of(skill, tuning)))
             {
                 Debug.Log($"[SkillCaster] Not enough focus to cast \"{skill.Name}\".");
                 return;
             }
 
             var targets = FindTargets();
-            var resolution = SkillResolver.Resolve(skill, targets.Count);
+            var resolution = SkillResolver.Resolve(skill, targets.Count, tuning);
             Apply(resolution, targets);
         }
 

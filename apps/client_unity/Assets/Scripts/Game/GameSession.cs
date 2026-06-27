@@ -1,6 +1,9 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
 {
@@ -13,6 +16,7 @@ namespace ProjectAscension.Game
     public sealed class GameSession : MonoBehaviour
     {
         [SerializeField] private WeaponData[] ownedWeapons;
+        [SerializeField] private string serverUrl = ""; // empty → offline (defaults/SO assets)
 
         public static GameSession Instance { get; private set; }
 
@@ -23,6 +27,19 @@ namespace ProjectAscension.Game
         /// <summary>Skills the player has discovered, split into weapons (synthesized
         /// magic) and commands (techniques). Populated as discoveries are fetched.</summary>
         public DiscoveredSkillSet DiscoveredSkills { get; private set; }
+
+        /// <summary>The combat balance the resolvers use — DB-driven, fetched once at
+        /// startup. Defaults to <see cref="CombatTuning.Default"/> until/unless fetched
+        /// (offline keeps the built-in values).</summary>
+        public CombatTuning CombatTuning { get; private set; } = CombatTuning.Default;
+
+        // Authored weapon definitions by DisplayName (DB-driven stats), fetched at start.
+        private readonly Dictionary<string, WeaponDefinitionDto> _weaponDefs = new();
+
+        /// <summary>The DB-driven definition for an authored weapon, by display name —
+        /// null when offline or unknown (caller falls back to the authored asset).</summary>
+        public WeaponDefinitionDto WeaponDefinition(string displayName)
+            => displayName != null && _weaponDefs.TryGetValue(displayName, out var d) ? d : null;
 
         private void Awake()
         {
@@ -39,6 +56,30 @@ namespace ProjectAscension.Game
             PlayerState = new PlayerStateService(ownedWeapons ?? new WeaponData[0]);
             Discovery = new DiscoveryService();
             DiscoveredSkills = new DiscoveredSkillSet();
+
+            if (!string.IsNullOrWhiteSpace(serverUrl)) StartCoroutine(FetchCatalog(new CatalogApiClient(serverUrl)));
         }
+
+        // Pull the DB-driven balance once at startup. Any failure leaves the defaults in
+        // place, so the slice stays playable offline.
+        private IEnumerator FetchCatalog(CatalogApiClient api)
+        {
+            yield return api.GetCombatTuning(dto =>
+            {
+                if (dto != null) CombatTuning = ToCombatTuning(dto);
+            });
+            yield return api.GetWeapons(defs =>
+            {
+                if (defs == null) return;
+                foreach (var d in defs)
+                    if (!string.IsNullOrEmpty(d.displayName)) _weaponDefs[d.displayName] = d;
+            });
+        }
+
+        private static CombatTuning ToCombatTuning(CombatTuningDto d) => new(
+            d.projectileDamage, d.beamDamage, d.areaDamage, d.dotDamagePerTick, d.spreadFalloff,
+            d.baseDotTicks, d.shieldPerMagnitude, d.dashPerMagnitude, d.leechFractionPerMagnitude,
+            d.controlDurationPerMagnitude, d.passiveShieldReduction, d.passiveBarrierReduction,
+            d.passiveLeech, d.focusCostPerPoint);
     }
 }

@@ -78,6 +78,33 @@ namespace ProjectAscension.Equipment
         /// Null for authored weapons (which use their EquipmentType tag).</summary>
         public string ContextTag => _contextTag;
 
+        /// <summary>Build an authored weapon from a server definition (DB-driven stats),
+        /// so a balance edit retunes it with no client rebuild. Params (not a DTO) keep
+        /// Equipment free of the Net assembly; the caller maps the wire shape.</summary>
+        public static WeaponData CreateFromDefinition(
+            string displayName, EquipmentType equipmentType, SlotType slotType,
+            float damage, float range, float projectileSpeed, float projectileGravity, float cooldown,
+            float chargeTime, float maxChargeMultiplier,
+            float spreadMin, float spreadMax, float spreadPerShot, float spreadRecovery)
+        {
+            var data = CreateInstance<WeaponData>();
+            data.displayName = displayName;
+            data.equipmentType = equipmentType;
+            data.slotType = slotType;
+            data.damage = damage;
+            data.range = range;
+            data.projectileSpeed = projectileSpeed;
+            data.projectileGravity = projectileGravity;
+            data.cooldown = cooldown;
+            data.chargeTime = chargeTime;
+            data.maxChargeMultiplier = maxChargeMultiplier;
+            data.spreadMin = spreadMin;
+            data.spreadMax = spreadMax;
+            data.spreadPerShot = spreadPerShot;
+            data.spreadRecovery = spreadRecovery;
+            return data;
+        }
+
         /// <summary>Mint a discovered weapon at runtime from a composed skill — a new
         /// equippable that casts it (ADR 0005: a weapon is a new slot item).</summary>
         public static WeaponData CreateDiscovered(string name, Skill skill, string contextTag)
