@@ -32,11 +32,20 @@ namespace ProjectAscension.Equipment
                 Equip(config.Left, config.Right);
         }
 
-        /// <summary>Re-equip both slots from explicit weapon data (runtime selection).</summary>
+        /// <summary>Re-equip both slots from explicit weapon data (runtime selection).
+        /// A two-handed weapon occupies both slots (the other hand stays empty).</summary>
         public void Equip(WeaponData left, WeaponData right)
         {
+            if (left != null && left.IsTwoHand) { EquipTwoHand(left); return; }
+            if (right != null && right.IsTwoHand) { EquipTwoHand(right); return; }
             if (left != null) _left.Equip(WeaponFactory.Create(left)); else _left.Unequip();
             if (right != null) _right.Equip(WeaponFactory.Create(right)); else _right.Unequip();
+        }
+
+        private void EquipTwoHand(WeaponData data)
+        {
+            _left.Unequip(); // both hands hold the one weapon; it fires on the primary input
+            _right.Equip(WeaponFactory.Create(data));
         }
 
         /// <summary>Equip a single weapon into the left hand (e.g. a freshly discovered

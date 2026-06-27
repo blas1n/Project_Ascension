@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: ProjectAscension.Equipment::ProjectAscension.Equipment.WeaponData
   displayName: Bow
   equipmentType: 3
-  slotType: 2
+  slotType: 3
   damage: 18
   range: 60
   projectileSpeed: 28
   cooldown: 0.6
+  chargeTime: 0.8
+  maxChargeMultiplier: 2.5
   discoveryWeight: 0

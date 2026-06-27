@@ -31,37 +31,58 @@ namespace ProjectAscension.Player
             }
 
             _input.AttackPressed += OnLeftClick;
+            _input.AttackReleased += OnLeftRelease;
             _input.AttackLeftPressed += OnRightClick;
+            _input.AttackLeftReleased += OnRightRelease;
         }
 
         private void OnDestroy()
         {
             if (_input == null) return;
             _input.AttackPressed -= OnLeftClick;
+            _input.AttackReleased -= OnLeftRelease;
             _input.AttackLeftPressed -= OnRightClick;
+            _input.AttackLeftReleased -= OnRightRelease;
         }
 
-        // Raise the raw click (for command combos) then fire the weapon.
+        // LMB = right-hand weapon, RMB = left-hand. Press starts (instant weapons fire,
+        // charge weapons draw); release fires a charged weapon. Raise the raw click on
+        // press for command combos.
         private void OnLeftClick()
         {
             GameplayEvents.RaiseLeftClicked();
-            Fire(loadout != null ? loadout.RightSlot : null);
+            FireDown(loadout != null ? loadout.RightSlot : null);
         }
+
+        private void OnLeftRelease() => FireUp(loadout != null ? loadout.RightSlot : null);
 
         private void OnRightClick()
         {
             GameplayEvents.RaiseRightClicked();
-            Fire(loadout != null ? loadout.LeftSlot : null);
+            FireDown(loadout != null ? loadout.LeftSlot : null);
         }
 
-        private void Fire(EquipmentSlot slot)
+        private void OnRightRelease() => FireUp(loadout != null ? loadout.LeftSlot : null);
+
+        private void FireDown(EquipmentSlot slot)
         {
-            if (slot?.Current is not WeaponBase weapon || aimSource == null) return;
+            if (TryWeapon(slot, out var weapon, out var ctx) && weapon.PrimaryDown(ctx))
+                GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+        }
 
-            var ctx = new AttackContext(aimSource.position, aimSource.forward, gameObject);
-            if (!weapon.PrimaryAction(ctx)) return; // on cooldown
+        private void FireUp(EquipmentSlot slot)
+        {
+            if (TryWeapon(slot, out var weapon, out var ctx) && weapon.PrimaryUp(ctx))
+                GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+        }
 
-            GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+        private bool TryWeapon(EquipmentSlot slot, out WeaponBase weapon, out AttackContext ctx)
+        {
+            weapon = slot?.Current as WeaponBase;
+            ctx = default;
+            if (weapon == null || aimSource == null) return false;
+            ctx = new AttackContext(aimSource.position, aimSource.forward, gameObject);
+            return true;
         }
     }
 }

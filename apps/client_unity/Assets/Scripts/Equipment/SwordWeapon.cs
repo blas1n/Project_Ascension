@@ -8,7 +8,7 @@ namespace ProjectAscension.Equipment
     {
         private const float SwingRadius = 1.1f;
 
-        protected override void OnPrimary(AttackContext ctx)
+        protected override void OnPrimary(AttackContext ctx, float charge)
         {
             var center = ctx.Origin + ctx.Direction.normalized * Data.Range;
             var hits = Physics.OverlapSphere(center, SwingRadius);

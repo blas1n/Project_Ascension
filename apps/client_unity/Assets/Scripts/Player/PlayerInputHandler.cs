@@ -23,11 +23,13 @@ namespace ProjectAscension.Player
         public event Action JumpPressed;
         public event Action DodgePressed;
 
-        /// <summary>Primary attack (right-hand weapon).</summary>
+        /// <summary>Primary attack (right-hand weapon) — pressed / released (for charge).</summary>
         public event Action AttackPressed;
+        public event Action AttackReleased;
 
-        /// <summary>Secondary attack (left-hand weapon).</summary>
+        /// <summary>Secondary attack (left-hand weapon) — pressed / released (for charge).</summary>
         public event Action AttackLeftPressed;
+        public event Action AttackLeftReleased;
 
         public Vector2 Move => _move.ReadValue<Vector2>();
         public Vector2 Look => _look.ReadValue<Vector2>();
@@ -47,7 +49,9 @@ namespace ProjectAscension.Player
             _jump.performed += OnJump;
             _dodge.performed += OnDodge;
             _attack.performed += OnAttack;
+            _attack.canceled += OnAttackUp;
             _attackLeft.performed += OnAttackLeft;
+            _attackLeft.canceled += OnAttackLeftUp;
 
             _playerMap.Enable();
         }
@@ -56,7 +60,9 @@ namespace ProjectAscension.Player
         private void OnJump(InputAction.CallbackContext ctx) => JumpPressed?.Invoke();
         private void OnDodge(InputAction.CallbackContext ctx) => DodgePressed?.Invoke();
         private void OnAttack(InputAction.CallbackContext ctx) => AttackPressed?.Invoke();
+        private void OnAttackUp(InputAction.CallbackContext ctx) => AttackReleased?.Invoke();
         private void OnAttackLeft(InputAction.CallbackContext ctx) => AttackLeftPressed?.Invoke();
+        private void OnAttackLeftUp(InputAction.CallbackContext ctx) => AttackLeftReleased?.Invoke();
 
         public void Dispose()
         {
@@ -65,7 +71,9 @@ namespace ProjectAscension.Player
             _jump.performed -= OnJump;
             _dodge.performed -= OnDodge;
             _attack.performed -= OnAttack;
+            _attack.canceled -= OnAttackUp;
             _attackLeft.performed -= OnAttackLeft;
+            _attackLeft.canceled -= OnAttackLeftUp;
             _playerMap.Disable();
         }
     }

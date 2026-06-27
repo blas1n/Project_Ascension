@@ -24,6 +24,10 @@ namespace ProjectAscension.Equipment
         [SerializeField] private float projectileSpeed = 0f; // 0 = hitscan/melee
         [SerializeField] private float cooldown = 0.4f;
 
+        [Header("Charge (0 charge time = instant)")]
+        [SerializeField] private float chargeTime = 0f;            // seconds to full charge
+        [SerializeField] private float maxChargeMultiplier = 1f;   // damage/speed at full charge
+
         [Header("Discovery (later phase hook — unused)")]
         [SerializeField] private float discoveryWeight = 0f;
 
@@ -35,9 +39,17 @@ namespace ProjectAscension.Equipment
         public float ProjectileSpeed => projectileSpeed;
         public float Cooldown => cooldown;
         public float DiscoveryWeight => discoveryWeight;
+        public float ChargeTime => chargeTime;
+        public float MaxChargeMultiplier => maxChargeMultiplier;
 
         /// <summary>Melee weapons strike in range; everything else is ranged.</summary>
         public bool IsMelee => equipmentType == EquipmentType.Weapon;
+
+        /// <summary>A charge weapon holds to charge and releases to fire (e.g. a bow).</summary>
+        public bool IsCharged => chargeTime > 0f;
+
+        /// <summary>A two-handed weapon (e.g. a longbow) occupies both equip slots.</summary>
+        public bool IsTwoHand => slotType == SlotType.TwoHand;
 
         // Runtime-only (a discovered weapon), not serialized.
         private Skill _discoveredSkill;
