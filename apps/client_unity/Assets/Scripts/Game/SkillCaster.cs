@@ -1,9 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using ProjectAscension.Combat;
-using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.Net;
 
@@ -32,15 +30,13 @@ namespace ProjectAscension.Game
         private DiscoveryApiClient _api;
         private HitReceiver _self;
         private SkillEffects _effects;
-        private Loadout _loadout;
         private Skill _skill;
-        private string[] _requiredEquipment;
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
         public string SkillName => _skill?.Name ?? "(none)";
 
-        /// <summary>A synthesized-magic weapon (aim + fire) vs an invoked command —
-        /// the input layer binds it accordingly.</summary>
+        /// <summary>A synthesized-magic weapon (a new equippable, aim + fire) vs an
+        /// invoked command — the input layer binds it accordingly.</summary>
         public bool IsWeapon => _manifestation == ManifestationKind.Weapon;
 
         private ManifestationKind _manifestation = ManifestationKind.Command;
@@ -49,7 +45,6 @@ namespace ProjectAscension.Game
         {
             _self = GetComponent<HitReceiver>();
             _effects = GetComponent<SkillEffects>(); // optional presentation stub
-            _loadout = FindAnyObjectByType<Loadout>();
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
@@ -68,14 +63,8 @@ namespace ProjectAscension.Game
                 ? kind
                 : ManifestationKind.Command;
 
-            // The skill is bound to the equipment it was discovered with (ADR 0005):
-            // keep only the equipment-category tags from its context.
-            _requiredEquipment = (dto.contextTags ?? new string[0])
-                .Where(EquipmentTags.Vocabulary.Contains)
-                .ToArray();
-
-            // Register into the session's set — weapon (synthesized magic) or command.
-            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill, _requiredEquipment);
+            // Register into the session's set — weapon (a new equippable) or command.
+            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill);
             GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
             // A command is invoked by the button combo the engine assigned it — register it.
@@ -85,37 +74,18 @@ namespace ProjectAscension.Game
                 FindAnyObjectByType<ComboInvoker>()?.RegisterCommand(combo, discovered);
             }
 
-            var bind = _requiredEquipment.Length > 0 ? string.Join("+", _requiredEquipment) : "any";
-            Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} (needs {bind}, {_skill.Primitives.Count} primitives).");
-        }
-
-        /// <summary>Whether the skill can be cast with the gear in hand right now
-        /// (ADR 0005 — a discovery is bound to its weapon).</summary>
-        public bool CanCast()
-        {
-            if (!HasSkill) return false;
-            if (_requiredEquipment == null || _requiredEquipment.Length == 0) return true;
-            var equipped = EquipmentTags.CurrentTags(_loadout);
-            // Both hands must be the exact equipment the skill was discovered with.
-            return equipped.Count == _requiredEquipment.Length && _requiredEquipment.All(equipped.Contains);
+            Debug.Log($"[SkillCaster] Equipped \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
         }
 
         /// <summary>Execute the equipped weapon skill against nearby targets.</summary>
         public void Cast()
         {
-            if (!HasSkill) return;
-            if (!CanCast())
-            {
-                Debug.Log($"[SkillCaster] \"{SkillName}\" needs {string.Join("+", _requiredEquipment)} equipped — cannot cast with the current weapon.");
-                return;
-            }
-
-            ExecuteSkill(_skill);
+            if (HasSkill) ExecuteSkill(_skill);
         }
 
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
         /// by weapon fire (<see cref="Cast"/>) and combo-invoked commands
-        /// (<see cref="ComboInvoker"/>); the caller is responsible for equipment gating.</summary>
+        /// (<see cref="ComboInvoker"/>).</summary>
         public void ExecuteSkill(Skill skill)
         {
             if (skill == null) return;
