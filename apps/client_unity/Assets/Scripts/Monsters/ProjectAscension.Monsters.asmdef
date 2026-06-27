@@ -2,7 +2,8 @@
   "name": "ProjectAscension.Monsters",
   "rootNamespace": "ProjectAscension.Monsters",
   "references": [
-    "ProjectAscension.Combat"
+    "ProjectAscension.Combat",
+    "ProjectAscension.GameSimulation"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
