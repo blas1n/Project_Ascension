@@ -33,6 +33,7 @@ namespace ProjectAscension.Game
         private HitReceiver _self;
         private SkillEffects _effects;
         private PassiveModifiers _passives;
+        private FocusPool _focus;
         private Skill _skill;
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
@@ -49,6 +50,7 @@ namespace ProjectAscension.Game
             _self = GetComponent<HitReceiver>();
             _effects = GetComponent<SkillEffects>(); // optional presentation stub
             _passives = GetComponent<PassiveModifiers>(); // optional, for passive lifesteal
+            _focus = GetComponent<FocusPool>();           // optional, gates casts by focus
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
@@ -124,6 +126,14 @@ namespace ProjectAscension.Game
         public void ExecuteSkill(Skill skill)
         {
             if (skill == null) return;
+
+            // Skills cost focus (combat-framework 집중력); refuse the cast when short.
+            if (_focus != null && !_focus.TrySpend(FocusCost.Of(skill)))
+            {
+                Debug.Log($"[SkillCaster] Not enough focus to cast \"{skill.Name}\".");
+                return;
+            }
+
             var targets = FindTargets();
             var resolution = SkillResolver.Resolve(skill, targets.Count);
             Apply(resolution, targets);
