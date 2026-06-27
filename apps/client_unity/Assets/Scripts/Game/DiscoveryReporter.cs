@@ -27,7 +27,10 @@ namespace ProjectAscension.Game
         [SerializeField] private string regionId = "22222222-2222-2222-2222-222222222222";
         [SerializeField] private float flushInterval = 5f;
 
+        private const float MonsterContextWindow = 10f; // a recent kill flavors discovery for this long
+
         private readonly BehaviorAccumulator _accumulator = new();
+        private readonly Dictionary<string, float> _recentMonsters = new(); // tag -> expiry time
         private DiscoveryApiClient _api;
         private Loadout _loadout;
         private int _persistence;
@@ -48,6 +51,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
+            GameplayEvents.MonsterKilled += OnMonsterKilled;
         }
 
         private void OnDisable()
@@ -55,12 +59,20 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped -= OnJumped;
             GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
+            GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
         private void OnJumped() => _accumulator.Record(BehaviorKind.Jump);
         private void OnDodged() => _accumulator.Record(BehaviorKind.Dodge);
         private void OnAttacked(bool isMelee) =>
             _accumulator.Record(isMelee ? BehaviorKind.MeleeAttack : BehaviorKind.RangedAttack);
+
+        // A defeated monster flavors the discovery context for a window (몬스터는 발견의 촉매).
+        private void OnMonsterKilled(GameObject monster)
+        {
+            if (monster != null && monster.TryGetComponent<IMonsterInfo>(out var info) && !string.IsNullOrEmpty(info.DiscoveryTag))
+                _recentMonsters[info.DiscoveryTag] = Time.time + MonsterContextWindow;
+        }
 
         private IEnumerator FlushLoop()
         {
@@ -115,23 +127,23 @@ namespace ProjectAscension.Game
 
         private IEnumerable<string> BuildContextTags()
         {
-            var tags = new List<string>();
-            if (_loadout == null) return tags;
-            AddTags(tags, _loadout.LeftSlot?.Current?.Data);
-            AddTags(tags, _loadout.RightSlot?.Current?.Data);
+            // Equipment (shared EquipmentTags — includes a discovered weapon's own tag,
+            // so equipping it opens further discoveries) + recent monster encounters.
+            var tags = new List<string>(EquipmentTags.CurrentTags(_loadout));
+            AddRecentMonsters(tags);
             return tags;
         }
 
-        private static void AddTags(ICollection<string> tags, WeaponData data)
+        private void AddRecentMonsters(ICollection<string> tags)
         {
-            if (data == null) return;
-            switch (data.EquipmentType)
+            float now = Time.time;
+            var expired = new List<string>();
+            foreach (var kv in _recentMonsters)
             {
-                case EquipmentType.Weapon: tags.Add("melee"); break;
-                case EquipmentType.Firearm: tags.Add("firearm"); break;
-                case EquipmentType.Bow: tags.Add("bow"); break;
-                case EquipmentType.Catalyst: tags.Add("arcane"); break;
+                if (kv.Value > now) tags.Add(kv.Key);
+                else expired.Add(kv.Key);
             }
+            foreach (var tag in expired) _recentMonsters.Remove(tag);
         }
 
         // The composition seed for the skill's primary effect — a PrimitiveKind name.

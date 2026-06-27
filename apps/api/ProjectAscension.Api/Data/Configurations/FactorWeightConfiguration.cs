@@ -24,6 +24,9 @@ public class FactorWeightConfiguration : IEntityTypeConfiguration<FactorWeight>
             new FactorWeight { Key = "catalyst", Category = "Equipment", Weight = 6 },
             new FactorWeight { Key = "fire", Category = "Knowledge", Weight = 8 },
             new FactorWeight { Key = "compression", Category = "Knowledge", Weight = 8 },
-            new FactorWeight { Key = "wind", Category = "Knowledge", Weight = 8 });
+            new FactorWeight { Key = "wind", Category = "Knowledge", Weight = 8 },
+            new FactorWeight { Key = "monster:melee", Category = "Monster", Weight = 6 },
+            new FactorWeight { Key = "monster:ranged", Category = "Monster", Weight = 8 },
+            new FactorWeight { Key = "monster:elite", Category = "Monster", Weight = 14 });
     }
 }

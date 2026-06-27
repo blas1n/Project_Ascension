@@ -11,7 +11,7 @@ namespace ProjectAscension.Monsters
     /// (slowed = moves slower, stunned = can't act, knocked back = pushed).
     /// </summary>
     [RequireComponent(typeof(HitReceiver))]
-    public abstract class MonsterBase : MonoBehaviour, IStatusReceiver
+    public abstract class MonsterBase : MonoBehaviour, IStatusReceiver, IMonsterInfo
     {
         private enum State { Idle, Chase, Attack, Dead }
 
@@ -36,6 +36,10 @@ namespace ProjectAscension.Monsters
 
         protected Transform Target => _target;
         protected IDamageable TargetDamageable => _targetDamageable;
+
+        /// <summary>Discovery context tag (e.g. "monster:elite"), set by the factory —
+        /// defeating this monster flavors the player's discovery context.</summary>
+        public string DiscoveryTag { get; set; }
 
         public void Configure(float moveSpeed, float aggroRange, float attackRange, float attackCooldown, float damage, float projectileSpeed)
         {

@@ -51,6 +51,10 @@ public sealed record DiscoveryTuning(
             ["fire"] = 8,
             ["compression"] = 8,
             ["wind"] = 8,
+            // Monsters as discovery catalysts (combat-framework: 몬스터는 발견의 촉매).
+            ["monster:melee"] = 6,
+            ["monster:ranged"] = 8,
+            ["monster:elite"] = 14,
         },
         DefaultBehaviorWeight: 1,
         DefaultFactorWeight: 0,
