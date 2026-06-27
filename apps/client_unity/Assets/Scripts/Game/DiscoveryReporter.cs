@@ -51,6 +51,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
+            GameplayEvents.ChargedAttacked += OnChargedAttacked;
             GameplayEvents.MonsterKilled += OnMonsterKilled;
         }
 
@@ -59,6 +60,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped -= OnJumped;
             GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
+            GameplayEvents.ChargedAttacked -= OnChargedAttacked;
             GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
@@ -66,6 +68,7 @@ namespace ProjectAscension.Game
         private void OnDodged() => _accumulator.Record(BehaviorKind.Dodge);
         private void OnAttacked(bool isMelee) =>
             _accumulator.Record(isMelee ? BehaviorKind.MeleeAttack : BehaviorKind.RangedAttack);
+        private void OnChargedAttacked() => _accumulator.Record(BehaviorKind.ChargedAttack);
 
         // A defeated monster flavors the discovery context for a window (몬스터는 발견의 촉매).
         private void OnMonsterKilled(GameObject monster)

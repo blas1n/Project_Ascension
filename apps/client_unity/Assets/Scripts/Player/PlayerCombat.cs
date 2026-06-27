@@ -13,6 +13,8 @@ namespace ProjectAscension.Player
     /// </summary>
     public sealed class PlayerCombat : MonoBehaviour
     {
+        private const float ChargedAttackThreshold = 0.7f; // draw fraction that counts as "charged"
+
         [SerializeField] private Loadout loadout;
         [SerializeField] private Transform aimSource;
 
@@ -72,8 +74,10 @@ namespace ProjectAscension.Player
 
         private void FireUp(EquipmentSlot slot)
         {
-            if (TryWeapon(slot, out var weapon, out var ctx) && weapon.PrimaryUp(ctx))
-                GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx)) return;
+            GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            // A held/charged shot is its own discovery signal (e.g. 긴 차징 → 화염포).
+            if (weapon.LastCharge >= ChargedAttackThreshold) GameplayEvents.RaiseChargedAttacked();
         }
 
         private bool TryWeapon(EquipmentSlot slot, out WeaponBase weapon, out AttackContext ctx)

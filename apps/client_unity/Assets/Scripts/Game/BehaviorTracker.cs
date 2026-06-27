@@ -29,6 +29,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
+            GameplayEvents.ChargedAttacked += OnChargedAttacked;
         }
 
         private void OnDisable()
@@ -36,6 +37,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped -= OnJumped;
             GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
+            GameplayEvents.ChargedAttacked -= OnChargedAttacked;
         }
 
         private void OnJumped() => Emit(BehaviorKind.Jump);
@@ -53,6 +55,8 @@ namespace ProjectAscension.Game
             if (Time.time - _lastDodgeTime <= DodgeAttackWindow)
                 Emit(BehaviorKind.DodgeAttack);
         }
+
+        private void OnChargedAttacked() => Emit(BehaviorKind.ChargedAttack);
 
         private void Emit(BehaviorKind kind)
         {

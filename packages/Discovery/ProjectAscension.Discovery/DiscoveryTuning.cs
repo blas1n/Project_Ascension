@@ -35,6 +35,7 @@ public sealed record DiscoveryTuning(
             ["RangedAttack"] = 2,
             ["ChargeAttack"] = 3,
             ["DodgeAttack"] = 3,
+            ["ChargedAttack"] = 3, // a deliberate held shot — drives charge discoveries
         },
         new Dictionary<string, int>
         {

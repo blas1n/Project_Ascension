@@ -18,6 +18,7 @@ namespace ProjectAscension.Combat
         public static event Action Jumped;
         public static event Action Dodged;
         public static event Action<bool> Attacked; // isMelee
+        public static event Action ChargedAttacked; // a high-charge shot was loosed
 
         // Raw attack-button inputs (left/right click) — feed the command combo
         // recognizer, which needs the button press, not the weapon-fire execution.
@@ -36,6 +37,7 @@ namespace ProjectAscension.Combat
         public static void RaiseJumped() => Jumped?.Invoke();
         public static void RaiseDodged() => Dodged?.Invoke();
         public static void RaiseAttacked(bool isMelee) => Attacked?.Invoke(isMelee);
+        public static void RaiseChargedAttacked() => ChargedAttacked?.Invoke();
 
         public static void RaiseLeftClicked() => LeftClicked?.Invoke();
         public static void RaiseRightClicked() => RightClicked?.Invoke();
