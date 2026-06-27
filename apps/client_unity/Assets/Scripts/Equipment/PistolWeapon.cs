@@ -6,7 +6,7 @@ namespace ProjectAscension.Equipment
     /// <summary>Firearm: instant hitscan raycast.</summary>
     public sealed class PistolWeapon : WeaponBase
     {
-        protected override void OnPrimary(AttackContext ctx)
+        protected override void OnPrimary(AttackContext ctx, float charge)
         {
             var dir = ctx.Direction.normalized;
             var origin = ctx.Origin + dir * 0.5f; // clear the attacker

@@ -10,7 +10,7 @@ namespace ProjectAscension.Equipment
     /// </summary>
     public sealed class SpellWeapon : WeaponBase
     {
-        protected override void OnPrimary(AttackContext ctx)
+        protected override void OnPrimary(AttackContext ctx, float charge)
         {
             if (Data != null && Data.DiscoveredSkill != null)
                 GameplayEvents.RaiseSkillCastRequested(Data.DiscoveredSkill);
