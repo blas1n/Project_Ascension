@@ -7,6 +7,7 @@ namespace ProjectAscension.GameSimulation.Combat
     {
         Weapon,
         Command,
+        Passive,
     }
 
     /// <summary>A discovered, executable skill plus how the player wields it — a

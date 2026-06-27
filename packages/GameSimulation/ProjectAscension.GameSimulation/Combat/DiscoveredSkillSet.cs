@@ -12,14 +12,29 @@ namespace ProjectAscension.GameSimulation.Combat
     {
         private readonly List<DiscoveredSkill> _weapons = new();
         private readonly List<DiscoveredSkill> _commands = new();
+        private readonly List<DiscoveredSkill> _passives = new();
 
         public IReadOnlyList<DiscoveredSkill> Weapons => _weapons;
         public IReadOnlyList<DiscoveredSkill> Commands => _commands;
+        public IReadOnlyList<DiscoveredSkill> Passives => _passives;
 
         public void Add(DiscoveredSkill skill)
         {
-            if (skill.Manifestation == ManifestationKind.Weapon) _weapons.Add(skill);
-            else _commands.Add(skill);
+            switch (skill.Manifestation)
+            {
+                case ManifestationKind.Weapon: _weapons.Add(skill); break;
+                case ManifestationKind.Passive: _passives.Add(skill); break;
+                default: _commands.Add(skill); break; // Command
+            }
+        }
+
+        /// <summary>The combined always-on bonuses from every discovered passive.</summary>
+        public PassiveEffect AggregatePassive()
+        {
+            var total = PassiveEffect.None;
+            foreach (var passive in _passives)
+                total += PassiveResolver.Resolve(passive.Skill);
+            return total;
         }
 
         /// <summary>Execute a discovered skill against the targets in range

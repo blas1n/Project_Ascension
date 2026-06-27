@@ -19,6 +19,10 @@ namespace ProjectAscension.Combat
         public float Current => _health.Current;
         public bool IsDead => _health.IsDead;
 
+        /// <summary>Fraction of incoming damage prevented (0..1) — set from the player's
+        /// passive discoveries (Game.PassiveModifiers). 0 for monsters.</summary>
+        public float DamageReduction { get; set; }
+
         /// <summary>(receiver, amount)</summary>
         public event Action<HitReceiver, float> Damaged;
         public event Action<HitReceiver> Died;
@@ -36,6 +40,7 @@ namespace ProjectAscension.Combat
         {
             if (IsDead) return;
 
+            amount *= Mathf.Clamp01(1f - DamageReduction); // passive damage reduction
             _health = CombatResolver.ApplyDamage(_health, amount);
             Damaged?.Invoke(this, amount);
             if (IsDead) Died?.Invoke(this);
