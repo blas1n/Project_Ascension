@@ -38,5 +38,12 @@ namespace ProjectAscension.Equipment
             if (left != null) _left.Equip(WeaponFactory.Create(left)); else _left.Unequip();
             if (right != null) _right.Equip(WeaponFactory.Create(right)); else _right.Unequip();
         }
+
+        /// <summary>Equip a single weapon into the left hand (e.g. a freshly discovered
+        /// weapon), keeping the right hand as-is.</summary>
+        public void EquipLeft(WeaponData weapon)
+        {
+            if (weapon != null) _left.Equip(WeaponFactory.Create(weapon));
+        }
     }
 }

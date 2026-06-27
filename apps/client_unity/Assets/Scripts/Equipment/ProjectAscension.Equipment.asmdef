@@ -3,7 +3,8 @@
   "rootNamespace": "ProjectAscension.Equipment",
   "references": [
     "ProjectAscension.Domain",
-    "ProjectAscension.Combat"
+    "ProjectAscension.Combat",
+    "ProjectAscension.GameSimulation"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -13,13 +13,15 @@ namespace ProjectAscension.Equipment
         public static WeaponBase Create(WeaponData data)
         {
             var go = new GameObject(data.DisplayName);
-            WeaponBase weapon = data.EquipmentType switch
-            {
-                EquipmentType.Bow => go.AddComponent<BowWeapon>(),
-                EquipmentType.Firearm => go.AddComponent<PistolWeapon>(),
-                EquipmentType.Catalyst => go.AddComponent<CatalystWeapon>(),
-                _ => go.AddComponent<SwordWeapon>(), // Weapon / default = melee
-            };
+            WeaponBase weapon = data.DiscoveredSkill != null
+                ? go.AddComponent<SpellWeapon>() // a discovered weapon casts its skill
+                : data.EquipmentType switch
+                {
+                    EquipmentType.Bow => go.AddComponent<BowWeapon>(),
+                    EquipmentType.Firearm => go.AddComponent<PistolWeapon>(),
+                    EquipmentType.Catalyst => go.AddComponent<CatalystWeapon>(),
+                    _ => go.AddComponent<SwordWeapon>(), // Weapon / default = melee
+                };
             weapon.Configure(data);
             AddPlaceholderVisual(go, data.EquipmentType);
             return weapon;
