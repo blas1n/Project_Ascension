@@ -48,6 +48,7 @@ namespace ProjectAscension.Monsters
             if (renderer != null)
                 renderer.material.color = color;
 
+            monster.DiscoveryTag = "monster:" + type.ToString().ToLowerInvariant(); // discovery catalyst
             return monster;
         }
     }
