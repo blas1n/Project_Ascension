@@ -15,6 +15,15 @@ namespace ProjectAscension.Game
         public List<ContractInstance> Available { get; } = new();
         public ContractInstance Active { get; private set; }
 
+        /// <summary>Replace the board with DB-driven contracts (fetched at startup). A null
+        /// or empty list is ignored, so an offline session keeps the built-in defaults.</summary>
+        public void SetAvailable(List<ContractInstance> contracts)
+        {
+            if (contracts == null || contracts.Count == 0) return;
+            Available.Clear();
+            Available.AddRange(contracts);
+        }
+
         public ContractService()
         {
             Available.Add(new ContractInstance

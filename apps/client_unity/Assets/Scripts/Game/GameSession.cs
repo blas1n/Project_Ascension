@@ -18,6 +18,8 @@ namespace ProjectAscension.Game
         [SerializeField] private WeaponData[] ownedWeapons;
         [SerializeField] private string serverUrl = ""; // empty → offline (defaults/SO assets)
 
+        private const string RegionId = "22222222-2222-2222-2222-222222222222"; // the slice's frontier
+
         public static GameSession Instance { get; private set; }
 
         public ContractService Contracts { get; private set; }
@@ -87,6 +89,21 @@ namespace ProjectAscension.Game
                     GameSimulation.Player.PlayerStatsCatalog.Set(new GameSimulation.Player.PlayerStats(
                         d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity,
                         d.dodgeSpeed, d.dodgeDuration, d.maxFocus, d.focusRegenPerSecond));
+            });
+            yield return api.GetContracts(RegionId, defs =>
+            {
+                if (defs == null) return;
+                var board = new List<ContractInstance>(defs.Length);
+                foreach (var d in defs)
+                    board.Add(new ContractInstance
+                    {
+                        Purpose = System.Enum.TryParse<Domain.Enums.ContractPurpose>(d.purpose, out var p) ? p : Domain.Enums.ContractPurpose.Hunt,
+                        Title = d.title,
+                        Description = d.description,
+                        TargetCount = Mathf.Max(1, d.targetCount),
+                        RewardCurrency = d.rewardCurrency,
+                    });
+                Contracts.SetAvailable(board);
             });
         }
 
