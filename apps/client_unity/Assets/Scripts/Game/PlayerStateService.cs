@@ -10,6 +10,7 @@ namespace ProjectAscension.Game
     public sealed class PlayerStateService
     {
         public int Currency;
+        public int Reputation; // 명성 — standing earned from contracts; gates higher-tier ones
         private readonly List<WeaponData> _owned;
         public IReadOnlyList<WeaponData> OwnedWeapons => _owned;
         public WeaponData SelectedLeft { get; private set; }

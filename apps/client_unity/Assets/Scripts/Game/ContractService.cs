@@ -85,6 +85,17 @@ namespace ProjectAscension.Game
             }
         }
 
+        /// <summary>The payout of a completed contract — currency and standing (명성).</summary>
+        public readonly struct Reward
+        {
+            public readonly int Currency;
+            public readonly int Reputation;
+            public Reward(int currency, int reputation) { Currency = currency; Reputation = reputation; }
+        }
+
+        /// <summary>Whether the player's standing meets the contract's requirement.</summary>
+        public static bool CanAccept(ContractInstance c, int reputation) => c != null && reputation >= c.MinReputation;
+
         public void Accept(ContractInstance template) => Active = template.Fresh();
 
         public void Abandon() => Active = null;
@@ -112,10 +123,10 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>Hand in a completed contract; returns the reward (0 if not completable).</summary>
-        public int TurnIn()
+        public Reward TurnIn()
         {
-            if (Active == null || !Active.IsComplete) return 0;
-            int reward = Active.RewardCurrency;
+            if (Active == null || !Active.IsComplete) return default;
+            var reward = new Reward(Active.RewardCurrency, Active.RewardReputation);
             Active = null;
             return reward;
         }

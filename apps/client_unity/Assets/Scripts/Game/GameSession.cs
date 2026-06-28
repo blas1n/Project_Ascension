@@ -124,6 +124,8 @@ namespace ProjectAscension.Game
                         RewardCurrency = d.rewardCurrency,
                         Target = d.target,
                         DelegationAllowed = d.delegationAllowed,
+                        RewardReputation = d.rewardReputation,
+                        MinReputation = d.minReputation,
                     });
                 Contracts.SetAvailable(board);
             });

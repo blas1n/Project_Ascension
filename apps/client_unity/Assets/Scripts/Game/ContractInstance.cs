@@ -14,6 +14,8 @@ namespace ProjectAscension.Game
         public int TargetCount = 1;
         public int Progress;
         public int RewardCurrency;
+        public int RewardReputation; // 명성 gained on completion
+        public int MinReputation;    // standing required to accept (0 = open to all)
 
         /// <summary>Optional objective filter — for a hunt, the monster key ("elite") that
         /// counts; null/empty means any target satisfies the objective.</summary>
@@ -33,6 +35,8 @@ namespace ProjectAscension.Game
             TargetCount = TargetCount,
             Progress = 0,
             RewardCurrency = RewardCurrency,
+            RewardReputation = RewardReputation,
+            MinReputation = MinReputation,
             Target = Target,
             DelegationAllowed = DelegationAllowed,
         };
