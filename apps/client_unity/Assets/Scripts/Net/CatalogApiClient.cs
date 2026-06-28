@@ -71,6 +71,8 @@ namespace ProjectAscension.Net
         public float damage;
         public float projectileSpeed;
         public float scale;
+        public string dropItemKey;
+        public int dropAmount;
     }
 
     [Serializable]

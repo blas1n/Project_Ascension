@@ -33,6 +33,8 @@ namespace ProjectAscension.Monsters
                 renderer.material.color = ColorFor(type);
 
             monster.DiscoveryTag = "monster:" + type.ToString().ToLowerInvariant(); // discovery catalyst
+            monster.DropItemKey = stats.DropItemKey;
+            monster.DropAmount = stats.DropAmount;
             return monster;
         }
 
@@ -42,10 +44,10 @@ namespace ProjectAscension.Monsters
 
         private static MonsterStats Default(MonsterType type) => type switch
         {
-            //                        hp     spd   aggro  atkRng  cd    dmg  projSpd scale
-            MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 6f, 18f, 1f),
-            MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 14f, 24f, 1.6f),
-            _ => new(40f, 3.5f, 25f, 2f, 1f, 8f, 0f, 1f), // Melee
+            //                        hp     spd   aggro  atkRng  cd    dmg  projSpd scale  drop
+            MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 6f, 18f, 1f, "feather", 2),
+            MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 14f, 24f, 1.6f, "core", 1),
+            _ => new(40f, 3.5f, 25f, 2f, 1f, 8f, 0f, 1f, "hide", 2), // Melee
         };
 
         private static Color ColorFor(MonsterType type) => type switch

@@ -24,6 +24,8 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 Damage = 8f,
                 ProjectileSpeed = 0f,
                 Scale = 1f,
+                DropItemKey = "hide",
+                DropAmount = 2,
             },
             new MonsterDefinition
             {
@@ -36,6 +38,8 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 Damage = 6f,
                 ProjectileSpeed = 18f,
                 Scale = 1f,
+                DropItemKey = "feather",
+                DropAmount = 2,
             },
             new MonsterDefinition
             {
@@ -48,6 +52,8 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 Damage = 14f,
                 ProjectileSpeed = 24f,
                 Scale = 1.6f,
+                DropItemKey = "core",
+                DropAmount = 1,
             });
     }
 }

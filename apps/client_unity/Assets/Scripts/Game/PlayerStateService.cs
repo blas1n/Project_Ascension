@@ -11,6 +11,28 @@ namespace ProjectAscension.Game
     {
         public int Currency;
         public int Reputation; // 명성 — standing earned from contracts; gates higher-tier ones
+
+        /// <summary>Resource materials by key (monster drops), the itemization base for the
+        /// shop, contract collection, and settlement supply.</summary>
+        public readonly Dictionary<string, int> Resources = new();
+
+        public void AddResource(string key, int amount)
+        {
+            if (string.IsNullOrEmpty(key) || amount <= 0) return;
+            Resources.TryGetValue(key, out var have);
+            Resources[key] = have + amount;
+        }
+
+        /// <summary>Spend resources if available; returns false (spending nothing) otherwise.</summary>
+        public bool SpendResource(string key, int amount)
+        {
+            if (string.IsNullOrEmpty(key) || amount <= 0) return false;
+            Resources.TryGetValue(key, out var have);
+            if (have < amount) return false;
+            Resources[key] = have - amount;
+            return true;
+        }
+
         private readonly List<WeaponData> _owned;
         public IReadOnlyList<WeaponData> OwnedWeapons => _owned;
         public WeaponData SelectedLeft { get; private set; }

@@ -19,5 +19,10 @@ namespace ProjectAscension.Domain.Entities
         public float Damage { get; set; }
         public float ProjectileSpeed { get; set; } // 0 = melee
         public float Scale { get; set; } // visual/body scale (elite is larger)
+
+        // The resource this monster drops on death (the itemization foundation — drops
+        // feed the shop, contract collection, and settlement supply). Empty = no drop.
+        public string DropItemKey { get; set; } = string.Empty;
+        public int DropAmount { get; set; }
     }
 }
