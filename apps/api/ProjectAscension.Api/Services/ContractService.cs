@@ -148,7 +148,8 @@ public class ContractService : IContractService
             ReadInt(c.ConditionsJson, "targetCount", 1), ReadInt(c.RewardJson, "currency", 0),
             ReadString(c.ConditionsJson, "target"), c.DelegationAllowed,
             ReadInt(c.RewardJson, "reputation", 0), ReadInt(c.ConditionsJson, "minReputation", 0),
-            ReadInt(c.ConditionsJson, "timeLimitSeconds", 0));
+            ReadInt(c.ConditionsJson, "timeLimitSeconds", 0),
+            FailOnHas(c.ConditionsJson, "timeout"), FailOnHas(c.ConditionsJson, "death"));
 
     // The slice's objective/reward are simple values in the Conditions/Reward JSON.
     private static int ReadInt(string json, string property, int fallback)
@@ -162,6 +163,26 @@ public class ContractService : IContractService
         catch (System.Text.Json.JsonException)
         {
             return fallback;
+        }
+    }
+
+    // A failure condition is set if it appears in the ConditionsJson "failOn" array.
+    // Absent / empty → that condition never triggers (failure is opt-in, never forced).
+    private static bool FailOnHas(string json, string condition)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("failOn", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                foreach (var e in arr.EnumerateArray())
+                    if (e.ValueKind == System.Text.Json.JsonValueKind.String && e.GetString() == condition)
+                        return true;
+            return false;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
         }
     }
 

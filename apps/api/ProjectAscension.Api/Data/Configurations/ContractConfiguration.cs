@@ -68,7 +68,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Status = ContractStatus.Open,
                 Title = "Elite Bounty",
                 Description = "Slay 2 elite monsters.",
-                ConditionsJson = "{\"targetCount\":2,\"target\":\"elite\",\"timeLimitSeconds\":120}",
+                ConditionsJson = "{\"targetCount\":2,\"target\":\"elite\",\"timeLimitSeconds\":120,\"failOn\":[\"timeout\"]}",
                 RewardJson = "{\"currency\":220,\"reputation\":8}",
                 CreatedAt = SeedTime,
             },
@@ -98,7 +98,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Status = ContractStatus.Open,
                 Title = "Frontier Warden",
                 Description = "A trusted expeditionary's charge: slay 3 elites. (Requires standing.)",
-                ConditionsJson = "{\"targetCount\":3,\"target\":\"elite\",\"minReputation\":20,\"timeLimitSeconds\":180}",
+                ConditionsJson = "{\"targetCount\":3,\"target\":\"elite\",\"minReputation\":20,\"timeLimitSeconds\":180,\"failOn\":[\"timeout\",\"death\"]}",
                 RewardJson = "{\"currency\":350,\"reputation\":15}",
                 CreatedAt = SeedTime,
             });

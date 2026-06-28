@@ -76,7 +76,14 @@ namespace ProjectAscension.Game
             if (Instance == this) Combat.GameplayEvents.PlayerDied -= OnPlayerDied;
         }
 
-        private void OnPlayerDied() => SuggestDelegation = true;
+        private void OnPlayerDied()
+        {
+            // A contract that fails on death does so now; otherwise death is just the
+            // delegation tutorial's teachable moment.
+            var failed = Contracts?.FailActiveOnDeath();
+            if (failed != null) ApplyFailure(failed, "died");
+            else SuggestDelegation = true;
+        }
 
         // Advance the contractor (delegated contracts) and the active contract's deadline
         // each frame, across scenes. Letting a deadline lapse fails the contract and costs
@@ -87,12 +94,14 @@ namespace ProjectAscension.Game
             float dt = Time.deltaTime;
             Contracts.TickDelegations(dt);
             var failed = Contracts.TickActive(dt);
-            if (failed != null)
-            {
-                int penalty = Mathf.Min(PlayerState.Reputation, failed.RewardReputation);
-                PlayerState.Reputation -= penalty;
-                Contracts.FailedRecently.Add($"{failed.Title} (expired, -{penalty} rep)");
-            }
+            if (failed != null) ApplyFailure(failed, "expired");
+        }
+
+        private void ApplyFailure(ContractInstance contract, string reason)
+        {
+            int penalty = Mathf.Min(PlayerState.Reputation, contract.RewardReputation);
+            PlayerState.Reputation -= penalty;
+            Contracts.FailedRecently.Add($"{contract.Title} ({reason}, -{penalty} rep)");
         }
 
         // Pull the DB-driven balance once at startup. Any failure leaves the defaults in
@@ -141,6 +150,8 @@ namespace ProjectAscension.Game
                         RewardReputation = d.rewardReputation,
                         MinReputation = d.minReputation,
                         TimeLimitSeconds = d.timeLimitSeconds,
+                        FailOnTimeout = d.failOnTimeout,
+                        FailOnDeath = d.failOnDeath,
                     });
                 Contracts.SetAvailable(board);
             });

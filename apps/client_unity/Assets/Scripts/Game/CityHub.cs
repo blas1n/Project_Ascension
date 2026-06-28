@@ -80,9 +80,16 @@ namespace ProjectAscension.Game
             else
             {
                 var c = contracts.Active;
-                string clock = c.TimeLimitSeconds > 0 ? $"   ⏱ {Mathf.CeilToInt(c.Remaining)}s left" : "";
+                string clock = c.FailOnTimeout ? $"   ⏱ {Mathf.CeilToInt(c.Remaining)}s left" : "";
                 GUILayout.Label($"Active: {c.Title}   {c.Progress}/{c.TargetCount}{clock}");
                 GUILayout.Label(c.Description);
+                if (c.FailOnTimeout || c.FailOnDeath)
+                {
+                    var conds = new List<string>();
+                    if (c.FailOnTimeout) conds.Add("timeout");
+                    if (c.FailOnDeath) conds.Add("death");
+                    GUILayout.Label($"Fails on: {string.Join(", ", conds)}");
+                }
                 if (c.IsComplete)
                 {
                     string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";

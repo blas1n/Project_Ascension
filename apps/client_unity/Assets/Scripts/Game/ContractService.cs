@@ -131,16 +131,28 @@ namespace ProjectAscension.Game
             return reward;
         }
 
-        // Failure: a deadline contract that wasn't finished in time. Surfaced for the city.
+        // Failure: a contract whose specified failure condition triggered. Surfaced for the
+        // city. Failure is opt-in — only contracts with a failOn condition can fail.
         public List<string> FailedRecently { get; } = new();
 
-        /// <summary>Advance the active contract's deadline. Returns the contract if it just
-        /// expired (the caller applies the standing penalty), else null.</summary>
+        /// <summary>Advance the active contract's deadline. Returns the contract if it
+        /// fails on timeout and just expired (the caller applies the penalty), else null.</summary>
         public ContractInstance TickActive(float dt)
         {
-            if (Active == null || Active.TimeLimitSeconds <= 0 || Active.IsComplete) return null;
+            if (Active == null || !Active.FailOnTimeout || Active.IsComplete) return null;
             Active.Remaining -= dt;
             if (Active.Remaining > 0f) return null;
+            var failed = Active;
+            Active = null;
+            return failed;
+        }
+
+        /// <summary>The active contract fails if it specifies death as a failure condition.
+        /// Returns the failed contract (caller applies the penalty), else null — so a death
+        /// during a non-death-fail contract (e.g. the delegation tutorial) does NOT fail it.</summary>
+        public ContractInstance FailActiveOnDeath()
+        {
+            if (Active == null || !Active.FailOnDeath || Active.IsComplete) return null;
             var failed = Active;
             Active = null;
             return failed;
