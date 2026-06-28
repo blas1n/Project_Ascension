@@ -30,6 +30,7 @@ builder.Services.AddScoped<IWeaponDefinitionRepository, WeaponDefinitionReposito
 builder.Services.AddScoped<IMonsterDefinitionRepository, MonsterDefinitionRepository>();
 builder.Services.AddScoped<IPlayerDefinitionRepository, PlayerDefinitionRepository>();
 builder.Services.AddScoped<IItemDefinitionRepository, ItemDefinitionRepository>();
+builder.Services.AddScoped<ISettlementRepository, SettlementRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
@@ -42,6 +43,7 @@ builder.Services.AddScoped<ISkillCompositionService, SkillCompositionService>();
 builder.Services.AddScoped<IDiscoveryTuningProvider, DiscoveryTuningProvider>();
 builder.Services.AddScoped<ICombatTuningProvider, CombatTuningProvider>();
 builder.Services.AddScoped<IKnowledgeService, KnowledgeService>();
+builder.Services.AddScoped<ISettlementService, SettlementService>();
 builder.Services.AddSingleton<CompositionMetrics>();
 
 // AI skill composition. Provider-agnostic via Microsoft.Extensions.AI IChatClient:
