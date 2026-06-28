@@ -8,15 +8,15 @@ namespace ProjectAscension.GameSimulation.Combat
     /// here.) A pure value so the timers are deterministic and testable; the renderer
     /// applies the consequences (reduced move speed, skipped actions).
     /// </summary>
-    public record StatusState(float SlowRemaining, float StunRemaining)
+    public record StatusState(float SlowRemaining, float StunRemaining, float SlowMultiplier)
     {
-        public static readonly StatusState None = new(0f, 0f);
+        public static readonly StatusState None = new(0f, 0f, 1f);
 
         public bool IsStunned => StunRemaining > 0f;
         public bool IsSlowed => SlowRemaining > 0f;
 
-        /// <summary>Movement multiplier — <paramref name="slowFactor"/> while slowed, else 1.</summary>
-        public float SpeedMultiplier(float slowFactor) => SlowRemaining > 0f ? slowFactor : 1f;
+        /// <summary>Movement multiplier while slowed (the skill-defined factor), else 1.</summary>
+        public float SpeedMultiplier => SlowRemaining > 0f ? SlowMultiplier : 1f;
     }
 
     /// <summary>Deterministic status transitions: apply a control for a duration and tick
@@ -24,25 +24,38 @@ namespace ProjectAscension.GameSimulation.Combat
     /// and the rules are testable.</summary>
     public static class StatusRules
     {
-        /// <summary>Apply a control. Slow/Stun set the remaining time to the longer of the
-        /// current and the new duration; Knockback (an impulse) is handled elsewhere.</summary>
-        public static StatusState Apply(StatusState state, ControlKind kind, float duration)
+        private const float MaxSlow = 0.9f; // a slow can't fully stop a target (min 10% speed)
+
+        /// <summary>Apply a control. Slow/Stun take the longer of the current and the new
+        /// duration; Slow's <paramref name="strength"/> (the skill's slow fraction) sets the
+        /// move multiplier, the stronger slow winning. Knockback (an impulse) is elsewhere.</summary>
+        public static StatusState Apply(StatusState state, ControlKind kind, float duration, float strength)
         {
             if (duration <= 0f) return state;
-            return kind switch
+            switch (kind)
             {
-                ControlKind.Slow => state with { SlowRemaining = Math.Max(state.SlowRemaining, duration) },
-                ControlKind.Stun => state with { StunRemaining = Math.Max(state.StunRemaining, duration) },
-                _ => state,
-            };
+                case ControlKind.Slow:
+                    float mult = 1f - Math.Min(MaxSlow, Math.Max(0f, strength));
+                    return state with
+                    {
+                        SlowRemaining = Math.Max(state.SlowRemaining, duration),
+                        SlowMultiplier = state.IsSlowed ? Math.Min(state.SlowMultiplier, mult) : mult,
+                    };
+                case ControlKind.Stun:
+                    return state with { StunRemaining = Math.Max(state.StunRemaining, duration) };
+                default:
+                    return state;
+            }
         }
 
         public static StatusState Tick(StatusState state, float dt)
         {
             if (dt <= 0f) return state;
-            return new StatusState(
-                state.SlowRemaining > dt ? state.SlowRemaining - dt : 0f,
-                state.StunRemaining > dt ? state.StunRemaining - dt : 0f);
+            return state with
+            {
+                SlowRemaining = state.SlowRemaining > dt ? state.SlowRemaining - dt : 0f,
+                StunRemaining = state.StunRemaining > dt ? state.StunRemaining - dt : 0f,
+            };
         }
     }
 }

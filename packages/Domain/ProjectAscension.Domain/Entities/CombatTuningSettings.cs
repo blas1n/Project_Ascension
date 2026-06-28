@@ -34,5 +34,12 @@ namespace ProjectAscension.Domain.Entities
 
         // Resource.
         public float FocusCostPerPoint { get; set; }
+
+        // Control strength per control magnitude (the skill defines the status numbers).
+        public float SlowPerMagnitude { get; set; }
+        public float KnockbackPerMagnitude { get; set; }
+
+        // Input.
+        public float ChargedAttackThreshold { get; set; }
     }
 }

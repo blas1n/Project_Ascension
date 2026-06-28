@@ -29,6 +29,9 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             PassiveBarrierReduction = 0.08f,
             PassiveLeech = 0.05f,
             FocusCostPerPoint = 4f,
+            SlowPerMagnitude = 0.15f,
+            KnockbackPerMagnitude = 4f,
+            ChargedAttackThreshold = 0.7f,
         });
     }
 }

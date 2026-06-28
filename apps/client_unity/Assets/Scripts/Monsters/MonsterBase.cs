@@ -22,9 +22,7 @@ namespace ProjectAscension.Monsters
         protected float Damage = 8f;
         protected float ProjectileSpeed = 0f;
 
-        private const float SlowFactor = 0.5f;
-        private const float KnockbackSpeed = 8f;
-        private const float KnockbackDecay = 30f;
+        private const float KnockbackDecay = 30f; // how fast this monster recovers from a push
 
         private State _state = State.Idle;
         private Transform _target;
@@ -106,7 +104,7 @@ namespace ProjectAscension.Monsters
         {
             var p = transform.position;
             var goal = new Vector3(_target.position.x, p.y, _target.position.z);
-            float speed = _moveSpeed * _status.SpeedMultiplier(SlowFactor); // slowed = move less
+            float speed = _moveSpeed * _status.SpeedMultiplier; // slowed = move less (skill-defined)
             transform.position = Vector3.MoveTowards(p, goal, speed * Time.deltaTime);
             FaceTarget();
         }
@@ -118,19 +116,20 @@ namespace ProjectAscension.Monsters
             _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, KnockbackDecay * Time.deltaTime);
         }
 
-        /// <summary>Receive a control status from a skill.</summary>
-        public void ApplyControl(ControlKind kind, float duration, Vector3 sourcePosition)
+        /// <summary>Receive a control status from a skill. The strength (slow fraction /
+        /// knockback impulse) is defined by the skill, not fixed here.</summary>
+        public void ApplyControl(ControlKind kind, float duration, float strength, Vector3 sourcePosition)
         {
             if (_state == State.Dead) return;
             if (kind == ControlKind.Knockback)
             {
                 var away = transform.position - sourcePosition;
                 away.y = 0f;
-                _knockback = (away.sqrMagnitude > 0.0001f ? away.normalized : transform.forward) * KnockbackSpeed;
+                _knockback = (away.sqrMagnitude > 0.0001f ? away.normalized : transform.forward) * strength;
             }
             else
             {
-                _status = StatusRules.Apply(_status, kind, duration);
+                _status = StatusRules.Apply(_status, kind, duration, strength);
             }
         }
 
