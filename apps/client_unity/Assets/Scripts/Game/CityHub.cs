@@ -144,7 +144,7 @@ namespace ProjectAscension.Game
             GUILayout.EndArea();
 
             // Discovery journal.
-            GUILayout.BeginArea(new Rect(440, 20, 360, 620), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(440, 20, 360, 360), GUI.skin.box);
             GUILayout.Label($"DISCOVERIES ({session.Discovery.DiscoveredCount})");
             GUILayout.Space(4);
             bool any = false;
@@ -159,6 +159,55 @@ namespace ProjectAscension.Game
 
             DrawIssuePanel(session, ps);
             DrawShop(session, ps);
+            DrawSettlement(session, ps);
+        }
+
+        // Frontier outpost (정착지): deliver monster-drop materials to mature infrastructure
+        // and advance the settlement's civilization stage. Server-persistent.
+        private void DrawSettlement(GameSession session, PlayerStateService ps)
+        {
+            GUILayout.BeginArea(new Rect(440, 390, 360, 250), GUI.skin.box);
+            GUILayout.Label("FRONTIER OUTPOST (정착지)");
+            var s = session.Settlement;
+            if (s == null)
+            {
+                GUILayout.Label(string.IsNullOrWhiteSpace(session.ServerUrl) ? "Offline — needs the server." : "Loading…");
+                GUILayout.EndArea();
+                return;
+            }
+
+            GUILayout.Label($"{s.name} — [{s.stage}]  (maturity {s.totalLevel}/12)");
+            GUILayout.Label($"Shelter L{s.shelterLevel}/4   Market L{s.marketLevel}/4   Defense L{s.defenseLevel}/4");
+            GUILayout.Space(4);
+            GUILayout.Label("Deliver materials to develop:");
+            DeliverRow(session, ps, "hide", "Shelter");
+            DeliverRow(session, ps, "feather", "Market");
+            DeliverRow(session, ps, "core", "Defense");
+            GUILayout.EndArea();
+        }
+
+        private void DeliverRow(GameSession session, PlayerStateService ps, string key, string track)
+        {
+            ps.Resources.TryGetValue(key, out var have);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{key} (x{have}) → {track}", GUILayout.Width(180));
+            GUI.enabled = !_busy && have > 0;
+            if (GUILayout.Button("Deliver 5", GUILayout.Width(90)))
+            {
+                int amount = Mathf.Min(5, have);
+                if (ps.SpendResource(key, amount)) StartCoroutine(Deliver(session, key, amount));
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+        }
+
+        private IEnumerator Deliver(GameSession session, string key, int amount)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            yield return _api.DeliverResource(new DeliverResourceDto { itemKey = key, amount = amount },
+                dto => session.SetSettlement(dto));
+            _busy = false;
         }
 
         // City shop: sell monster-drop materials for gold, or buy materials (for settlement

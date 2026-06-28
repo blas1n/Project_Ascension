@@ -44,6 +44,11 @@ namespace ProjectAscension.Game
         // The city shop catalog (DB-driven buy/sell prices), fetched at start.
         public List<ItemDefinitionDto> ShopItems { get; } = new();
 
+        /// <summary>The frontier outpost's development (server-persistent), fetched at start
+        /// and refreshed after each resource delivery. Null until/unless fetched.</summary>
+        public SettlementDto Settlement { get; private set; }
+        public void SetSettlement(SettlementDto s) { if (s != null) Settlement = s; }
+
         /// <summary>The DB-driven definition for an authored weapon, by display name —
         /// null when offline or unknown (caller falls back to the authored asset).</summary>
         public WeaponDefinitionDto WeaponDefinition(string displayName)
@@ -152,6 +157,7 @@ namespace ProjectAscension.Game
                 ShopItems.Clear();
                 ShopItems.AddRange(items);
             });
+            yield return api.GetSettlement(s => { if (s != null) Settlement = s; });
             yield return api.GetContracts(RegionId, defs =>
             {
                 if (defs == null) return;

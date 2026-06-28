@@ -139,6 +139,24 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class SettlementDto
+    {
+        public string name;
+        public string stage;
+        public int shelterLevel;
+        public int marketLevel;
+        public int defenseLevel;
+        public int totalLevel;
+    }
+
+    [Serializable]
+    public sealed class DeliverResourceDto
+    {
+        public string itemKey;
+        public int amount;
+    }
+
+    [Serializable]
     public sealed class PlayerDefinitionDto
     {
         public float maxHealth;
@@ -187,6 +205,19 @@ namespace ProjectAscension.Net
             yield return GetJson(
                 $"{_baseUrl}/api/player",
                 json => onResult?.Invoke(JsonUtility.FromJson<PlayerDefinitionDto>(json)));
+        }
+
+        public IEnumerator GetSettlement(Action<SettlementDto> onResult)
+        {
+            yield return GetJson($"{_baseUrl}/api/settlement", json => onResult?.Invoke(JsonUtility.FromJson<SettlementDto>(json)));
+        }
+
+        public IEnumerator DeliverResource(DeliverResourceDto request, Action<SettlementDto> onResult)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/settlement/deliver",
+                JsonUtility.ToJson(request),
+                json => onResult?.Invoke(JsonUtility.FromJson<SettlementDto>(json)));
         }
 
         public IEnumerator GetShop(Action<ItemDefinitionDto[]> onResult)

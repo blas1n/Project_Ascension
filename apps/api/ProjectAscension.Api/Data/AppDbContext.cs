@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayerDefinition> PlayerDefinitions => Set<PlayerDefinition>();
     public DbSet<ContractRewardTuning> ContractRewardTuning => Set<ContractRewardTuning>();
     public DbSet<ItemDefinition> ItemDefinitions => Set<ItemDefinition>();
+    public DbSet<Settlement> Settlements => Set<Settlement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
