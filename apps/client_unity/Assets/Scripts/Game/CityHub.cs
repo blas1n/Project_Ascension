@@ -14,6 +14,7 @@ namespace ProjectAscension.Game
     public sealed class CityHub : MonoBehaviour
     {
         private const string IssuerActorId = "11111111-1111-1111-1111-111111111111";
+        private const float DelegationSeconds = 20f; // stub contractor finishes a delegated contract in this time
         private static readonly string[] TargetKeys = { "", "melee", "ranged", "elite" };
 
         // Contract-issuing panel state. The player picks the objective; the server quotes a
@@ -78,11 +79,34 @@ namespace ProjectAscension.Game
                     if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g)", GUILayout.Height(28)))
                         ps.Currency += contracts.TurnIn();
                 }
-                else if (GUILayout.Button("Abandon"))
+                else
                 {
-                    contracts.Abandon();
+                    // Delegation tutorial: a too-hard contract can be handed to a contractor
+                    // instead of cleared alone. The hint appears after a death.
+                    if (c.DelegationAllowed)
+                    {
+                        if (session.SuggestDelegation)
+                            GUILayout.Label("You fell in battle. Too hard? Delegate it — a contractor will handle it.");
+                        bool affordable = ps.Currency >= c.RewardCurrency;
+                        GUI.enabled = affordable;
+                        if (GUILayout.Button(affordable ? $"Delegate  (-{c.RewardCurrency}g)" : "Delegate  (not enough gold)", GUILayout.Height(28)))
+                        {
+                            ps.Currency = Mathf.Max(0, ps.Currency - c.RewardCurrency); // escrow the contractor's pay
+                            contracts.DelegateActive(DelegationSeconds);
+                            session.SuggestDelegation = false;
+                        }
+                        GUI.enabled = true;
+                    }
+                    if (GUILayout.Button("Abandon"))
+                        contracts.Abandon();
                 }
             }
+
+            // Stub contractor status (the delegation payoff).
+            foreach (var d in contracts.InProgress)
+                GUILayout.Label($"Contractor working: {d.Contract.Title}  ({Mathf.CeilToInt(d.Remaining)}s)");
+            foreach (var title in contracts.ContractorCompleted)
+                GUILayout.Label($"✓ Contractor completed your delegated contract: {title}");
 
             GUILayout.Space(12);
             if (GUILayout.Button("Depart to Frontier", GUILayout.Height(34)))

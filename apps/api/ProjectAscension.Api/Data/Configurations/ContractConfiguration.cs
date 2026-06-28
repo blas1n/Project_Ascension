@@ -71,6 +71,22 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 ConditionsJson = "{\"targetCount\":2,\"target\":\"elite\"}",
                 RewardJson = "{\"currency\":220}",
                 CreatedAt = SeedTime,
+            },
+            // Delegation tutorial (contract-example.md 위임 튜토리얼): deliberately too hard for
+            // a starter — slay 4 elites, but the frontier spawns only one. The player learns
+            // they can DELEGATE it (DelegationAllowed) rather than clear it alone.
+            new Contract
+            {
+                Id = System.Guid.Parse("c0000005-0000-0000-0000-000000000005"),
+                Kind = ContractKind.Task,
+                Purpose = ContractPurpose.Hunt,
+                Status = ContractStatus.Open,
+                Title = "Deep Cull",
+                Description = "Slay 4 elite monsters in the deep frontier. (Hard — consider delegating.)",
+                ConditionsJson = "{\"targetCount\":4,\"target\":\"elite\"}",
+                RewardJson = "{\"currency\":400}",
+                DelegationAllowed = true,
+                CreatedAt = SeedTime,
             });
     }
 }

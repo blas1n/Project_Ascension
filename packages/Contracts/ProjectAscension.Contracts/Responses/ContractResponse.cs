@@ -9,5 +9,5 @@ namespace ProjectAscension.Contracts.Responses
         // Typed objective fields the slice board uses (parsed from the Conditions/Reward JSON).
         // Target is an optional objective filter (e.g. a monster key "elite" for a targeted
         // hunt); null/empty means "any".
-        ContractPurpose Purpose, int TargetCount, int RewardCurrency, string? Target);
+        ContractPurpose Purpose, int TargetCount, int RewardCurrency, string? Target, bool DelegationAllowed);
 }

@@ -65,6 +65,7 @@ namespace ProjectAscension.Player
         private void OnDied(HitReceiver hitReceiver)
         {
             Debug.Log("[PlayerController] Player died — respawning.");
+            GameplayEvents.RaisePlayerDied(); // the delegation tutorial's teachable moment
             _movement.Teleport(_spawnPoint);
             hitReceiver.Revive();
         }
