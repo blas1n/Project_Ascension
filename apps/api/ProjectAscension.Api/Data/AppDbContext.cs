@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<WeaponDefinition> WeaponDefinitions => Set<WeaponDefinition>();
     public DbSet<MonsterDefinition> MonsterDefinitions => Set<MonsterDefinition>();
     public DbSet<PlayerDefinition> PlayerDefinitions => Set<PlayerDefinition>();
+    public DbSet<ContractRewardTuning> ContractRewardTuning => Set<ContractRewardTuning>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

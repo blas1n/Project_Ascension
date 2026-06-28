@@ -22,6 +22,10 @@ namespace ProjectAscension.Game
 
         public static GameSession Instance { get; private set; }
 
+        /// <summary>The API base URL (empty = offline) — lets UI (e.g. contract issuing)
+        /// make its own requests.</summary>
+        public string ServerUrl => serverUrl;
+
         public ContractService Contracts { get; private set; }
         public PlayerStateService PlayerState { get; private set; }
         public DiscoveryService Discovery { get; private set; }

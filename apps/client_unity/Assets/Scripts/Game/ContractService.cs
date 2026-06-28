@@ -47,6 +47,12 @@ namespace ProjectAscension.Game
             GameplayEvents.MarkerSurveyed += OnMarkerSurveyed;
         }
 
+        /// <summary>Add a player-issued contract to the board (already calibrated by the server).</summary>
+        public void AddIssued(ContractInstance contract)
+        {
+            if (contract != null) Available.Add(contract);
+        }
+
         public void Accept(ContractInstance template) => Active = template.Fresh();
 
         public void Abandon() => Active = null;

@@ -1,15 +1,31 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
+using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// City hub UI (dev OnGUI): contract board, loadout selection, turn-in, depart.
-    /// Cursor is unlocked here so the buttons are clickable.
+    /// City hub UI (dev OnGUI): contract board, loadout selection, turn-in, depart, and a
+    /// contract-issuing panel. Cursor is unlocked here so the buttons are clickable.
     /// </summary>
     public sealed class CityHub : MonoBehaviour
     {
+        private const string IssuerActorId = "11111111-1111-1111-1111-111111111111";
+        private static readonly string[] TargetKeys = { "", "melee", "ranged", "elite" };
+
+        // Contract-issuing panel state. The player picks the objective; the server quotes a
+        // fair reward + band (so it's a choice, not balance math); the player tunes generosity.
+        private ContractPurpose _iPurpose = ContractPurpose.Hunt;
+        private int _iTargetIdx;   // index into TargetKeys (Hunt only)
+        private int _iCount = 1;
+        private int _iReward;
+        private ContractQuoteDto _quote;
+        private bool _busy;
+        private CatalogApiClient _api;
+
         private void OnEnable()
         {
             Cursor.lockState = CursorLockMode.None;
@@ -87,6 +103,139 @@ namespace ProjectAscension.Game
             if (!any)
                 GUILayout.Label("None yet — fight and explore to discover.");
             GUILayout.EndArea();
+
+            DrawIssuePanel(session, ps);
+        }
+
+        // Player-issued contract panel. The player chooses what (purpose / target / count)
+        // and how generous; the server calibrates the reward + band and writes the copy.
+        private void DrawIssuePanel(GameSession session, PlayerStateService ps)
+        {
+            GUILayout.BeginArea(new Rect(820, 20, 380, 360), GUI.skin.box);
+            GUILayout.Label("ISSUE A CONTRACT (발주)");
+
+            if (string.IsNullOrWhiteSpace(session.ServerUrl))
+            {
+                GUILayout.Label("Offline — needs the server (set GameSession.serverUrl).");
+                GUILayout.EndArea();
+                return;
+            }
+
+            GUILayout.Space(4);
+            GUILayout.Label("Purpose:");
+            GUILayout.BeginHorizontal();
+            if (PurposeButton(ContractPurpose.Hunt)) ChangeChoice(session, () => _iPurpose = ContractPurpose.Hunt);
+            if (PurposeButton(ContractPurpose.Survey)) ChangeChoice(session, () => _iPurpose = ContractPurpose.Survey);
+            if (PurposeButton(ContractPurpose.Collection)) ChangeChoice(session, () => _iPurpose = ContractPurpose.Collection);
+            GUILayout.EndHorizontal();
+
+            if (_iPurpose == ContractPurpose.Hunt)
+            {
+                GUILayout.Label("Target:");
+                GUILayout.BeginHorizontal();
+                for (int i = 0; i < TargetKeys.Length; i++)
+                {
+                    string label = i == 0 ? "any" : TargetKeys[i];
+                    bool on = _iTargetIdx == i;
+                    if (GUILayout.Toggle(on, label) && !on)
+                    {
+                        int idx = i;
+                        ChangeChoice(session, () => _iTargetIdx = idx);
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Count: {_iCount}", GUILayout.Width(90));
+            if (GUILayout.Button("-", GUILayout.Width(28)) && _iCount > 1) ChangeChoice(session, () => _iCount--);
+            if (GUILayout.Button("+", GUILayout.Width(28)) && _iCount < 20) ChangeChoice(session, () => _iCount++);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+            if (_quote == null)
+            {
+                GUILayout.Label(_busy ? "Quoting…" : "Pick an objective for a quote.");
+                if (!_busy && GUILayout.Button("Get Quote")) StartCoroutine(RefreshQuote(session));
+                GUILayout.EndArea();
+                return;
+            }
+
+            GUILayout.Label($"Suggested: {_quote.suggestedReward}g   (band {_quote.minReward}–{_quote.maxReward})");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Reward: {_iReward}g", GUILayout.Width(110));
+            if (GUILayout.Button("-10", GUILayout.Width(40))) _iReward = Mathf.Max(_quote.minReward, _iReward - 10);
+            if (GUILayout.Button("+10", GUILayout.Width(40))) _iReward = Mathf.Min(_quote.maxReward, _iReward + 10);
+            GUILayout.EndHorizontal();
+            GUILayout.Label(_iReward > _quote.suggestedReward ? "Generous — more attractive to takers." : "Lean — may sit on the board.");
+
+            GUILayout.Space(6);
+            bool affordable = ps.Currency >= _iReward;
+            GUI.enabled = !_busy && affordable;
+            if (GUILayout.Button(affordable ? $"Issue  (-{_iReward}g escrow)" : "Issue  (not enough gold)", GUILayout.Height(30)))
+                StartCoroutine(DoIssue(session, ps));
+            GUI.enabled = true;
+
+            GUILayout.EndArea();
+        }
+
+        private bool PurposeButton(ContractPurpose purpose)
+        {
+            bool on = _iPurpose == purpose;
+            return GUILayout.Toggle(on, purpose.ToString()) && !on;
+        }
+
+        // Apply a choice change and re-quote (clears the stale quote first).
+        private void ChangeChoice(GameSession session, System.Action apply)
+        {
+            apply();
+            _quote = null;
+            if (!_busy) StartCoroutine(RefreshQuote(session));
+        }
+
+        private IEnumerator RefreshQuote(GameSession session)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            string target = _iPurpose == ContractPurpose.Hunt ? TargetKeys[_iTargetIdx] : "";
+            yield return _api.GetContractQuote(_iPurpose.ToString(), target, _iCount, q =>
+            {
+                _quote = q;
+                if (q != null) _iReward = Mathf.Clamp(_iReward == 0 ? q.suggestedReward : _iReward, q.minReward, q.maxReward);
+            });
+            _busy = false;
+        }
+
+        private IEnumerator DoIssue(GameSession session, PlayerStateService ps)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            var request = new IssueContractDto
+            {
+                issuerActorId = IssuerActorId,
+                purpose = _iPurpose.ToString(),
+                target = _iPurpose == ContractPurpose.Hunt ? TargetKeys[_iTargetIdx] : "",
+                targetCount = _iCount,
+                desiredReward = _iReward,
+                durationHours = 24,
+            };
+            yield return _api.IssueContract(request, dto =>
+            {
+                if (dto == null) return;
+                var purpose = System.Enum.TryParse<ContractPurpose>(dto.purpose, out var p) ? p : ContractPurpose.Hunt;
+                session.Contracts.AddIssued(new ContractInstance
+                {
+                    Purpose = purpose,
+                    Title = dto.title,
+                    Description = dto.description,
+                    TargetCount = Mathf.Max(1, dto.targetCount),
+                    RewardCurrency = dto.rewardCurrency,
+                    Target = dto.target,
+                });
+                ps.Currency = Mathf.Max(0, ps.Currency - dto.rewardCurrency); // escrow the reward
+                _quote = null;
+            });
+            _busy = false;
         }
 
         private static void DrawWeaponSelector(string label, WeaponData current,

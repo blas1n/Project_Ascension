@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -96,6 +97,25 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class ContractQuoteDto
+    {
+        public int suggestedReward;
+        public int minReward;
+        public int maxReward;
+    }
+
+    [Serializable]
+    public sealed class IssueContractDto
+    {
+        public string issuerActorId;
+        public string purpose; // ContractPurpose name
+        public string target;  // optional monster key
+        public int targetCount;
+        public int desiredReward;
+        public int durationHours;
+    }
+
+    [Serializable]
     public sealed class PlayerDefinitionDto
     {
         public float maxHealth;
@@ -153,6 +173,21 @@ namespace ProjectAscension.Net
                 json => onResult?.Invoke(JsonUtility.FromJson<ContractListDto>("{\"items\":" + json + "}").items));
         }
 
+        public IEnumerator GetContractQuote(string purpose, string target, int count, Action<ContractQuoteDto> onResult)
+        {
+            var url = $"{_baseUrl}/api/contracts/quote?purpose={purpose}&count={count}";
+            if (!string.IsNullOrEmpty(target)) url += $"&target={target}";
+            yield return GetJson(url, json => onResult?.Invoke(JsonUtility.FromJson<ContractQuoteDto>(json)));
+        }
+
+        public IEnumerator IssueContract(IssueContractDto request, Action<ContractDto> onResult)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts",
+                JsonUtility.ToJson(request),
+                json => onResult?.Invoke(JsonUtility.FromJson<ContractDto>(json)));
+        }
+
         private static IEnumerator GetJson(string url, Action<string> onOk)
         {
             using var req = UnityWebRequest.Get(url);
@@ -162,6 +197,22 @@ namespace ProjectAscension.Net
                 onOk?.Invoke(req.downloadHandler.text);
             else
                 Debug.LogWarning($"[Catalog] GET {url} failed: {req.error}");
+        }
+
+        private static IEnumerator PostJson(string url, string body, Action<string> onOk)
+        {
+            using var req = new UnityWebRequest(url, "POST")
+            {
+                uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body)),
+                downloadHandler = new DownloadHandlerBuffer(),
+            };
+            req.SetRequestHeader("Content-Type", "application/json");
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success)
+                onOk?.Invoke(req.downloadHandler.text);
+            else
+                Debug.LogWarning($"[Catalog] POST {url} failed: {req.error}");
         }
     }
 }

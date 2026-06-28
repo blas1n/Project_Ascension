@@ -19,6 +19,19 @@ public class ContractsController : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>The calibrated reward (suggested + band) for a prospective objective — the
+    /// issuing UI reads this live so the player picks generosity, not balance math.</summary>
+    [HttpGet("quote")]
+    public async Task<IActionResult> GetQuote(
+        [FromQuery] Domain.Enums.ContractPurpose purpose, [FromQuery] string? target, [FromQuery] int count, CancellationToken ct)
+        => (await _service.GetQuoteAsync(purpose, target, count, ct)).ToActionResult(this);
+
+    /// <summary>A player issues a contract: they choose the objective and generosity; the
+    /// server calibrates/validates the reward and fills the copy, then opens it.</summary>
+    [HttpPost]
+    public async Task<IActionResult> Issue([FromBody] IssueContractRequest request, CancellationToken ct)
+        => (await _service.IssueAsync(request, ct)).ToActionResult(this);
+
     [HttpPost("{id:guid}/accept")]
     public async Task<IActionResult> Accept(Guid id, [FromBody] AcceptContractRequest request, CancellationToken ct)
         => (await _service.AcceptAsync(id, request, ct)).ToActionResult(this);
