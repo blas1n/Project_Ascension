@@ -92,6 +92,8 @@ namespace ProjectAscension.Net
         public int rewardReputation;
         public int minReputation;
         public int timeLimitSeconds;
+        public bool failOnTimeout;
+        public bool failOnDeath;
     }
 
     [Serializable]
