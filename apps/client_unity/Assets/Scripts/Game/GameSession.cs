@@ -41,6 +41,9 @@ namespace ProjectAscension.Game
         // Authored weapon definitions by DisplayName (DB-driven stats), fetched at start.
         private readonly Dictionary<string, WeaponDefinitionDto> _weaponDefs = new();
 
+        // The city shop catalog (DB-driven buy/sell prices), fetched at start.
+        public List<ItemDefinitionDto> ShopItems { get; } = new();
+
         /// <summary>The DB-driven definition for an authored weapon, by display name —
         /// null when offline or unknown (caller falls back to the authored asset).</summary>
         public WeaponDefinitionDto WeaponDefinition(string displayName)
@@ -142,6 +145,12 @@ namespace ProjectAscension.Game
                     GameSimulation.Player.PlayerStatsCatalog.Set(new GameSimulation.Player.PlayerStats(
                         d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity,
                         d.dodgeSpeed, d.dodgeDuration, d.maxFocus, d.focusRegenPerSecond));
+            });
+            yield return api.GetShop(items =>
+            {
+                if (items == null) return;
+                ShopItems.Clear();
+                ShopItems.AddRange(items);
             });
             yield return api.GetContracts(RegionId, defs =>
             {

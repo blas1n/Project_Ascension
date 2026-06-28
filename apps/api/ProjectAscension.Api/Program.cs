@@ -29,6 +29,7 @@ builder.Services.AddScoped<ICombatTuningRepository, CombatTuningRepository>();
 builder.Services.AddScoped<IWeaponDefinitionRepository, WeaponDefinitionRepository>();
 builder.Services.AddScoped<IMonsterDefinitionRepository, MonsterDefinitionRepository>();
 builder.Services.AddScoped<IPlayerDefinitionRepository, PlayerDefinitionRepository>();
+builder.Services.AddScoped<IItemDefinitionRepository, ItemDefinitionRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
