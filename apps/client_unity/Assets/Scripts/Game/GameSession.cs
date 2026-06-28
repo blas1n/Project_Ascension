@@ -102,6 +102,7 @@ namespace ProjectAscension.Game
                         Description = d.description,
                         TargetCount = Mathf.Max(1, d.targetCount),
                         RewardCurrency = d.rewardCurrency,
+                        Target = d.target,
                     });
                 Contracts.SetAvailable(board);
             });

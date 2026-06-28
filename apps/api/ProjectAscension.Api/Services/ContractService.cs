@@ -56,9 +56,10 @@ public class ContractService : IContractService
 
     private static ContractResponse ToResponse(Domain.Entities.Contract c) =>
         new(c.Id, c.Kind, c.Title, c.Description, c.Status, c.RewardJson, c.Purpose,
-            ReadInt(c.ConditionsJson, "targetCount", 1), ReadInt(c.RewardJson, "currency", 0));
+            ReadInt(c.ConditionsJson, "targetCount", 1), ReadInt(c.RewardJson, "currency", 0),
+            ReadString(c.ConditionsJson, "target"));
 
-    // The slice's objective/reward are simple numbers in the Conditions/Reward JSON.
+    // The slice's objective/reward are simple values in the Conditions/Reward JSON.
     private static int ReadInt(string json, string property, int fallback)
     {
         if (string.IsNullOrWhiteSpace(json)) return fallback;
@@ -70,6 +71,21 @@ public class ContractService : IContractService
         catch (System.Text.Json.JsonException)
         {
             return fallback;
+        }
+    }
+
+    private static string? ReadString(string json, string property)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty(property, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String
+                ? v.GetString() : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
         }
     }
 }
