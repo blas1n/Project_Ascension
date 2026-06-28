@@ -80,7 +80,8 @@ namespace ProjectAscension.Game
             else
             {
                 var c = contracts.Active;
-                GUILayout.Label($"Active: {c.Title}   {c.Progress}/{c.TargetCount}");
+                string clock = c.TimeLimitSeconds > 0 ? $"   ⏱ {Mathf.CeilToInt(c.Remaining)}s left" : "";
+                GUILayout.Label($"Active: {c.Title}   {c.Progress}/{c.TargetCount}{clock}");
                 GUILayout.Label(c.Description);
                 if (c.IsComplete)
                 {
@@ -120,6 +121,8 @@ namespace ProjectAscension.Game
                 GUILayout.Label($"Contractor working: {d.Contract.Title}  ({Mathf.CeilToInt(d.Remaining)}s)");
             foreach (var title in contracts.ContractorCompleted)
                 GUILayout.Label($"✓ Contractor completed your delegated contract: {title}");
+            foreach (var msg in contracts.FailedRecently)
+                GUILayout.Label($"✗ Contract failed: {msg}");
 
             GUILayout.Space(12);
             if (GUILayout.Button("Depart to Frontier", GUILayout.Height(34)))

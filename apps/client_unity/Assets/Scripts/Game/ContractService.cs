@@ -130,5 +130,20 @@ namespace ProjectAscension.Game
             Active = null;
             return reward;
         }
+
+        // Failure: a deadline contract that wasn't finished in time. Surfaced for the city.
+        public List<string> FailedRecently { get; } = new();
+
+        /// <summary>Advance the active contract's deadline. Returns the contract if it just
+        /// expired (the caller applies the standing penalty), else null.</summary>
+        public ContractInstance TickActive(float dt)
+        {
+            if (Active == null || Active.TimeLimitSeconds <= 0 || Active.IsComplete) return null;
+            Active.Remaining -= dt;
+            if (Active.Remaining > 0f) return null;
+            var failed = Active;
+            Active = null;
+            return failed;
+        }
     }
 }

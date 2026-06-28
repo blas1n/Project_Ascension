@@ -78,8 +78,22 @@ namespace ProjectAscension.Game
 
         private void OnPlayerDied() => SuggestDelegation = true;
 
-        // Advance the stub contractor each frame (delegated contracts finish across scenes).
-        private void Update() => Contracts?.TickDelegations(Time.deltaTime);
+        // Advance the contractor (delegated contracts) and the active contract's deadline
+        // each frame, across scenes. Letting a deadline lapse fails the contract and costs
+        // standing — accepting one is a real commitment.
+        private void Update()
+        {
+            if (Contracts == null) return;
+            float dt = Time.deltaTime;
+            Contracts.TickDelegations(dt);
+            var failed = Contracts.TickActive(dt);
+            if (failed != null)
+            {
+                int penalty = Mathf.Min(PlayerState.Reputation, failed.RewardReputation);
+                PlayerState.Reputation -= penalty;
+                Contracts.FailedRecently.Add($"{failed.Title} (expired, -{penalty} rep)");
+            }
+        }
 
         // Pull the DB-driven balance once at startup. Any failure leaves the defaults in
         // place, so the slice stays playable offline.
@@ -126,6 +140,7 @@ namespace ProjectAscension.Game
                         DelegationAllowed = d.delegationAllowed,
                         RewardReputation = d.rewardReputation,
                         MinReputation = d.minReputation,
+                        TimeLimitSeconds = d.timeLimitSeconds,
                     });
                 Contracts.SetAvailable(board);
             });

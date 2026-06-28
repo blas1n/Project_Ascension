@@ -91,6 +91,7 @@ namespace ProjectAscension.Net
         public bool delegationAllowed;
         public int rewardReputation;
         public int minReputation;
+        public int timeLimitSeconds;
     }
 
     [Serializable]
