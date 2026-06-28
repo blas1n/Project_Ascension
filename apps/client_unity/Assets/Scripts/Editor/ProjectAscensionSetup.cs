@@ -30,6 +30,11 @@ namespace ProjectAscension.Editor
         private const string LoadoutConfigPath = DataDir + "/StarterLoadout.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
+        // The slice's API base URL — GameSession fetches DB-driven balance (combat tuning,
+        // weapon + monster stats) from here at startup. Empty = offline (built-in defaults
+        // / authored assets). Change to where your API runs (Docker maps localhost:8080).
+        private const string DevServerUrl = "http://localhost:8080";
+
         private const string BootstrapScene = ScenesDir + "/Bootstrap.unity";
         private const string CityScene = ScenesDir + "/City.unity";
         private const string FrontierScene = ScenesDir + "/Frontier_01.unity";
@@ -224,6 +229,7 @@ namespace ProjectAscension.Editor
             var sessionGo = new GameObject("GameSession");
             var session = sessionGo.AddComponent<GameSession>();
             SetObjectArray(session, "ownedWeapons", LoadWeapons());
+            SetStringField(session, "serverUrl", DevServerUrl); // enable DB-driven balance fetch
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, BootstrapScene);
@@ -390,6 +396,20 @@ namespace ProjectAscension.Editor
                 return;
             }
             prop.objectReferenceValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Assigns a serialized string field (incl. private [SerializeField]).</summary>
+        private static void SetStringField(Object target, string fieldName, string value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(fieldName);
+            if (prop == null)
+            {
+                Debug.LogWarning($"[Setup] String field '{fieldName}' not found on {target.GetType().Name}.");
+                return;
+            }
+            prop.stringValue = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

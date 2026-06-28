@@ -55,6 +55,26 @@ namespace ProjectAscension.Net
         public WeaponDefinitionDto[] items;
     }
 
+    [Serializable]
+    public sealed class MonsterDefinitionDto
+    {
+        public string key;
+        public float maxHealth;
+        public float moveSpeed;
+        public float aggroRange;
+        public float attackRange;
+        public float attackCooldown;
+        public float damage;
+        public float projectileSpeed;
+        public float scale;
+    }
+
+    [Serializable]
+    public sealed class MonsterDefinitionListDto
+    {
+        public MonsterDefinitionDto[] items;
+    }
+
     /// <summary>Thin UnityWebRequest client for the read-only server catalog. Coroutine-
     /// based so a MonoBehaviour can drive it. On any failure it simply doesn't invoke the
     /// callback, so callers keep their offline defaults.</summary>
@@ -77,6 +97,13 @@ namespace ProjectAscension.Net
                 $"{_baseUrl}/api/weapons",
                 // JsonUtility can't parse a top-level array — wrap it in an object first.
                 json => onResult?.Invoke(JsonUtility.FromJson<WeaponDefinitionListDto>("{\"items\":" + json + "}").items));
+        }
+
+        public IEnumerator GetMonsters(Action<MonsterDefinitionDto[]> onResult)
+        {
+            yield return GetJson(
+                $"{_baseUrl}/api/monsters",
+                json => onResult?.Invoke(JsonUtility.FromJson<MonsterDefinitionListDto>("{\"items\":" + json + "}").items));
         }
 
         private static IEnumerator GetJson(string url, Action<string> onOk)

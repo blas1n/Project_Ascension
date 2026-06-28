@@ -74,6 +74,14 @@ namespace ProjectAscension.Game
                 foreach (var d in defs)
                     if (!string.IsNullOrEmpty(d.displayName)) _weaponDefs[d.displayName] = d;
             });
+            yield return api.GetMonsters(defs =>
+            {
+                if (defs == null) return;
+                foreach (var d in defs)
+                    Combat.MonsterStatsCatalog.Set(d.key, new Combat.MonsterStats(
+                        d.maxHealth, d.moveSpeed, d.aggroRange, d.attackRange,
+                        d.attackCooldown, d.damage, d.projectileSpeed, d.scale));
+            });
         }
 
         private static CombatTuning ToCombatTuning(CombatTuningDto d) => new(

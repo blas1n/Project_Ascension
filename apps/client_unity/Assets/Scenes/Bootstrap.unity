@@ -290,6 +290,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fb4c43b97f3f54e50b5481ed31118d8d, type: 2}
   - {fileID: 11400000, guid: 01b2070493202431a8fac47b5e1f044e, type: 2}
   - {fileID: 11400000, guid: 15b71e3d8d1344494bd365e92682b4fa, type: 2}
+  serverUrl: http://localhost:8080
 --- !u!4 &1077389334
 Transform:
   m_ObjectHideFlags: 0

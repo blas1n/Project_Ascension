@@ -3,7 +3,9 @@ using ProjectAscension.Combat;
 
 namespace ProjectAscension.Monsters
 {
-    /// <summary>Spawns a placeholder monster (capsule) of the given type, tuned per tier.</summary>
+    /// <summary>Spawns a placeholder monster (capsule) of the given type. Stats are
+    /// DB-driven (fetched into <see cref="MonsterStatsCatalog"/> at startup); the built-in
+    /// defaults below are the offline fallback. Only the placeholder color is cosmetic.</summary>
     public static class MonsterFactory
     {
         public static MonsterBase Create(MonsterType type, Vector3 position)
@@ -12,44 +14,45 @@ namespace ProjectAscension.Monsters
             go.name = $"{type}Monster";
             go.transform.position = position;
 
+            var stats = StatsFor(type);
             var hr = go.AddComponent<HitReceiver>();
-            MonsterBase monster;
-            Color color;
+            hr.SetMaxHealth(stats.MaxHealth);
+            go.transform.localScale = Vector3.one * stats.Scale;
 
-            switch (type)
+            MonsterBase monster = type switch
             {
-                case MonsterType.Ranged:
-                    hr.SetMaxHealth(25f);
-                    var ranged = go.AddComponent<RangedMonster>();
-                    ranged.Configure(moveSpeed: 2f, aggroRange: 30f, attackRange: 14f, attackCooldown: 1.5f, damage: 6f, projectileSpeed: 18f);
-                    monster = ranged;
-                    color = new Color(1f, 0.5f, 0.2f);
-                    break;
-
-                case MonsterType.Elite:
-                    hr.SetMaxHealth(120f);
-                    go.transform.localScale = Vector3.one * 1.6f;
-                    var elite = go.AddComponent<EliteMonster>();
-                    elite.Configure(moveSpeed: 2.5f, aggroRange: 35f, attackRange: 18f, attackCooldown: 1.2f, damage: 14f, projectileSpeed: 24f);
-                    monster = elite;
-                    color = new Color(0.7f, 0.2f, 0.9f);
-                    break;
-
-                default: // Melee
-                    hr.SetMaxHealth(40f);
-                    var melee = go.AddComponent<MeleeMonster>();
-                    melee.Configure(moveSpeed: 3.5f, aggroRange: 25f, attackRange: 2f, attackCooldown: 1f, damage: 8f, projectileSpeed: 0f);
-                    monster = melee;
-                    color = new Color(0.85f, 0.2f, 0.2f);
-                    break;
-            }
+                MonsterType.Ranged => go.AddComponent<RangedMonster>(),
+                MonsterType.Elite => go.AddComponent<EliteMonster>(),
+                _ => go.AddComponent<MeleeMonster>(),
+            };
+            monster.Configure(stats.MoveSpeed, stats.AggroRange, stats.AttackRange,
+                stats.AttackCooldown, stats.Damage, stats.ProjectileSpeed);
 
             var renderer = go.GetComponent<Renderer>();
             if (renderer != null)
-                renderer.material.color = color;
+                renderer.material.color = ColorFor(type);
 
             monster.DiscoveryTag = "monster:" + type.ToString().ToLowerInvariant(); // discovery catalyst
             return monster;
         }
+
+        // DB stats when fetched, else the built-in defaults (offline fallback).
+        private static MonsterStats StatsFor(MonsterType type)
+            => MonsterStatsCatalog.TryGet(type.ToString().ToLowerInvariant(), out var s) ? s : Default(type);
+
+        private static MonsterStats Default(MonsterType type) => type switch
+        {
+            //                        hp     spd   aggro  atkRng  cd    dmg  projSpd scale
+            MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 6f, 18f, 1f),
+            MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 14f, 24f, 1.6f),
+            _ => new(40f, 3.5f, 25f, 2f, 1f, 8f, 0f, 1f), // Melee
+        };
+
+        private static Color ColorFor(MonsterType type) => type switch
+        {
+            MonsterType.Ranged => new Color(1f, 0.5f, 0.2f),
+            MonsterType.Elite => new Color(0.7f, 0.2f, 0.9f),
+            _ => new Color(0.85f, 0.2f, 0.2f),
+        };
     }
 }
