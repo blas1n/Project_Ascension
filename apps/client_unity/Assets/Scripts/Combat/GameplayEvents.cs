@@ -29,6 +29,10 @@ namespace ProjectAscension.Combat
         // the weapon lives in the Equipment assembly, the executor in Game).
         public static event Action<Skill> SkillCastRequested;
 
+        // The player died (and will respawn) — the delegation tutorial uses this as its
+        // teachable moment.
+        public static event Action PlayerDied;
+
         // World facts (argument is the subject GameObject).
         public static event Action<GameObject> MonsterKilled;
         public static event Action<GameObject> SampleCollected;
@@ -43,6 +47,8 @@ namespace ProjectAscension.Combat
         public static void RaiseRightClicked() => RightClicked?.Invoke();
 
         public static void RaiseSkillCastRequested(Skill skill) => SkillCastRequested?.Invoke(skill);
+
+        public static void RaisePlayerDied() => PlayerDied?.Invoke();
 
         public static void RaiseMonsterKilled(GameObject monster) => MonsterKilled?.Invoke(monster);
         public static void RaiseSampleCollected(GameObject sample) => SampleCollected?.Invoke(sample);

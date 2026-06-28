@@ -53,6 +53,38 @@ namespace ProjectAscension.Game
             if (contract != null) Available.Add(contract);
         }
 
+        // Delegation (위임): contracts the player handed to a contractor instead of clearing
+        // themselves, each finishing after a delay (the stub NPC contractor). Completed
+        // titles surface as a one-time message the city reads — the tutorial's payoff.
+        public sealed class Delegated { public ContractInstance Contract; public float Remaining; }
+        public List<Delegated> InProgress { get; } = new();
+        public List<string> ContractorCompleted { get; } = new();
+
+        /// <summary>Hand the active contract to a contractor (only if it allows delegation).
+        /// The caller escrows the reward. Returns true if delegated.</summary>
+        public bool DelegateActive(float seconds)
+        {
+            if (Active == null || !Active.DelegationAllowed) return false;
+            InProgress.Add(new Delegated { Contract = Active, Remaining = seconds });
+            Active = null;
+            return true;
+        }
+
+        /// <summary>Advance the stub contractor — completes delegated contracts whose timer
+        /// elapsed (works across scenes while the player plays). Driven by GameSession.</summary>
+        public void TickDelegations(float dt)
+        {
+            for (int i = InProgress.Count - 1; i >= 0; i--)
+            {
+                InProgress[i].Remaining -= dt;
+                if (InProgress[i].Remaining <= 0f)
+                {
+                    ContractorCompleted.Add(InProgress[i].Contract.Title);
+                    InProgress.RemoveAt(i);
+                }
+            }
+        }
+
         public void Accept(ContractInstance template) => Active = template.Fresh();
 
         public void Abandon() => Active = null;

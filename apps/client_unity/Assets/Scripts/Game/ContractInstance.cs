@@ -19,6 +19,10 @@ namespace ProjectAscension.Game
         /// counts; null/empty means any target satisfies the objective.</summary>
         public string Target;
 
+        /// <summary>Whether the holder may delegate (re-issue) this contract instead of
+        /// clearing it themselves — the delegation tutorial uses this.</summary>
+        public bool DelegationAllowed;
+
         public bool IsComplete => Progress >= TargetCount;
 
         public ContractInstance Fresh() => new()
@@ -30,6 +34,7 @@ namespace ProjectAscension.Game
             Progress = 0,
             RewardCurrency = RewardCurrency,
             Target = Target,
+            DelegationAllowed = DelegationAllowed,
         };
     }
 }

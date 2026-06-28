@@ -46,6 +46,10 @@ namespace ProjectAscension.Game
         public WeaponDefinitionDto WeaponDefinition(string displayName)
             => displayName != null && _weaponDefs.TryGetValue(displayName, out var d) ? d : null;
 
+        /// <summary>Set when the player dies — the city surfaces a delegation hint
+        /// (the tutorial's teachable moment). Cleared once acted on.</summary>
+        public bool SuggestDelegation { get; set; }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -62,8 +66,20 @@ namespace ProjectAscension.Game
             Discovery = new DiscoveryService();
             DiscoveredSkills = new DiscoveredSkillSet();
 
+            Combat.GameplayEvents.PlayerDied += OnPlayerDied;
+
             if (!string.IsNullOrWhiteSpace(serverUrl)) StartCoroutine(FetchCatalog(new CatalogApiClient(serverUrl)));
         }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Combat.GameplayEvents.PlayerDied -= OnPlayerDied;
+        }
+
+        private void OnPlayerDied() => SuggestDelegation = true;
+
+        // Advance the stub contractor each frame (delegated contracts finish across scenes).
+        private void Update() => Contracts?.TickDelegations(Time.deltaTime);
 
         // Pull the DB-driven balance once at startup. Any failure leaves the defaults in
         // place, so the slice stays playable offline.
@@ -107,6 +123,7 @@ namespace ProjectAscension.Game
                         TargetCount = Mathf.Max(1, d.targetCount),
                         RewardCurrency = d.rewardCurrency,
                         Target = d.target,
+                        DelegationAllowed = d.delegationAllowed,
                     });
                 Contracts.SetAvailable(board);
             });

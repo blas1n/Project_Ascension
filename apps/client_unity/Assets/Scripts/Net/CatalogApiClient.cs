@@ -88,6 +88,7 @@ namespace ProjectAscension.Net
         public int targetCount;
         public int rewardCurrency;
         public string target; // optional objective filter (e.g. monster key "elite")
+        public bool delegationAllowed;
     }
 
     [Serializable]
