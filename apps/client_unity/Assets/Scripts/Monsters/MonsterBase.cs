@@ -39,6 +39,10 @@ namespace ProjectAscension.Monsters
         /// defeating this monster flavors the player's discovery context.</summary>
         public string DiscoveryTag { get; set; }
 
+        /// <summary>Resource dropped on death (set by the factory). Empty = none.</summary>
+        public string DropItemKey { get; set; } = "";
+        public int DropAmount { get; set; }
+
         public void Configure(float moveSpeed, float aggroRange, float attackRange, float attackCooldown, float damage, float projectileSpeed)
         {
             _moveSpeed = moveSpeed;

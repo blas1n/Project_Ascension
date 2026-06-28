@@ -9,5 +9,10 @@ namespace ProjectAscension.Combat
     public interface IMonsterInfo
     {
         string DiscoveryTag { get; }
+
+        /// <summary>The resource dropped on death, and how much (empty = none) — collected
+        /// into the player's inventory.</summary>
+        string DropItemKey { get; }
+        int DropAmount { get; }
     }
 }

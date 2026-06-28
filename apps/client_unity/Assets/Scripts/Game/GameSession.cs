@@ -67,13 +67,23 @@ namespace ProjectAscension.Game
             DiscoveredSkills = new DiscoveredSkillSet();
 
             Combat.GameplayEvents.PlayerDied += OnPlayerDied;
+            Combat.GameplayEvents.MonsterKilled += OnMonsterKilled;
 
             if (!string.IsNullOrWhiteSpace(serverUrl)) StartCoroutine(FetchCatalog(new CatalogApiClient(serverUrl)));
         }
 
         private void OnDestroy()
         {
-            if (Instance == this) Combat.GameplayEvents.PlayerDied -= OnPlayerDied;
+            if (Instance != this) return;
+            Combat.GameplayEvents.PlayerDied -= OnPlayerDied;
+            Combat.GameplayEvents.MonsterKilled -= OnMonsterKilled;
+        }
+
+        // Collect a defeated monster's resource drop into the player's inventory.
+        private void OnMonsterKilled(GameObject monster)
+        {
+            if (monster != null && monster.TryGetComponent<Combat.IMonsterInfo>(out var info))
+                PlayerState.AddResource(info.DropItemKey, info.DropAmount);
         }
 
         private void OnPlayerDied()
@@ -124,7 +134,7 @@ namespace ProjectAscension.Game
                 foreach (var d in defs)
                     Combat.MonsterStatsCatalog.Set(d.key, new Combat.MonsterStats(
                         d.maxHealth, d.moveSpeed, d.aggroRange, d.attackRange,
-                        d.attackCooldown, d.damage, d.projectileSpeed, d.scale));
+                        d.attackCooldown, d.damage, d.projectileSpeed, d.scale, d.dropItemKey, d.dropAmount));
             });
             yield return api.GetPlayer(d =>
             {

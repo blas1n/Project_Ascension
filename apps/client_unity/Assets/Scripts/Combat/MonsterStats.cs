@@ -15,9 +15,12 @@ namespace ProjectAscension.Combat
         public readonly float Damage;
         public readonly float ProjectileSpeed; // 0 = melee
         public readonly float Scale;
+        public readonly string DropItemKey;
+        public readonly int DropAmount;
 
         public MonsterStats(float maxHealth, float moveSpeed, float aggroRange, float attackRange,
-            float attackCooldown, float damage, float projectileSpeed, float scale)
+            float attackCooldown, float damage, float projectileSpeed, float scale,
+            string dropItemKey = "", int dropAmount = 0)
         {
             MaxHealth = maxHealth;
             MoveSpeed = moveSpeed;
@@ -27,6 +30,8 @@ namespace ProjectAscension.Combat
             Damage = damage;
             ProjectileSpeed = projectileSpeed;
             Scale = scale;
+            DropItemKey = dropItemKey ?? "";
+            DropAmount = dropAmount;
         }
     }
 

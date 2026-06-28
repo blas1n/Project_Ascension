@@ -47,6 +47,12 @@ namespace ProjectAscension.Game
 
             GUILayout.BeginArea(new Rect(20, 20, 400, 620), GUI.skin.box);
             GUILayout.Label($"CITY      Gold: {ps.Currency}    Rep: {ps.Reputation}");
+            if (ps.Resources.Count > 0)
+            {
+                var parts = new List<string>();
+                foreach (var kv in ps.Resources) parts.Add($"{kv.Key} x{kv.Value}");
+                GUILayout.Label($"Materials: {string.Join(", ", parts)}");
+            }
             GUILayout.Space(8);
 
             GUILayout.Label("Loadout (chosen from inventory):");

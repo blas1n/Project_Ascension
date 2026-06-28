@@ -13,5 +13,7 @@ namespace ProjectAscension.Contracts.Responses
         float AttackCooldown,
         float Damage,
         float ProjectileSpeed,
-        float Scale);
+        float Scale,
+        string DropItemKey,
+        int DropAmount);
 }
