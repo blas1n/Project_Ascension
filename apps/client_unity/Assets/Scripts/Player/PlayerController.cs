@@ -50,7 +50,13 @@ namespace ProjectAscension.Player
             _spawnPoint = transform.position;
             _hitReceiver = GetComponent<HitReceiver>();
             if (_hitReceiver != null)
+            {
+                // DB-driven max health when fetched (balance edits apply with no rebuild),
+                // else the HitReceiver's authored value.
+                var stats = GameSimulation.Player.PlayerStatsCatalog.Current;
+                if (stats != null) _hitReceiver.SetMaxHealth(stats.MaxHealth);
                 _hitReceiver.Died += OnDied;
+            }
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;

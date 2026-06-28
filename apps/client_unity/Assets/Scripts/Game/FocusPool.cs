@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Player;
 
 namespace ProjectAscension.Game
 {
@@ -14,13 +15,22 @@ namespace ProjectAscension.Game
         [SerializeField] private float regenPerSecond = 15f;
 
         private Focus _focus;
+        private float _regenPerSecond;
 
         public float Current => _focus.Current;
         public float Max => _focus.Max;
 
-        private void Awake() => _focus = Focus.Full(maxFocus);
+        // DB-driven max/regen when fetched (so balance edits apply with no rebuild),
+        // else the authored serialized values (offline).
+        private void Awake()
+        {
+            var s = PlayerStatsCatalog.Current;
+            float max = s?.MaxFocus ?? maxFocus;
+            _regenPerSecond = s?.FocusRegenPerSecond ?? regenPerSecond;
+            _focus = Focus.Full(max);
+        }
 
-        private void Update() => _focus = FocusRules.Regenerate(_focus, regenPerSecond * Time.deltaTime);
+        private void Update() => _focus = FocusRules.Regenerate(_focus, _regenPerSecond * Time.deltaTime);
 
         /// <summary>Spend the cost if affordable; returns false (and spends nothing) otherwise.</summary>
         public bool TrySpend(float cost)

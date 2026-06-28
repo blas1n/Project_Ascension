@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<CombatTuningSettings> CombatTuningSettings => Set<CombatTuningSettings>();
     public DbSet<WeaponDefinition> WeaponDefinitions => Set<WeaponDefinition>();
     public DbSet<MonsterDefinition> MonsterDefinitions => Set<MonsterDefinition>();
+    public DbSet<PlayerDefinition> PlayerDefinitions => Set<PlayerDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

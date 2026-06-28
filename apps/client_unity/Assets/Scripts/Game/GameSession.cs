@@ -82,6 +82,13 @@ namespace ProjectAscension.Game
                         d.maxHealth, d.moveSpeed, d.aggroRange, d.attackRange,
                         d.attackCooldown, d.damage, d.projectileSpeed, d.scale));
             });
+            yield return api.GetPlayer(d =>
+            {
+                if (d != null)
+                    GameSimulation.Player.PlayerStatsCatalog.Set(new GameSimulation.Player.PlayerStats(
+                        d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity,
+                        d.dodgeSpeed, d.dodgeDuration, d.maxFocus, d.focusRegenPerSecond));
+            });
         }
 
         private static CombatTuning ToCombatTuning(CombatTuningDto d) => new(

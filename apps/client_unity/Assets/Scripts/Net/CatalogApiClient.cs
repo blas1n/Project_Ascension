@@ -75,6 +75,19 @@ namespace ProjectAscension.Net
         public MonsterDefinitionDto[] items;
     }
 
+    [Serializable]
+    public sealed class PlayerDefinitionDto
+    {
+        public float maxHealth;
+        public float moveSpeed;
+        public float jumpVelocity;
+        public float gravity;
+        public float dodgeSpeed;
+        public float dodgeDuration;
+        public float maxFocus;
+        public float focusRegenPerSecond;
+    }
+
     /// <summary>Thin UnityWebRequest client for the read-only server catalog. Coroutine-
     /// based so a MonoBehaviour can drive it. On any failure it simply doesn't invoke the
     /// callback, so callers keep their offline defaults.</summary>
@@ -104,6 +117,13 @@ namespace ProjectAscension.Net
             yield return GetJson(
                 $"{_baseUrl}/api/monsters",
                 json => onResult?.Invoke(JsonUtility.FromJson<MonsterDefinitionListDto>("{\"items\":" + json + "}").items));
+        }
+
+        public IEnumerator GetPlayer(Action<PlayerDefinitionDto> onResult)
+        {
+            yield return GetJson(
+                $"{_baseUrl}/api/player",
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerDefinitionDto>(json)));
         }
 
         private static IEnumerator GetJson(string url, Action<string> onOk)

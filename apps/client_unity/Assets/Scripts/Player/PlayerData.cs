@@ -30,8 +30,16 @@ namespace ProjectAscension.Player
         public float MinPitch => minPitch;
         public float MaxPitch => maxPitch;
 
-        /// <summary>Builds the authoritative movement settings consumed by the simulation.</summary>
-        public MovementSettings ToMovementSettings() =>
-            new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration);
+        /// <summary>Builds the authoritative movement settings consumed by the simulation.
+        /// Uses the DB-driven player stats when fetched (so balance edits apply with no
+        /// rebuild), falling back to the authored values offline. groundY is level geometry,
+        /// always authored.</summary>
+        public MovementSettings ToMovementSettings()
+        {
+            var s = PlayerStatsCatalog.Current;
+            return s == null
+                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration)
+                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration);
+        }
     }
 }
