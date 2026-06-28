@@ -158,6 +158,42 @@ namespace ProjectAscension.Game
             GUILayout.EndArea();
 
             DrawIssuePanel(session, ps);
+            DrawShop(session, ps);
+        }
+
+        // City shop: sell monster-drop materials for gold, or buy materials (for settlement
+        // supply). Prices are DB-driven (fetched into GameSession.ShopItems).
+        private void DrawShop(GameSession session, PlayerStateService ps)
+        {
+            GUILayout.BeginArea(new Rect(820, 390, 380, 250), GUI.skin.box);
+            GUILayout.Label("SHOP (materials)");
+            if (session.ShopItems.Count == 0)
+            {
+                GUILayout.Label(string.IsNullOrWhiteSpace(session.ServerUrl) ? "Offline — needs the server." : "No items.");
+                GUILayout.EndArea();
+                return;
+            }
+
+            foreach (var item in session.ShopItems)
+            {
+                ps.Resources.TryGetValue(item.key, out var have);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{item.displayName} (x{have})", GUILayout.Width(150));
+                GUI.enabled = item.sellPrice > 0 && have > 0;
+                if (GUILayout.Button($"Sell +{item.sellPrice}g", GUILayout.Width(95)))
+                {
+                    if (ps.SpendResource(item.key, 1)) ps.Currency += item.sellPrice;
+                }
+                GUI.enabled = item.buyPrice > 0 && ps.Currency >= item.buyPrice;
+                if (GUILayout.Button($"Buy -{item.buyPrice}g", GUILayout.Width(95)))
+                {
+                    ps.Currency -= item.buyPrice;
+                    ps.AddResource(item.key, 1);
+                }
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.EndArea();
         }
 
         // Player-issued contract panel. The player chooses what (purpose / target / count)

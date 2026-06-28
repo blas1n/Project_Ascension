@@ -124,6 +124,21 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class ItemDefinitionDto
+    {
+        public string key;
+        public string displayName;
+        public int sellPrice;
+        public int buyPrice;
+    }
+
+    [Serializable]
+    public sealed class ItemDefinitionListDto
+    {
+        public ItemDefinitionDto[] items;
+    }
+
+    [Serializable]
     public sealed class PlayerDefinitionDto
     {
         public float maxHealth;
@@ -172,6 +187,13 @@ namespace ProjectAscension.Net
             yield return GetJson(
                 $"{_baseUrl}/api/player",
                 json => onResult?.Invoke(JsonUtility.FromJson<PlayerDefinitionDto>(json)));
+        }
+
+        public IEnumerator GetShop(Action<ItemDefinitionDto[]> onResult)
+        {
+            yield return GetJson(
+                $"{_baseUrl}/api/shop",
+                json => onResult?.Invoke(JsonUtility.FromJson<ItemDefinitionListDto>("{\"items\":" + json + "}").items));
         }
 
         public IEnumerator GetContracts(string regionId, Action<ContractDto[]> onResult)
