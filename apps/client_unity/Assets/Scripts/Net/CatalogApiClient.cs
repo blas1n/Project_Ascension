@@ -89,6 +89,8 @@ namespace ProjectAscension.Net
         public int rewardCurrency;
         public string target; // optional objective filter (e.g. monster key "elite")
         public bool delegationAllowed;
+        public int rewardReputation;
+        public int minReputation;
     }
 
     [Serializable]

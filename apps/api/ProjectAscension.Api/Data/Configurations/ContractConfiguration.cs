@@ -31,7 +31,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Cull the Beasts",
                 Description = "Defeat 5 monsters in the frontier.",
                 ConditionsJson = "{\"targetCount\":5}",
-                RewardJson = "{\"currency\":120}",
+                RewardJson = "{\"currency\":120,\"reputation\":5}",
                 CreatedAt = SeedTime,
             },
             new Contract
@@ -43,7 +43,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Map the Frontier",
                 Description = "Reach the survey marker.",
                 ConditionsJson = "{\"targetCount\":1}",
-                RewardJson = "{\"currency\":80}",
+                RewardJson = "{\"currency\":80,\"reputation\":4}",
                 CreatedAt = SeedTime,
             },
             new Contract
@@ -55,7 +55,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Gather Samples",
                 Description = "Collect 3 samples.",
                 ConditionsJson = "{\"targetCount\":3}",
-                RewardJson = "{\"currency\":90}",
+                RewardJson = "{\"currency\":90,\"reputation\":3}",
                 CreatedAt = SeedTime,
             },
             // A targeted hunt: only elite kills count (the objective filter, "외곽 늑대 5마리"
@@ -69,7 +69,7 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Elite Bounty",
                 Description = "Slay 2 elite monsters.",
                 ConditionsJson = "{\"targetCount\":2,\"target\":\"elite\"}",
-                RewardJson = "{\"currency\":220}",
+                RewardJson = "{\"currency\":220,\"reputation\":8}",
                 CreatedAt = SeedTime,
             },
             // Delegation tutorial (contract-example.md 위임 튜토리얼): deliberately too hard for
@@ -84,8 +84,22 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Deep Cull",
                 Description = "Slay 4 elite monsters in the deep frontier. (Hard — consider delegating.)",
                 ConditionsJson = "{\"targetCount\":4,\"target\":\"elite\"}",
-                RewardJson = "{\"currency\":400}",
+                RewardJson = "{\"currency\":400,\"reputation\":12}",
                 DelegationAllowed = true,
+                CreatedAt = SeedTime,
+            },
+            // Reputation-gated high tier: only an established expeditionary may accept it.
+            // Closes the loop — basic contracts build the standing that unlocks this one.
+            new Contract
+            {
+                Id = System.Guid.Parse("c0000006-0000-0000-0000-000000000006"),
+                Kind = ContractKind.Task,
+                Purpose = ContractPurpose.Hunt,
+                Status = ContractStatus.Open,
+                Title = "Frontier Warden",
+                Description = "A trusted expeditionary's charge: slay 3 elites. (Requires standing.)",
+                ConditionsJson = "{\"targetCount\":3,\"target\":\"elite\",\"minReputation\":20}",
+                RewardJson = "{\"currency\":350,\"reputation\":15}",
                 CreatedAt = SeedTime,
             });
     }

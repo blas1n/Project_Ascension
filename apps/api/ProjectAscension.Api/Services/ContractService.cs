@@ -146,7 +146,8 @@ public class ContractService : IContractService
     private static ContractResponse ToResponse(Domain.Entities.Contract c) =>
         new(c.Id, c.Kind, c.Title, c.Description, c.Status, c.RewardJson, c.Purpose,
             ReadInt(c.ConditionsJson, "targetCount", 1), ReadInt(c.RewardJson, "currency", 0),
-            ReadString(c.ConditionsJson, "target"), c.DelegationAllowed);
+            ReadString(c.ConditionsJson, "target"), c.DelegationAllowed,
+            ReadInt(c.RewardJson, "reputation", 0), ReadInt(c.ConditionsJson, "minReputation", 0));
 
     // The slice's objective/reward are simple values in the Conditions/Reward JSON.
     private static int ReadInt(string json, string property, int fallback)

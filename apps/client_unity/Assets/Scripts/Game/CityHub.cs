@@ -46,7 +46,7 @@ namespace ProjectAscension.Game
             var ps = session.PlayerState;
 
             GUILayout.BeginArea(new Rect(20, 20, 400, 620), GUI.skin.box);
-            GUILayout.Label($"CITY      Gold: {ps.Currency}");
+            GUILayout.Label($"CITY      Gold: {ps.Currency}    Rep: {ps.Reputation}");
             GUILayout.Space(8);
 
             GUILayout.Label("Loadout (chosen from inventory):");
@@ -61,9 +61,17 @@ namespace ProjectAscension.Game
                 foreach (var c in contracts.Available)
                 {
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label($"{c.Title}  ({c.Purpose}, +{c.RewardCurrency}g)");
-                    if (GUILayout.Button("Accept", GUILayout.Width(70)))
-                        toAccept = c;
+                    string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";
+                    GUILayout.Label($"{c.Title}  ({c.Purpose}, +{c.RewardCurrency}g{rep})");
+                    if (ContractService.CanAccept(c, ps.Reputation))
+                    {
+                        if (GUILayout.Button("Accept", GUILayout.Width(70)))
+                            toAccept = c;
+                    }
+                    else
+                    {
+                        GUILayout.Label($"needs {c.MinReputation} rep", GUILayout.Width(90));
+                    }
                     GUILayout.EndHorizontal();
                 }
                 if (toAccept != null)
@@ -76,8 +84,13 @@ namespace ProjectAscension.Game
                 GUILayout.Label(c.Description);
                 if (c.IsComplete)
                 {
-                    if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g)", GUILayout.Height(28)))
-                        ps.Currency += contracts.TurnIn();
+                    string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";
+                    if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g{rep})", GUILayout.Height(28)))
+                    {
+                        var r = contracts.TurnIn();
+                        ps.Currency += r.Currency;
+                        ps.Reputation += r.Reputation;
+                    }
                 }
                 else
                 {
