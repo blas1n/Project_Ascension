@@ -21,7 +21,8 @@ namespace ProjectAscension.GameSimulation.Combat
         float DamageOverTimePerTick,
         int DamageOverTimeTicks,
         ControlKind Control,
-        float ControlDuration);
+        float ControlDuration,
+        float ControlStrength);
 
     /// <summary>
     /// The deterministic outcome of executing a skill: per-target effects plus

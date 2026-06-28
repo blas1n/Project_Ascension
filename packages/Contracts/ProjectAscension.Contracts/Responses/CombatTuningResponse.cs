@@ -18,5 +18,8 @@ namespace ProjectAscension.Contracts.Responses
         float PassiveShieldReduction,
         float PassiveBarrierReduction,
         float PassiveLeech,
-        float FocusCostPerPoint);
+        float FocusCostPerPoint,
+        float SlowPerMagnitude,
+        float KnockbackPerMagnitude,
+        float ChargedAttackThreshold);
 }

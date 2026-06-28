@@ -128,7 +128,7 @@ namespace ProjectAscension.Game
             if (skill == null) return;
 
             // DB-driven combat balance (fetched at startup; Default offline).
-            var tuning = GameSession.Instance?.CombatTuning ?? CombatTuning.Default;
+            var tuning = CombatTuningCatalog.Current;
 
             // Skills cost focus (combat-framework 집중력); refuse the cast when short.
             if (_focus != null && !_focus.TrySpend(FocusCost.Of(skill, tuning)))
@@ -168,7 +168,7 @@ namespace ProjectAscension.Game
                 if (hit.Damage > 0f) target.TakeDamage(hit.Damage, gameObject);
                 if (hit.DamageOverTimePerTick > 0f && hit.DamageOverTimeTicks > 0)
                     StartCoroutine(DamageOverTime(target, hit.DamageOverTimePerTick, hit.DamageOverTimeTicks));
-                if (hit.Control != ControlKind.None) PlayControl(target, hit.Control, hit.ControlDuration);
+                if (hit.Control != ControlKind.None) PlayControl(target, hit.Control, hit.ControlDuration, hit.ControlStrength);
             }
 
             if (resolution.SelfHeal > 0f) _self.Heal(resolution.SelfHeal);
@@ -181,11 +181,11 @@ namespace ProjectAscension.Game
         }
 
         // Apply the control to the target's status receiver (real slow/stun/knockback);
-        // the SkillEffects stub still plays placeholder VFX.
-        private void PlayControl(IDamageable target, ControlKind kind, float duration)
+        // strength is skill-defined. The SkillEffects stub still plays placeholder VFX.
+        private void PlayControl(IDamageable target, ControlKind kind, float duration, float strength)
         {
             if (target is Component c && c.TryGetComponent<IStatusReceiver>(out var receiver))
-                receiver.ApplyControl(kind, duration, transform.position);
+                receiver.ApplyControl(kind, duration, strength, transform.position);
             if (_effects != null) _effects.PlayControl(target, kind);
         }
 

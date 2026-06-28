@@ -27,7 +27,13 @@ namespace ProjectAscension.GameSimulation.Combat
         float PassiveBarrierReduction,
         float PassiveLeech,
         // Resource.
-        float FocusCostPerPoint)
+        float FocusCostPerPoint,
+        // Control strength per control magnitude — so the status the skill applies is
+        // defined by the skill (its magnitude), not fixed on the receiver.
+        float SlowPerMagnitude,      // slow fraction per magnitude (0.45 → move at 55%)
+        float KnockbackPerMagnitude, // impulse speed per magnitude
+                                     // Input.
+        float ChargedAttackThreshold)// draw fraction (0..1) that counts as a charged shot
     {
         /// <summary>A baseline used by tests and as a safe fallback when the DB has no
         /// combat-tuning row yet. Mirrors the seeded defaults.</summary>
@@ -45,6 +51,9 @@ namespace ProjectAscension.GameSimulation.Combat
             PassiveShieldReduction: 0.06f,
             PassiveBarrierReduction: 0.08f,
             PassiveLeech: 0.05f,
-            FocusCostPerPoint: 4f);
+            FocusCostPerPoint: 4f,
+            SlowPerMagnitude: 0.15f,
+            KnockbackPerMagnitude: 4f,
+            ChargedAttackThreshold: 0.7f);
     }
 }

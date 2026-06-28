@@ -28,10 +28,9 @@ namespace ProjectAscension.Game
         /// magic) and commands (techniques). Populated as discoveries are fetched.</summary>
         public DiscoveredSkillSet DiscoveredSkills { get; private set; }
 
-        /// <summary>The combat balance the resolvers use — DB-driven, fetched once at
-        /// startup. Defaults to <see cref="CombatTuning.Default"/> until/unless fetched
-        /// (offline keeps the built-in values).</summary>
-        public CombatTuning CombatTuning { get; private set; } = CombatTuning.Default;
+        // The combat balance the resolvers use is DB-driven, fetched once at startup into
+        // the shared CombatTuningCatalog (so the Player layer can read it too); offline
+        // keeps CombatTuning.Default.
 
         // Authored weapon definitions by DisplayName (DB-driven stats), fetched at start.
         private readonly Dictionary<string, WeaponDefinitionDto> _weaponDefs = new();
@@ -66,7 +65,7 @@ namespace ProjectAscension.Game
         {
             yield return api.GetCombatTuning(dto =>
             {
-                if (dto != null) CombatTuning = ToCombatTuning(dto);
+                if (dto != null) CombatTuningCatalog.Set(ToCombatTuning(dto));
             });
             yield return api.GetWeapons(defs =>
             {
@@ -95,6 +94,7 @@ namespace ProjectAscension.Game
             d.projectileDamage, d.beamDamage, d.areaDamage, d.dotDamagePerTick, d.spreadFalloff,
             d.baseDotTicks, d.shieldPerMagnitude, d.dashPerMagnitude, d.leechFractionPerMagnitude,
             d.controlDurationPerMagnitude, d.passiveShieldReduction, d.passiveBarrierReduction,
-            d.passiveLeech, d.focusCostPerPoint);
+            d.passiveLeech, d.focusCostPerPoint,
+            d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold);
     }
 }

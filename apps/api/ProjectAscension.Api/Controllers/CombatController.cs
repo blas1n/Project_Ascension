@@ -23,6 +23,7 @@ public class CombatController : ControllerBase
             t.ProjectileDamage, t.BeamDamage, t.AreaDamage, t.DotDamagePerTick, t.SpreadFalloff,
             t.BaseDotTicks, t.ShieldPerMagnitude, t.DashPerMagnitude, t.LeechFractionPerMagnitude,
             t.ControlDurationPerMagnitude, t.PassiveShieldReduction, t.PassiveBarrierReduction,
-            t.PassiveLeech, t.FocusCostPerPoint));
+            t.PassiveLeech, t.FocusCostPerPoint,
+            t.SlowPerMagnitude, t.KnockbackPerMagnitude, t.ChargedAttackThreshold));
     }
 }

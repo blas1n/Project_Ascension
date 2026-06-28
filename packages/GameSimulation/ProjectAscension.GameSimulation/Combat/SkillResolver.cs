@@ -61,6 +61,14 @@ namespace ProjectAscension.GameSimulation.Combat
             bool hasArea = area > 0f;
             int dotTicks = (dotPerTick > 0f) ? t.BaseDotTicks + dotDuration : 0;
             float controlDuration = controlMagnitude * t.ControlDurationPerMagnitude;
+            // Strength is defined by the skill (its control magnitude), not the receiver:
+            // a slow fraction or a knockback impulse.
+            float controlStrength = control switch
+            {
+                ControlKind.Slow => controlMagnitude * t.SlowPerMagnitude,
+                ControlKind.Knockback => controlMagnitude * t.KnockbackPerMagnitude,
+                _ => 0f,
+            };
             int hitCount = hasArea ? availableTargets : Math.Min(availableTargets, 1 + spread);
 
             var hits = new List<TargetEffect>(hitCount);
@@ -75,7 +83,7 @@ namespace ProjectAscension.GameSimulation.Combat
                 if (dmg <= 0f && dotPerTick <= 0f && control == ControlKind.None) continue;
 
                 directTotal += dmg;
-                hits.Add(new TargetEffect(i, dmg, dotPerTick, dotTicks, control, controlDuration));
+                hits.Add(new TargetEffect(i, dmg, dotPerTick, dotTicks, control, controlDuration, controlStrength));
             }
 
             float selfHeal = directTotal * (leech * t.LeechFractionPerMagnitude);

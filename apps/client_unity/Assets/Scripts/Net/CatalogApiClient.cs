@@ -27,6 +27,9 @@ namespace ProjectAscension.Net
         public float passiveBarrierReduction;
         public float passiveLeech;
         public float focusCostPerPoint;
+        public float slowPerMagnitude;
+        public float knockbackPerMagnitude;
+        public float chargedAttackThreshold;
     }
 
     [Serializable]
