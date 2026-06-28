@@ -12,5 +12,8 @@ namespace ProjectAscension.Contracts.Responses
         ContractPurpose Purpose, int TargetCount, int RewardCurrency, string? Target, bool DelegationAllowed,
         // Reputation (명성) granted on completion, and the standing required to accept
         // (0 = open to all). The reputation loop: do contracts → gain standing → unlock harder ones.
-        int RewardReputation, int MinReputation);
+        int RewardReputation, int MinReputation,
+        // Deadline once accepted (seconds; 0 = no limit). Letting it expire fails the
+        // contract — a commitment with stakes.
+        int TimeLimitSeconds);
 }

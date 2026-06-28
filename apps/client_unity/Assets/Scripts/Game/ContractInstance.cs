@@ -16,6 +16,8 @@ namespace ProjectAscension.Game
         public int RewardCurrency;
         public int RewardReputation; // 명성 gained on completion
         public int MinReputation;    // standing required to accept (0 = open to all)
+        public int TimeLimitSeconds; // deadline once accepted (0 = no limit)
+        public float Remaining;      // runtime countdown after accepting
 
         /// <summary>Optional objective filter — for a hunt, the monster key ("elite") that
         /// counts; null/empty means any target satisfies the objective.</summary>
@@ -37,6 +39,8 @@ namespace ProjectAscension.Game
             RewardCurrency = RewardCurrency,
             RewardReputation = RewardReputation,
             MinReputation = MinReputation,
+            TimeLimitSeconds = TimeLimitSeconds,
+            Remaining = TimeLimitSeconds,
             Target = Target,
             DelegationAllowed = DelegationAllowed,
         };
