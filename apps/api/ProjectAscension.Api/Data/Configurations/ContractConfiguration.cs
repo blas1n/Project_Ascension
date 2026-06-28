@@ -57,6 +57,20 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 ConditionsJson = "{\"targetCount\":3}",
                 RewardJson = "{\"currency\":90}",
                 CreatedAt = SeedTime,
+            },
+            // A targeted hunt: only elite kills count (the objective filter, "외곽 늑대 5마리"
+            // style). Higher reward for the harder, specific objective.
+            new Contract
+            {
+                Id = System.Guid.Parse("c0000004-0000-0000-0000-000000000004"),
+                Kind = ContractKind.Task,
+                Purpose = ContractPurpose.Hunt,
+                Status = ContractStatus.Open,
+                Title = "Elite Bounty",
+                Description = "Slay 2 elite monsters.",
+                ConditionsJson = "{\"targetCount\":2,\"target\":\"elite\"}",
+                RewardJson = "{\"currency\":220}",
+                CreatedAt = SeedTime,
             });
     }
 }

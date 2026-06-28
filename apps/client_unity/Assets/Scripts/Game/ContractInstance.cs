@@ -15,6 +15,10 @@ namespace ProjectAscension.Game
         public int Progress;
         public int RewardCurrency;
 
+        /// <summary>Optional objective filter — for a hunt, the monster key ("elite") that
+        /// counts; null/empty means any target satisfies the objective.</summary>
+        public string Target;
+
         public bool IsComplete => Progress >= TargetCount;
 
         public ContractInstance Fresh() => new()
@@ -25,6 +29,7 @@ namespace ProjectAscension.Game
             TargetCount = TargetCount,
             Progress = 0,
             RewardCurrency = RewardCurrency,
+            Target = Target,
         };
     }
 }

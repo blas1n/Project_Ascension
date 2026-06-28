@@ -51,7 +51,18 @@ namespace ProjectAscension.Game
 
         public void Abandon() => Active = null;
 
-        private void OnMonsterKilled(UnityEngine.GameObject _) => Advance(ContractPurpose.Hunt, 1);
+        // A targeted hunt only counts kills of its target monster type (the objective
+        // filter); an untargeted hunt counts any kill.
+        private void OnMonsterKilled(UnityEngine.GameObject monster)
+        {
+            if (Active == null || Active.Purpose != ContractPurpose.Hunt) return;
+            if (!string.IsNullOrEmpty(Active.Target))
+            {
+                var info = monster != null ? monster.GetComponent<IMonsterInfo>() : null;
+                if (info == null || info.DiscoveryTag != "monster:" + Active.Target) return;
+            }
+            Advance(ContractPurpose.Hunt, 1);
+        }
         private void OnSampleCollected(UnityEngine.GameObject _) => Advance(ContractPurpose.Collection, 1);
         private void OnMarkerSurveyed(UnityEngine.GameObject _) =>
             Advance(ContractPurpose.Survey, Active != null ? Active.TargetCount : 0);

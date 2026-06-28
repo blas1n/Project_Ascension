@@ -86,6 +86,7 @@ namespace ProjectAscension.Net
         public string purpose; // ContractPurpose name
         public int targetCount;
         public int rewardCurrency;
+        public string target; // optional objective filter (e.g. monster key "elite")
     }
 
     [Serializable]
