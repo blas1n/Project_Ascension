@@ -26,6 +26,8 @@ public class CombatTuningProvider : ICombatTuningProvider
             s.BaseDotTicks, s.ShieldPerMagnitude, s.DashPerMagnitude, s.LeechFractionPerMagnitude,
             s.ControlDurationPerMagnitude, s.PassiveShieldReduction, s.PassiveBarrierReduction,
             s.PassiveLeech, s.FocusCostPerPoint,
-            s.SlowPerMagnitude, s.KnockbackPerMagnitude, s.ChargedAttackThreshold);
+            s.SlowPerMagnitude, s.KnockbackPerMagnitude, s.ChargedAttackThreshold,
+            s.DeliveryProjectileSpeed, s.DeliveryProjectileGravity, s.DeliveryRange,
+            s.DeliveryAreaRadius, s.DeliveryHitscanRadius);
     }
 }

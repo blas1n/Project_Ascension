@@ -33,7 +33,14 @@ namespace ProjectAscension.GameSimulation.Combat
         float SlowPerMagnitude,      // slow fraction per magnitude (0.45 → move at 55%)
         float KnockbackPerMagnitude, // impulse speed per magnitude
                                      // Input.
-        float ChargedAttackThreshold)// draw fraction (0..1) that counts as a charged shot
+        float ChargedAttackThreshold,// draw fraction (0..1) that counts as a charged shot
+                                     // Delivery (the manifestation NUMBERS; the AI picks the delivery concept/axes, the
+                                     // engine owns these — ADR 0002).
+        float DeliveryProjectileSpeed,
+        float DeliveryProjectileGravity,
+        float DeliveryRange,        // how far a discovered weapon reaches
+        float DeliveryAreaRadius,   // resolve radius for an Area delivery
+        float DeliveryHitscanRadius)// resolve catch radius for a projectile/hitscan
     {
         /// <summary>A baseline used by tests and as a safe fallback when the DB has no
         /// combat-tuning row yet. Mirrors the seeded defaults.</summary>
@@ -54,6 +61,11 @@ namespace ProjectAscension.GameSimulation.Combat
             FocusCostPerPoint: 4f,
             SlowPerMagnitude: 0.15f,
             KnockbackPerMagnitude: 4f,
-            ChargedAttackThreshold: 0.7f);
+            ChargedAttackThreshold: 0.7f,
+            DeliveryProjectileSpeed: 32f,
+            DeliveryProjectileGravity: 0f,
+            DeliveryRange: 60f,
+            DeliveryAreaRadius: 4f,
+            DeliveryHitscanRadius: 1.5f);
     }
 }

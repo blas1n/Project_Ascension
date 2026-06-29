@@ -31,6 +31,11 @@ namespace ProjectAscension.Net
         public float slowPerMagnitude;
         public float knockbackPerMagnitude;
         public float chargedAttackThreshold;
+        public float deliveryProjectileSpeed;
+        public float deliveryProjectileGravity;
+        public float deliveryRange;
+        public float deliveryAreaRadius;
+        public float deliveryHitscanRadius;
     }
 
     [Serializable]

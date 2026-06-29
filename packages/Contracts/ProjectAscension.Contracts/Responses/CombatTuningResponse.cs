@@ -21,5 +21,10 @@ namespace ProjectAscension.Contracts.Responses
         float FocusCostPerPoint,
         float SlowPerMagnitude,
         float KnockbackPerMagnitude,
-        float ChargedAttackThreshold);
+        float ChargedAttackThreshold,
+        float DeliveryProjectileSpeed,
+        float DeliveryProjectileGravity,
+        float DeliveryRange,
+        float DeliveryAreaRadius,
+        float DeliveryHitscanRadius);
 }

@@ -240,6 +240,8 @@ namespace ProjectAscension.Game
             d.baseDotTicks, d.shieldPerMagnitude, d.dashPerMagnitude, d.leechFractionPerMagnitude,
             d.controlDurationPerMagnitude, d.passiveShieldReduction, d.passiveBarrierReduction,
             d.passiveLeech, d.focusCostPerPoint,
-            d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold);
+            d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold,
+            d.deliveryProjectileSpeed, d.deliveryProjectileGravity, d.deliveryRange,
+            d.deliveryAreaRadius, d.deliveryHitscanRadius);
     }
 }
