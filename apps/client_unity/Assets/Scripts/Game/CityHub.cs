@@ -60,9 +60,9 @@ namespace ProjectAscension.Game
 
             if (session.Npcs.Count > 0)
             {
-                var staff = new List<string>();
-                foreach (var n in session.Npcs) staff.Add($"{n.name} ({n.role})");
-                GUILayout.Label($"Staff: {string.Join(", ", staff)}");
+                GUILayout.Label("City staff:");
+                foreach (var n in session.Npcs)
+                    GUILayout.Label($"  {n.name} ({n.role}): \"{NpcReaction(n.role, ps.Reputation)}\"");
                 GUILayout.Space(6);
             }
 
@@ -282,6 +282,8 @@ namespace ProjectAscension.Game
                 }
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
+                if (!string.IsNullOrEmpty(item.description))
+                    GUILayout.Label($"   {item.description}");
             }
             GUILayout.EndArea();
         }
@@ -356,6 +358,19 @@ namespace ProjectAscension.Game
             GUI.enabled = true;
 
             GUILayout.EndArea();
+        }
+
+        // NPCs react to the player's standing (the slice's "명성 — NPC 반응 변화").
+        private static string NpcReaction(string role, int reputation)
+        {
+            int tier = reputation >= 30 ? 2 : reputation >= 10 ? 1 : 0;
+            switch (role)
+            {
+                case "Guard": return tier == 2 ? "An honor to have you, Warden." : tier == 1 ? "Stay sharp out there." : "State your business.";
+                case "Shopkeeper": return tier == 2 ? "For you — only the finest." : tier == 1 ? "Good to see a regular." : "Coin first, talk later.";
+                case "Contract Clerk": return tier == 2 ? "The board is yours to pick from." : tier == 1 ? "More work? I have plenty." : "Fill out the form like everyone else.";
+                default: return tier == 2 ? "Your name carries weight here." : tier == 1 ? "I have heard of you." : "Another newcomer.";
+            }
         }
 
         private bool PurposeButton(ContractPurpose purpose)

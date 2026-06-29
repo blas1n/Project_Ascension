@@ -18,6 +18,6 @@ public class ShopController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var items = await _repo.GetAllAsync(ct);
-        return Ok(items.Select(i => new ItemDefinitionResponse(i.Key, i.DisplayName, i.SellPrice, i.BuyPrice)));
+        return Ok(items.Select(i => new ItemDefinitionResponse(i.Key, i.DisplayName, i.Description, i.SellPrice, i.BuyPrice)));
     }
 }

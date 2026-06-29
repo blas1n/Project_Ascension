@@ -15,8 +15,8 @@ public class ItemDefinitionConfiguration : IEntityTypeConfiguration<ItemDefiniti
         // The monster-drop materials, priced for the city shop. Sellable (drops → gold)
         // and buyable (acquire materials for settlement supply). Editable at runtime.
         builder.HasData(
-            new ItemDefinition { Key = "hide", DisplayName = "Beast Hide", SellPrice = 8, BuyPrice = 16 },
-            new ItemDefinition { Key = "feather", DisplayName = "Sky Feather", SellPrice = 10, BuyPrice = 20 },
-            new ItemDefinition { Key = "core", DisplayName = "Elite Core", SellPrice = 40, BuyPrice = 90 });
+            new ItemDefinition { Key = "hide", DisplayName = "Beast Hide", SellPrice = 8, BuyPrice = 16, Description = "Tough hide from frontier beasts — raises shelters and armor." },
+            new ItemDefinition { Key = "feather", DisplayName = "Sky Feather", SellPrice = 10, BuyPrice = 20, Description = "Light feathers prized in the city markets." },
+            new ItemDefinition { Key = "core", DisplayName = "Elite Core", SellPrice = 40, BuyPrice = 90, Description = "A volatile core torn from an elite — fortifies the outpost's defenses." });
     }
 }
