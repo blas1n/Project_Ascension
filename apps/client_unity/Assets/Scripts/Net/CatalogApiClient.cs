@@ -100,6 +100,22 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class ResourceCountDto
+    {
+        public string key;
+        public int count;
+    }
+
+    [Serializable]
+    public sealed class PlayerStateDto
+    {
+        public int currency;
+        public int reputation;
+        public ResourceCountDto[] resources;
+        public string[] soldKnowledge;
+    }
+
+    [Serializable]
     public sealed class NpcDto
     {
         public string name;
@@ -221,6 +237,19 @@ namespace ProjectAscension.Net
                 json => onResult?.Invoke(JsonUtility.FromJson<PlayerDefinitionDto>(json)));
         }
 
+        public IEnumerator GetPlayerState(Action<PlayerStateDto> onResult)
+        {
+            yield return GetJson($"{_baseUrl}/api/player-state", json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)));
+        }
+
+        public IEnumerator SavePlayerState(PlayerStateDto state, Action<PlayerStateDto> onResult)
+        {
+            yield return PutJson(
+                $"{_baseUrl}/api/player-state",
+                JsonUtility.ToJson(state),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)));
+        }
+
         public IEnumerator GetNpcs(Action<NpcDto[]> onResult)
         {
             yield return GetJson(
@@ -279,6 +308,22 @@ namespace ProjectAscension.Net
                 onOk?.Invoke(req.downloadHandler.text);
             else
                 Debug.LogWarning($"[Catalog] GET {url} failed: {req.error}");
+        }
+
+        private static IEnumerator PutJson(string url, string body, Action<string> onOk)
+        {
+            using var req = new UnityWebRequest(url, "PUT")
+            {
+                uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body)),
+                downloadHandler = new DownloadHandlerBuffer(),
+            };
+            req.SetRequestHeader("Content-Type", "application/json");
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success)
+                onOk?.Invoke(req.downloadHandler.text);
+            else
+                Debug.LogWarning($"[Catalog] PUT {url} failed: {req.error}");
         }
 
         private static IEnumerator PostJson(string url, string body, Action<string> onOk)
