@@ -158,6 +158,7 @@ namespace ProjectAscension.Net
     {
         public string key;
         public string displayName;
+        public string description;
         public int sellPrice;
         public int buyPrice;
     }

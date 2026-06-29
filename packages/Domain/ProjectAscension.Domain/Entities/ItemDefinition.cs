@@ -12,6 +12,7 @@ namespace ProjectAscension.Domain.Entities
     {
         public string Key { get; set; } = string.Empty; // "hide","feather","core",...
         public string DisplayName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty; // flavor shown in the shop
         public int SellPrice { get; set; } // gold the shop pays the player (0 = not sellable)
         public int BuyPrice { get; set; }  // gold the player pays the shop (0 = not buyable)
     }
