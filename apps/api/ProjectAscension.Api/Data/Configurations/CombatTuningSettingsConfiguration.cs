@@ -32,6 +32,11 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             SlowPerMagnitude = 0.15f,
             KnockbackPerMagnitude = 4f,
             ChargedAttackThreshold = 0.7f,
+            DeliveryProjectileSpeed = 32f,
+            DeliveryProjectileGravity = 0f,
+            DeliveryRange = 60f,
+            DeliveryAreaRadius = 4f,
+            DeliveryHitscanRadius = 1.5f,
         });
     }
 }

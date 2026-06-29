@@ -56,19 +56,24 @@ namespace ProjectAscension.GameSimulation.Combat
     /// </summary>
     public static class DeliveryInference
     {
-        public static DeliverySpec From(Skill skill)
+        /// <summary>Derive the delivery from the skill's primitives. The discrete axes are
+        /// the manifestation concept; the numbers come from <paramref name="tuning"/>
+        /// (DB-driven, deterministic — never hard-coded, ADR 0002).</summary>
+        public static DeliverySpec From(Skill skill, CombatTuning tuning)
         {
+            var t = tuning ?? CombatTuning.Default;
+
             if (Has(skill, SkillPrimitiveKind.Projectile))
                 return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.Projectile, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
-                    Speed: 32f, Gravity: 0f, Range: 60f, Radius: 1.5f, Lifetime: 0f, TickInterval: 0f);
+                    Speed: t.DeliveryProjectileSpeed, Gravity: t.DeliveryProjectileGravity, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
 
             if (Has(skill, SkillPrimitiveKind.Area) && !Has(skill, SkillPrimitiveKind.Beam))
                 return new DeliverySpec(DeliveryOrigin.AimPoint, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
-                    Speed: 0f, Gravity: 0f, Range: 60f, Radius: 4f, Lifetime: 0f, TickInterval: 0f);
+                    Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryAreaRadius, Lifetime: 0f, TickInterval: 0f);
 
             // Beam or default → an instant hitscan line resolving at the first thing hit.
             return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Line,
-                Speed: 0f, Gravity: 0f, Range: 60f, Radius: 1.5f, Lifetime: 0f, TickInterval: 0f);
+                Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
         }
 
         private static bool Has(Skill skill, SkillPrimitiveKind kind)

@@ -41,5 +41,12 @@ namespace ProjectAscension.Domain.Entities
 
         // Input.
         public float ChargedAttackThreshold { get; set; }
+
+        // Delivery (manifestation numbers; AI picks the concept, the engine owns these).
+        public float DeliveryProjectileSpeed { get; set; }
+        public float DeliveryProjectileGravity { get; set; }
+        public float DeliveryRange { get; set; }
+        public float DeliveryAreaRadius { get; set; }
+        public float DeliveryHitscanRadius { get; set; }
     }
 }

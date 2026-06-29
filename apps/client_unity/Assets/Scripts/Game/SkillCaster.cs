@@ -156,7 +156,7 @@ namespace ProjectAscension.Game
             // Manifestation is derived from the skill's composition (DeliverySpec), so a
             // projectile flies, a beam hitscans, an area lands — each discovered skill
             // delivers differently. The effect numbers stay with SkillResolver (ResolveAt).
-            var spec = DeliveryInference.From(skill);
+            var spec = DeliveryInference.From(skill, tuning);
             var origin = aimSource != null ? aimSource.position : transform.position;
             var dir = aimSource != null ? aimSource.forward : transform.forward;
 
