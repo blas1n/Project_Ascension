@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
+using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
@@ -15,6 +16,8 @@ namespace ProjectAscension.Game
     {
         private const string IssuerActorId = "11111111-1111-1111-1111-111111111111";
         private const float DelegationSeconds = 20f; // stub contractor finishes a delegated contract in this time
+        private const int KnowledgeGoldPerPoint = 6;  // knowledge license price per power point
+        private const int KnowledgePointsPerRep = 5;  // power per standing point from a license sale
         private static readonly string[] TargetKeys = { "", "melee", "ranged", "elite" };
 
         // Contract-issuing panel state. The player picks the objective; the server quotes a
@@ -155,6 +158,28 @@ namespace ProjectAscension.Game
             }
             if (!any)
                 GUILayout.Label("None yet — fight and explore to discover.");
+
+            GUILayout.Space(8);
+            GUILayout.Label("KNOWLEDGE MARKET (지식 거래)");
+            bool anySellable = false;
+            foreach (var discovered in session.DiscoveredSkills.All)
+            {
+                if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
+                anySellable = true;
+                int price = KnowledgeValuation.LicensePrice(discovered.Skill, KnowledgeGoldPerPoint);
+                int rep = KnowledgeValuation.LicenseReputation(discovered.Skill, KnowledgePointsPerRep);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
+                if (GUILayout.Button($"Sell license +{price}g +{rep}rep", GUILayout.Width(180)))
+                {
+                    ps.Currency += price;
+                    ps.Reputation += rep;
+                    ps.SoldKnowledge.Add(discovered.Name);
+                }
+                GUILayout.EndHorizontal();
+            }
+            if (!anySellable)
+                GUILayout.Label("No unsold knowledge — discover skills to license.");
             GUILayout.EndArea();
 
             DrawIssuePanel(session, ps);
