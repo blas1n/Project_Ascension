@@ -7,6 +7,7 @@ namespace ProjectAscension.Domain.Entities
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty; // "Shopkeeper","Guard","Contract Clerk"
         public Guid HomeRegionId { get; set; }
         public Guid CurrentRegionId { get; set; }
         public bool Alive { get; set; } = true;

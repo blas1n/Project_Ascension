@@ -16,5 +16,7 @@ namespace ProjectAscension.Contracts.Responses
         // Deadline once accepted (seconds; 0 = no limit) and the specified failure
         // conditions (ConditionsJson "failOn"). Failure is NOT forced — a contract with no
         // failure conditions can never fail.
-        int TimeLimitSeconds, bool FailOnTimeout, bool FailOnDeath);
+        int TimeLimitSeconds, bool FailOnTimeout, bool FailOnDeath,
+        // The NPC/office that issued it (ConditionsJson "issuer"); empty for player-issued.
+        string Issuer);
 }

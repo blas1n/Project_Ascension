@@ -96,6 +96,20 @@ namespace ProjectAscension.Net
         public int timeLimitSeconds;
         public bool failOnTimeout;
         public bool failOnDeath;
+        public string issuer;
+    }
+
+    [Serializable]
+    public sealed class NpcDto
+    {
+        public string name;
+        public string role;
+    }
+
+    [Serializable]
+    public sealed class NpcListDto
+    {
+        public NpcDto[] items;
     }
 
     [Serializable]
@@ -205,6 +219,13 @@ namespace ProjectAscension.Net
             yield return GetJson(
                 $"{_baseUrl}/api/player",
                 json => onResult?.Invoke(JsonUtility.FromJson<PlayerDefinitionDto>(json)));
+        }
+
+        public IEnumerator GetNpcs(Action<NpcDto[]> onResult)
+        {
+            yield return GetJson(
+                $"{_baseUrl}/api/npcs",
+                json => onResult?.Invoke(JsonUtility.FromJson<NpcListDto>("{\"items\":" + json + "}").items));
         }
 
         public IEnumerator GetSettlement(Action<SettlementDto> onResult)

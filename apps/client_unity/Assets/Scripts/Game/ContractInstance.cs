@@ -20,6 +20,7 @@ namespace ProjectAscension.Game
         public float Remaining;      // runtime countdown after accepting
         public bool FailOnTimeout;   // specified failure conditions — absent = never fails
         public bool FailOnDeath;
+        public string Issuer = "";   // the NPC/office that issued it (empty for player-issued)
 
         /// <summary>Optional objective filter — for a hunt, the monster key ("elite") that
         /// counts; null/empty means any target satisfies the objective.</summary>

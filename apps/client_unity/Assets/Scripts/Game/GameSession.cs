@@ -49,6 +49,9 @@ namespace ProjectAscension.Game
         public SettlementDto Settlement { get; private set; }
         public void SetSettlement(SettlementDto s) { if (s != null) Settlement = s; }
 
+        /// <summary>The city's NPC roster (shop / guard / contract clerk), fetched at start.</summary>
+        public List<NpcDto> Npcs { get; } = new();
+
         /// <summary>The DB-driven definition for an authored weapon, by display name —
         /// null when offline or unknown (caller falls back to the authored asset).</summary>
         public WeaponDefinitionDto WeaponDefinition(string displayName)
@@ -158,6 +161,12 @@ namespace ProjectAscension.Game
                 ShopItems.AddRange(items);
             });
             yield return api.GetSettlement(s => { if (s != null) Settlement = s; });
+            yield return api.GetNpcs(npcs =>
+            {
+                if (npcs == null) return;
+                Npcs.Clear();
+                Npcs.AddRange(npcs);
+            });
             yield return api.GetContracts(RegionId, defs =>
             {
                 if (defs == null) return;
@@ -171,6 +180,7 @@ namespace ProjectAscension.Game
                         TargetCount = Mathf.Max(1, d.targetCount),
                         RewardCurrency = d.rewardCurrency,
                         Target = d.target,
+                        Issuer = d.issuer ?? "",
                         DelegationAllowed = d.delegationAllowed,
                         RewardReputation = d.rewardReputation,
                         MinReputation = d.minReputation,
