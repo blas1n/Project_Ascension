@@ -16,6 +16,10 @@ namespace ProjectAscension.Game
         /// shop, contract collection, and settlement supply.</summary>
         public readonly Dictionary<string, int> Resources = new();
 
+        /// <summary>Discovered skills whose knowledge license has been sold (by name) — each
+        /// sells once. The discovery itself is kept (first-discoverer is permanent).</summary>
+        public readonly HashSet<string> SoldKnowledge = new();
+
         public void AddResource(string key, int amount)
         {
             if (string.IsNullOrEmpty(key) || amount <= 0) return;

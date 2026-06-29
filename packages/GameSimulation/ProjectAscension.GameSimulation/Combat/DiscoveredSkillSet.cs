@@ -18,6 +18,18 @@ namespace ProjectAscension.GameSimulation.Combat
         public IReadOnlyList<DiscoveredSkill> Commands => _commands;
         public IReadOnlyList<DiscoveredSkill> Passives => _passives;
 
+        /// <summary>Every discovered skill, regardless of manifestation (e.g. for the
+        /// knowledge market).</summary>
+        public IEnumerable<DiscoveredSkill> All
+        {
+            get
+            {
+                foreach (var w in _weapons) yield return w;
+                foreach (var c in _commands) yield return c;
+                foreach (var p in _passives) yield return p;
+            }
+        }
+
         public void Add(DiscoveredSkill skill)
         {
             switch (skill.Manifestation)
