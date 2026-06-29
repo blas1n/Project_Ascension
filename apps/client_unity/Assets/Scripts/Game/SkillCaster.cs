@@ -153,22 +153,87 @@ namespace ProjectAscension.Game
                 return;
             }
 
-            var targets = FindTargets();
-            var resolution = SkillResolver.Resolve(skill, targets.Count, tuning);
-            Apply(resolution, targets);
+            // Manifestation is derived from the skill's composition (DeliverySpec), so a
+            // projectile flies, a beam hitscans, an area lands — each discovered skill
+            // delivers differently. The effect numbers stay with SkillResolver (ResolveAt).
+            var spec = DeliveryInference.From(skill);
+            var origin = aimSource != null ? aimSource.position : transform.position;
+            var dir = aimSource != null ? aimSource.forward : transform.forward;
+
+            if (spec.Motion == DeliveryMotion.Projectile)
+            {
+                SpawnProjectile(origin, dir, spec, point => ResolveAt(skill, point, spec));
+                return;
+            }
+
+            // Instant deliveries — a hitscan line (Muzzle) or a strike at the aimed point
+            // (AimPoint). (Persistent deliveries — zone / turret / summon — are a reserved
+            // axis the inference does not produce yet.)
+            var resolvePoint = AimPoint(origin, dir, spec.Range);
+            ShowTracer(origin, resolvePoint);
+            ResolveAt(skill, resolvePoint, spec);
         }
 
-        private List<IDamageable> FindTargets()
+        // Resolve a skill's effects against everything within the delivery's footprint at a
+        // point. Shared by instant deliveries (now) and a projectile's impact (callback).
+        private void ResolveAt(Skill skill, Vector3 point, DeliverySpec spec)
         {
-            var origin = aimSource != null ? aimSource.position : transform.position;
+            if (this == null) return; // caster gone (e.g. projectile outlived the scene)
+            var targets = TargetsAround(point, spec.Radius);
+            var resolution = SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
+            Apply(resolution, targets);
+            ShowImpact(point);
+        }
+
+        private List<IDamageable> TargetsAround(Vector3 point, float radius)
+        {
             var list = new List<IDamageable>();
-            foreach (var col in Physics.OverlapSphere(origin, radius, targetMask))
+            foreach (var col in Physics.OverlapSphere(point, radius, targetMask))
                 if (col.TryGetComponent<IDamageable>(out var d) && !ReferenceEquals(d, _self) && !d.IsDead)
                     list.Add(d);
-
-            // Nearest-first so index 0 is the primary target the resolver focuses on.
-            list.Sort((a, b) => SqrDistance(a, origin).CompareTo(SqrDistance(b, origin)));
+            // Nearest-to-impact first so index 0 is the primary target the resolver focuses on.
+            list.Sort((a, b) => SqrDistance(a, point).CompareTo(SqrDistance(b, point)));
             return list;
+        }
+
+        // Where an instant delivery resolves: the first thing aimed at, or the far reach.
+        private Vector3 AimPoint(Vector3 origin, Vector3 dir, float range)
+            => Physics.Raycast(origin + dir * 0.5f, dir, out var hit, range, targetMask, QueryTriggerInteraction.Ignore)
+                ? hit.point
+                : origin + dir * range;
+
+        private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, System.Action<Vector3> onImpact)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "SkillProjectile";
+            go.transform.localScale = Vector3.one * 0.25f;
+            Destroy(go.GetComponent<Collider>()); // the projectile does its own linecast
+            if (go.TryGetComponent<Renderer>(out var r)) r.material.color = new Color(1f, 0.55f, 0.15f);
+            go.AddComponent<SkillProjectile>().Launch(origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, targetMask, onImpact);
+        }
+
+        private static void ShowImpact(Vector3 point)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "SkillImpact";
+            go.transform.position = point;
+            go.transform.localScale = Vector3.one * 0.8f;
+            Destroy(go.GetComponent<Collider>());
+            if (go.TryGetComponent<Renderer>(out var r)) r.material.color = new Color(1f, 0.6f, 0.2f);
+            Destroy(go, 0.08f);
+        }
+
+        private static void ShowTracer(Vector3 from, Vector3 to)
+        {
+            var go = new GameObject("SkillTracer");
+            var lr = go.AddComponent<LineRenderer>();
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = lr.endColor = new Color(1f, 0.55f, 0.15f);
+            lr.startWidth = lr.endWidth = 0.07f;
+            lr.positionCount = 2;
+            lr.SetPosition(0, from);
+            lr.SetPosition(1, to);
+            Destroy(go, 0.06f);
         }
 
         private static float SqrDistance(IDamageable d, Vector3 origin)
