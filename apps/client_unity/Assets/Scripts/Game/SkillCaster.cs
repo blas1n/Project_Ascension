@@ -58,16 +58,32 @@ namespace ProjectAscension.Game
         private void OnEnable() => GameplayEvents.SkillCastRequested += ExecuteSkill;
         private void OnDisable() => GameplayEvents.SkillCastRequested -= ExecuteSkill;
 
-        /// <summary>Fetch a discovered skill from the server and equip it for casting.</summary>
+        /// <summary>Fetch a discovered skill from the server and equip it for casting. The
+        /// content is composed asynchronously by the AI, so this polls until it's Ready.</summary>
         public void LoadSkill(string discoveryId)
         {
             if (_api == null || string.IsNullOrEmpty(discoveryId)) return;
-            StartCoroutine(_api.GetSkill(discoveryId, OnSkillFetched));
+            StartCoroutine(PollSkill(discoveryId));
         }
 
-        private void OnSkillFetched(SkillResponseDto dto)
+        private IEnumerator PollSkill(string discoveryId)
         {
-            if (dto == null || dto.primitives == null || dto.status != "Ready") return; // still Pending → ignore
+            for (int attempt = 0; attempt < 20; attempt++) // ~40s for async AI composition
+            {
+                SkillResponseDto fetched = null;
+                yield return _api.GetSkill(discoveryId, dto => fetched = dto);
+                if (fetched != null && fetched.status == "Ready" && fetched.primitives != null)
+                {
+                    OnSkillReady(fetched);
+                    yield break;
+                }
+                yield return new WaitForSeconds(2f); // still Pending — wait and retry
+            }
+            Debug.LogWarning($"[SkillCaster] Discovery {discoveryId} did not compose in time.");
+        }
+
+        private void OnSkillReady(SkillResponseDto dto)
+        {
             _skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
             _manifestation = System.Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
                 ? kind

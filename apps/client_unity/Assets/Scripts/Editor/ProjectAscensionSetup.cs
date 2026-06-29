@@ -321,6 +321,16 @@ namespace ProjectAscension.Editor
             SetObjectField(playerCombat, "loadout", loadout);
             SetObjectField(playerCombat, "aimSource", pivot.transform);
 
+            // Focus (the resource discovered skills spend).
+            player.AddComponent<FocusPool>();
+
+            // Server discovery → skill: SkillCaster fetches a fired discovery's composed
+            // skill and mints/equips it; DiscoveryReporter posts behavior to the trigger;
+            // the binder connects the two. Without this the discovery→weapon loop is dead.
+            var skillCaster = player.AddComponent<SkillCaster>();
+            SetStringField(skillCaster, "serverUrl", DevServerUrl);
+            SetObjectField(skillCaster, "aimSource", pivot.transform);
+
             // Main Camera gets the Cinemachine brain.
             var mainCam = FindMainCamera();
             if (mainCam != null && mainCam.GetComponent<CinemachineBrain>() == null)
@@ -337,6 +347,11 @@ namespace ProjectAscension.Editor
             // Discovery: track behaviors -> discoveries, and toast on unlock.
             new GameObject("BehaviorTracker").AddComponent<BehaviorTracker>();
             new GameObject("DiscoveryNotification").AddComponent<DiscoveryNotification>();
+
+            // Server discovery reporter + the binder that mints a fired discovery's skill.
+            var reporter = new GameObject("DiscoveryReporter").AddComponent<DiscoveryReporter>();
+            SetStringField(reporter, "serverUrl", DevServerUrl);
+            new GameObject("DiscoverySkillBinder").AddComponent<DiscoverySkillBinder>();
 
             // Objectives: collectibles (Collection), a survey marker (Survey), and a
             // green return pad (step on it to go back to the City).
