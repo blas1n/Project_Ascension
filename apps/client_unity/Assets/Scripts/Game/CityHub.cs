@@ -150,8 +150,15 @@ namespace ProjectAscension.Game
                 GUILayout.Label($"✗ Contract failed: {msg}");
 
             GUILayout.Space(12);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Save", GUILayout.Height(34), GUILayout.Width(80)))
+                session.Save();
             if (GUILayout.Button("Depart to Frontier", GUILayout.Height(34)))
+            {
+                session.Save(); // persist progress before leaving
                 GameScenes.LoadFrontier();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
 

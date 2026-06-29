@@ -61,6 +61,8 @@ namespace ProjectAscension.Game
         /// (the tutorial's teachable moment). Cleared once acted on.</summary>
         public bool SuggestDelegation { get; set; }
 
+        private CatalogApiClient _api; // reused for fetch + save (null offline)
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -80,7 +82,47 @@ namespace ProjectAscension.Game
             Combat.GameplayEvents.PlayerDied += OnPlayerDied;
             Combat.GameplayEvents.MonsterKilled += OnMonsterKilled;
 
-            if (!string.IsNullOrWhiteSpace(serverUrl)) StartCoroutine(FetchCatalog(new CatalogApiClient(serverUrl)));
+            if (!string.IsNullOrWhiteSpace(serverUrl))
+            {
+                _api = new CatalogApiClient(serverUrl);
+                StartCoroutine(FetchCatalog(_api));
+            }
+        }
+
+        /// <summary>Persist the player's progress (currency, standing, materials, sold
+        /// knowledge). No-op offline. Called when leaving the city / on demand.</summary>
+        public void Save()
+        {
+            if (_api == null) return;
+            var dto = new PlayerStateDto
+            {
+                currency = PlayerState.Currency,
+                reputation = PlayerState.Reputation,
+                resources = BuildResourceArray(),
+                soldKnowledge = new List<string>(PlayerState.SoldKnowledge).ToArray(),
+            };
+            StartCoroutine(_api.SavePlayerState(dto, _ => { }));
+        }
+
+        private ResourceCountDto[] BuildResourceArray()
+        {
+            var list = new List<ResourceCountDto>();
+            foreach (var kv in PlayerState.Resources)
+                if (kv.Value > 0) list.Add(new ResourceCountDto { key = kv.Key, count = kv.Value });
+            return list.ToArray();
+        }
+
+        private void ApplyPlayerState(PlayerStateDto dto)
+        {
+            if (dto == null) return;
+            PlayerState.Currency = dto.currency;
+            PlayerState.Reputation = dto.reputation;
+            PlayerState.Resources.Clear();
+            if (dto.resources != null)
+                foreach (var r in dto.resources) PlayerState.AddResource(r.key, r.count);
+            PlayerState.SoldKnowledge.Clear();
+            if (dto.soldKnowledge != null)
+                foreach (var k in dto.soldKnowledge) PlayerState.SoldKnowledge.Add(k);
         }
 
         private void OnDestroy()
@@ -167,6 +209,7 @@ namespace ProjectAscension.Game
                 Npcs.Clear();
                 Npcs.AddRange(npcs);
             });
+            yield return api.GetPlayerState(ApplyPlayerState); // load saved progress
             yield return api.GetContracts(RegionId, defs =>
             {
                 if (defs == null) return;
