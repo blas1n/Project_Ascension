@@ -58,6 +58,14 @@ namespace ProjectAscension.Game
             }
             GUILayout.Space(8);
 
+            if (session.Npcs.Count > 0)
+            {
+                var staff = new List<string>();
+                foreach (var n in session.Npcs) staff.Add($"{n.name} ({n.role})");
+                GUILayout.Label($"Staff: {string.Join(", ", staff)}");
+                GUILayout.Space(6);
+            }
+
             GUILayout.Label("Loadout (chosen from inventory):");
             DrawWeaponSelector("Left ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
             DrawWeaponSelector("Right", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
@@ -71,7 +79,8 @@ namespace ProjectAscension.Game
                 {
                     GUILayout.BeginHorizontal();
                     string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";
-                    GUILayout.Label($"{c.Title}  ({c.Purpose}, +{c.RewardCurrency}g{rep})");
+                    string by = string.IsNullOrEmpty(c.Issuer) ? "" : $" — by {c.Issuer}";
+                    GUILayout.Label($"{c.Title}  ({c.Purpose}, +{c.RewardCurrency}g{rep}){by}");
                     if (ContractService.CanAccept(c, ps.Reputation))
                     {
                         if (GUILayout.Button("Accept", GUILayout.Width(70)))

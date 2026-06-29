@@ -31,6 +31,7 @@ builder.Services.AddScoped<IMonsterDefinitionRepository, MonsterDefinitionReposi
 builder.Services.AddScoped<IPlayerDefinitionRepository, PlayerDefinitionRepository>();
 builder.Services.AddScoped<IItemDefinitionRepository, ItemDefinitionRepository>();
 builder.Services.AddScoped<ISettlementRepository, SettlementRepository>();
+builder.Services.AddScoped<INpcRepository, NpcRepository>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 // Services
