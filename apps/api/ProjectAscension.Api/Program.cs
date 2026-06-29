@@ -61,10 +61,12 @@ if (string.Equals(composerProvider, "Ollama", StringComparison.OrdinalIgnoreCase
     builder.Services.AddSingleton(new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(timeoutSeconds) });
     builder.Services.AddSingleton<IChatClient>(_ => new OllamaApiClient(new Uri(endpoint), model));
     builder.Services.AddSingleton<ISkillComposer, LlmSkillComposer>();
+    builder.Services.AddScoped<IContractFlavorComposer, LlmContractFlavorComposer>(); // AI contract postings
 }
 else
 {
     builder.Services.AddSingleton<ISkillComposer, StubSkillComposer>();
+    builder.Services.AddScoped<IContractFlavorComposer, StubContractFlavorComposer>();
 }
 builder.Services.AddHostedService<SkillCompositionWorker>();
 

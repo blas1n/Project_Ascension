@@ -12,10 +12,12 @@ public class ContractService : IContractService
 
     private readonly IContractRepository _repo;
     private readonly IMonsterDefinitionRepository _monsters;
-    public ContractService(IContractRepository repo, IMonsterDefinitionRepository monsters)
+    private readonly IContractFlavorComposer _flavor;
+    public ContractService(IContractRepository repo, IMonsterDefinitionRepository monsters, IContractFlavorComposer flavor)
     {
         _repo = repo;
         _monsters = monsters;
+        _flavor = flavor;
     }
 
     public async Task<Result<IReadOnlyList<ContractResponse>>> GetByRegionAsync(Guid regionId, CancellationToken ct = default)
@@ -39,9 +41,18 @@ public class ContractService : IContractService
         var (_, min, max) = await ComputeQuoteAsync(request.Purpose, request.Target, count, ct);
         int reward = Math.Clamp(request.DesiredReward, min, max); // the server owns the economy
 
-        // Assisted: fill the tedious copy when the player didn't write it.
-        string title = string.IsNullOrWhiteSpace(request.Title) ? AutoTitle(request.Purpose, request.Target, count) : request.Title!.Trim();
-        string description = string.IsNullOrWhiteSpace(request.Description) ? AutoDescription(request.Purpose, request.Target, count) : request.Description!.Trim();
+        // Assisted: fill the tedious copy when the player didn't write it. The AI flavor
+        // composer writes a posting from the objective (deterministic template under Stub /
+        // CI); explicit player text always wins. Numbers stay deterministic (ADR 0002).
+        bool authored = !string.IsNullOrWhiteSpace(request.Title) || !string.IsNullOrWhiteSpace(request.Description);
+        ContractFlavor flavor = authored
+            ? new ContractFlavor(
+                string.IsNullOrWhiteSpace(request.Title) ? AutoTitle(request.Purpose, request.Target, count) : request.Title!.Trim(),
+                string.IsNullOrWhiteSpace(request.Description) ? AutoDescription(request.Purpose, request.Target, count) : request.Description!.Trim())
+            : await _flavor.ComposeAsync(request.Purpose, request.Target, count,
+                AutoTitle(request.Purpose, request.Target, count), AutoDescription(request.Purpose, request.Target, count), ct);
+        string title = flavor.Title;
+        string description = flavor.Description;
         bool targeted = request.Purpose == ContractPurpose.Hunt && !string.IsNullOrEmpty(request.Target);
 
         var contract = new Domain.Entities.Contract
