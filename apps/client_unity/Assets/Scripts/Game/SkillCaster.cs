@@ -95,15 +95,11 @@ namespace ProjectAscension.Game
                 ? kind
                 : ManifestationKind.Command;
 
-            // Register into the session's set — weapon (a new equippable) or command.
+            // Register into the session's set — weapon (a new equippable) or command. We
+            // dedupe by discovery id (LoadSkill, _loaded) but NOT by name: distinct
+            // discoveries can share a composed name yet differ mechanically, and dropping
+            // them by name meant a genuinely-new discovered weapon never reached inventory.
             var set = GameSession.Instance?.DiscoveredSkills;
-            if (set != null)
-                foreach (var known in set.All)
-                    if (known.Name == _skill.Name) // already discovered (a near-identical re-fire) — don't duplicate
-                    {
-                        Debug.Log($"[SkillCaster] \"{_skill.Name}\" already discovered — skipping duplicate.");
-                        return;
-                    }
 
             var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill);
             set?.Add(discovered);
