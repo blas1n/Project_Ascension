@@ -93,9 +93,19 @@ namespace ProjectAscension.Player
             if (jumpExecuted) GameplayEvents.RaiseJumped();
             if (dodgeExecuted) GameplayEvents.RaiseDodged();
 
-            // Visually sync the CharacterController to the predicted position.
+            // Move the CharacterController toward the simulation's predicted position. The
+            // sim only knows the ground plane, so it ignores obstacles; the controller's
+            // sweep does collide with them.
             var target = new Vector3(_state.Position.X, _state.Position.Y, _state.Position.Z);
             _controller.Move(target - _body.position);
+
+            // Adopt the collision-resolved HORIZONTAL position back into the sim, so a wall
+            // that stopped the controller also stops the sim — otherwise the obstacle-unaware
+            // sim keeps advancing past the wall and the body drifts through it. Vertical
+            // (jump/gravity/ground) stays the sim's authority. Server reconciliation is a
+            // later phase; until then the client resolves obstacle collision locally.
+            var resolved = _body.position;
+            _state = _state with { Position = new SimVector3(resolved.x, _state.Position.Y, resolved.z) };
         }
     }
 }
