@@ -221,7 +221,10 @@ public class SkillCompositionServiceTests
 
         Assert.True(first.Fired);
         Assert.NotNull(first.DiscoveryId);
-        Assert.Equal(first.DiscoveryId, again.DiscoveryId);
+        // The re-evaluation hits the same claim, so it does NOT fire again — reporting it as
+        // fired made the client re-process the same discovery and mint duplicate skills.
+        Assert.False(again.Fired);
+        Assert.Null(again.DiscoveryId);
         Assert.Single(discoveries.Discoveries);
         Assert.Single(skills.Skills);
     }
@@ -229,6 +232,31 @@ public class SkillCompositionServiceTests
     private static EvaluateTriggerRequest EvalCtx(Guid actor, string[] contextTags, int jumpCount)
         => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", contextTags, "Projectile",
             new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
+
+    [Fact]
+    public async Task Evaluate_VolatileCatalystTags_DoNotFragmentTheClaim()
+    {
+        // Regression: transient monster:* tags (a rolling kill window) and the player's own
+        // spell:* tags (a discovery feedback loop) shifted every flush window, so the claim
+        // key changed each time and a fresh "first discovery" was minted every ~5s — a
+        // stream of near-identical skills. The same essential combination must claim once.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        var actor = Guid.NewGuid();
+
+        var first = await service.EvaluateAndTriggerAsync(
+            EvalCtx(actor, new[] { "arcane", "monster:elite" }, jumpCount: 200));
+        var withDifferentCatalysts = await service.EvaluateAndTriggerAsync(
+            EvalCtx(actor, new[] { "arcane", "monster:melee", "spell:flame-bullet" }, jumpCount: 200));
+
+        Assert.True(first.Fired);                    // claims arcane+Projectile once
+        Assert.False(withDifferentCatalysts.Fired);  // only the volatile tags differ → no re-fire
+        Assert.Single(discoveries.Discoveries);
+        Assert.Single(skills.Skills);
+    }
 
     [Fact]
     public async Task Evaluate_RecordsLineageFromPriorKnowledge()

@@ -51,10 +51,11 @@ public class SkillCompositionService : ISkillCompositionService
         var rarity = Enum.TryParse<Rarity>(request.Rarity, ignoreCase: true, out var parsed) ? parsed : Rarity.Common;
         var budget = BudgetRules.FromRarity(rarity, tuning);
 
-        return await CreateDiscoveryAsync(
+        var created = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
             request.ContextTags, request.PrimaryBehavior, Array.Empty<string>(), budget.Total,
             Array.Empty<Guid>(), request.IdempotencyKey, ct);
+        return created.Id;
     }
 
     public async Task<EvaluateTriggerResponse> EvaluateAndTriggerAsync(EvaluateTriggerRequest request, CancellationToken ct = default)
@@ -79,14 +80,17 @@ public class SkillCompositionService : ISkillCompositionService
         // Claim the behavior region once (first-discoverer) via an idempotency key,
         // so repeated evaluations of a still-growing signature don't re-fire it.
         var behaviors = request.Behaviors.Select(b => b.Behavior).ToList();
-        var discoveryId = await CreateDiscoveryAsync(
+        var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
             request.ContextTags, request.PrimaryBehavior, behaviors, budget.Total, parents, RegionKey(request), ct);
 
-        return new EvaluateTriggerResponse(true, outcome.Score, discoveryId);
+        // Report fired ONLY for a newly-claimed discovery. An idempotent re-hit returns the
+        // existing one — reporting fired=true there made the client re-process the same
+        // discovery every flush window, minting duplicate skills.
+        return new EvaluateTriggerResponse(isNew, outcome.Score, isNew ? discoveryId : (Guid?)null);
     }
 
-    private async Task<Guid> CreateDiscoveryAsync(
+    private async Task<(Guid Id, bool IsNew)> CreateDiscoveryAsync(
         Guid actorId, Guid regionId, DiscoveryType type, string theme,
         IReadOnlyList<string> contextTags, string primaryBehavior, IReadOnlyList<string> behaviors, int budget,
         IReadOnlyList<Guid> parentDiscoveryIds, string? idempotencyKey,
@@ -97,7 +101,7 @@ public class SkillCompositionService : ISkillCompositionService
         if (!string.IsNullOrEmpty(idempotencyKey))
         {
             var existing = await _skills.GetByIdempotencyKeyAsync(idempotencyKey, ct);
-            if (existing is not null) return existing.DiscoveryId;
+            if (existing is not null) return (existing.DiscoveryId, false);
         }
 
         // Rule engine fixes the fact instantly (ADR 0002): who/where/when, deterministic.
@@ -144,7 +148,7 @@ public class SkillCompositionService : ISkillCompositionService
             await _lineage.AddEdgesAsync(
                 parentDiscoveryIds.Select(p => new DiscoveryLineage { ChildDiscoveryId = discovery.Id, ParentDiscoveryId = p }), ct);
 
-        return discovery.Id;
+        return (discovery.Id, true);
     }
 
     private async Task<IReadOnlyList<Guid>> ComputeParentsAsync(
@@ -220,11 +224,22 @@ public class SkillCompositionService : ISkillCompositionService
         return counts;
     }
 
+    // Tag prefixes that flavor a discovery but must NOT fragment its claim key. Transient
+    // catalysts (monster:* — a rolling kill window) and the player's OWN discovered-skill
+    // tags (spell:* — a feedback loop) shift every flush window; including them made each
+    // window mint a fresh "first discovery", a stream of near-identical skills.
+    private static readonly string[] VolatileTagPrefixes = { "monster:", "spell:" };
+
     private static string RegionKey(EvaluateTriggerRequest r)
     {
-        var tags = r.ContextTags.Count == 0
-            ? "-"
-            : string.Join(",", r.ContextTags.OrderBy(t => t, StringComparer.Ordinal));
+        // The claim key must be STABLE across a growing signature (the idempotency intent),
+        // so it is built from the essential combination only — primary behavior + stable
+        // context (base equipment, knowledge), excluding the volatile catalysts above.
+        var stable = r.ContextTags
+            .Where(t => !VolatileTagPrefixes.Any(p => t.StartsWith(p, StringComparison.Ordinal)))
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+        var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
         return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}";
     }
 
