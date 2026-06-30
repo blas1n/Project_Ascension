@@ -234,13 +234,34 @@ public class SkillCompositionService : ISkillCompositionService
     {
         // The claim key must be STABLE across a growing signature (the idempotency intent),
         // so it is built from the essential combination only — primary behavior + stable
-        // context (base equipment, knowledge), excluding the volatile catalysts above.
+        // context (base equipment, knowledge), excluding the volatile catalysts above —
+        // PLUS a stable behavior signature so the SAME combination fought DIFFERENTLY claims
+        // a new discovery (CLAUDE.md / discovery.md: behavior must matter; otherwise the
+        // behavior-driven composition is unreachable — the first claim blocks the rest).
         var stable = r.ContextTags
             .Where(t => !VolatileTagPrefixes.Any(p => t.StartsWith(p, StringComparison.Ordinal)))
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}";
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{BehaviorSignature(r.Behaviors)}";
+    }
+
+    // A coarse, stable summary of HOW the player fought: the behaviors that are a real part
+    // of the play (at least half the dominant behavior's count), name-sorted. Incidental
+    // actions are filtered out so the signature doesn't churn window-to-window, while a
+    // genuine shift in play style (charging → skirmishing) changes it and earns a new
+    // discovery. The persistence reset on fire (DiscoveryReporter) gates the cadence, so
+    // this spaces discoveries rather than spamming them. Heuristic threshold — tunable.
+    private static string BehaviorSignature(IReadOnlyList<BehaviorCount> behaviors)
+    {
+        if (behaviors.Count == 0) return "-";
+        int max = behaviors.Max(b => b.Count);
+        if (max <= 0) return "-";
+        var significant = behaviors
+            .Where(b => b.Count * 2 >= max) // >= 50% of the dominant behavior
+            .Select(b => b.Behavior)
+            .OrderBy(b => b, StringComparer.Ordinal);
+        return string.Join("+", significant);
     }
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
