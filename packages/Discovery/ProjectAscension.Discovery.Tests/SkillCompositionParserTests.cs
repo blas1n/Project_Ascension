@@ -20,6 +20,22 @@ public class SkillCompositionParserTests
     }
 
     [Fact]
+    public void ParsesAndNormalizesTheComposedDeliveryStyle()
+    {
+        var known = SkillCompositionParser.TryParse(
+            """{"name":"X","description":"d","delivery":"Burst","primitives":[{"kind":"Area","magnitude":2}]}""");
+        Assert.Equal("burst", known!.Delivery); // normalized to lowercase
+
+        var unknown = SkillCompositionParser.TryParse(
+            """{"name":"X","description":"d","delivery":"teleport-swarm","primitives":[{"kind":"Area","magnitude":2}]}""");
+        Assert.Equal(string.Empty, unknown!.Delivery); // unknown → "" (executor derives)
+
+        var missing = SkillCompositionParser.TryParse(
+            """{"name":"X","description":"d","primitives":[{"kind":"Area","magnitude":2}]}""");
+        Assert.Equal(string.Empty, missing!.Delivery);
+    }
+
+    [Fact]
     public void ExtractsObjectFromProseAndFences()
     {
         const string text =

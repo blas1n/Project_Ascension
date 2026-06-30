@@ -60,9 +60,10 @@ public class LlmSkillComposer : ISkillComposer
                 return Invalid;
             }
 
-            // The model proposes; the rule engine packs it into the budget.
+            // The model proposes; the rule engine packs it into the budget. The delivery
+            // style (already normalized by the parser) carries through as the model chose it.
             var packed = BudgetPacker.Pack(parsed.Primitives, request.Budget);
-            return new SkillComposition(parsed.Name, parsed.Description, packed);
+            return new SkillComposition(parsed.Name, parsed.Description, packed, parsed.Delivery);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

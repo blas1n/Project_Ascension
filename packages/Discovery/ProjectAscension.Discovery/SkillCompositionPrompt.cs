@@ -15,6 +15,7 @@ public static class SkillCompositionPrompt
             .Select(g => $"{g.Key}:\n" + string.Join(
                 "\n", g.Select(p => $"- {p.Kind} (cost {p.BaseCost}): {p.Blurb}"))));
         var tags = request.ContextTags.Count > 0 ? string.Join(", ", request.ContextTags) : "none";
+        var deliveries = string.Join("\n", DeliveryStyleCatalog.All.Select(d => $"- {d.Style}: {d.Blurb}"));
 
         var profile = request.BehaviorProfile ?? Array.Empty<BehaviorWeight>();
         var behaviorSection = profile.Count == 0
@@ -42,6 +43,9 @@ Power budget: {request.Budget.Total}.
 Build the skill ONLY from these effect primitives:
 {primitives}
 
+Choose how the skill is DELIVERED — pick the one style that best fits its fantasy and the play pattern above (the delivery is independent of the effects: e.g. a burst can carry damage-over-time, a projectile can carry an area effect):
+{deliveries}
+
 Rules:
 - List 1 to 4 primitives in PRIORITY ORDER (most important first). For each give: magnitude (potency, 1 to {CompositionValidator.MaxMagnitude}), and optionally range (reach/area, 0 to {CompositionValidator.MaxParameterTier}) and duration (persistence, 0 to {CompositionValidator.MaxParameterTier}). Omit range/duration (or use 0) when they don't suit the effect.
 - Center the skill on the primary behavior's mechanic.
@@ -49,7 +53,7 @@ Rules:
 - Write the name and description in English.
 
 Respond with ONLY a JSON object — no prose, no markdown fences:
-{{""name"":""..."",""description"":""..."",""primitives"":[{{""kind"":""Projectile"",""magnitude"":2,""range"":1,""duration"":0}}]}}
-Each ""kind"" must be exactly one of the primitive names listed above.";
+{{""name"":""..."",""description"":""..."",""delivery"":""projectile"",""primitives"":[{{""kind"":""Projectile"",""magnitude"":2,""range"":1,""duration"":0}}]}}
+Each ""kind"" must be exactly one of the primitive names listed above; ""delivery"" must be exactly one of the delivery styles listed above.";
     }
 }

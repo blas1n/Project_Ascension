@@ -16,6 +16,7 @@ public class DiscoverySkillConfiguration : IEntityTypeConfiguration<DiscoverySki
         builder.Property(s => s.Manifestation).HasMaxLength(20);
         builder.Property(s => s.IdempotencyKey).HasMaxLength(128);
         builder.Property(s => s.BehaviorProfileJson).HasDefaultValue("[]"); // existing rows backfill
+        builder.Property(s => s.Delivery).HasMaxLength(32).HasDefaultValue(string.Empty);
 
         builder.HasIndex(s => s.DiscoveryId).IsUnique();
         builder.HasIndex(s => s.Status);

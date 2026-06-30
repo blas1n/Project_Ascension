@@ -54,6 +54,36 @@ namespace ProjectAscension.GameSimulation.Combat
     /// When the AI later composes delivery axes directly (or a DSL emits them), this is
     /// simply replaced as the source; the executor is unchanged.
     /// </summary>
+    /// <summary>
+    /// Maps an AI-composed delivery STYLE (the composer's vocabulary — "projectile" / "beam"
+    /// / "burst", see DeliveryStyleCatalog) to a concrete <see cref="DeliverySpec"/>, with the
+    /// numbers from the DB-driven tuning. This is the primary source once the AI composes the
+    /// delivery; <see cref="DeliveryInference"/> remains the fallback when a skill has no
+    /// composed style (offline/stub/legacy). Adding a style here + to the catalog extends what
+    /// the AI can compose without touching the executor.
+    /// </summary>
+    public static class DeliveryStyles
+    {
+        public static DeliverySpec? ForStyle(string? style, CombatTuning tuning)
+        {
+            var t = tuning ?? CombatTuning.Default;
+            switch ((style ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "projectile":
+                    return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.Projectile, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
+                        Speed: t.DeliveryProjectileSpeed, Gravity: t.DeliveryProjectileGravity, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
+                case "beam":
+                    return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Line,
+                        Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
+                case "burst":
+                    return new DeliverySpec(DeliveryOrigin.AimPoint, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
+                        Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryAreaRadius, Lifetime: 0f, TickInterval: 0f);
+                default:
+                    return null; // unknown/none → caller falls back to DeliveryInference
+            }
+        }
+    }
+
     public static class DeliveryInference
     {
         /// <summary>Derive the delivery from the skill's primitives. The discrete axes are

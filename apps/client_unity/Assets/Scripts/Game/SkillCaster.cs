@@ -35,6 +35,7 @@ namespace ProjectAscension.Game
         private PassiveModifiers _passives;
         private FocusPool _focus;
         private Skill _skill;
+        private string _deliveryStyle = ""; // AI-composed delivery style for the held weapon skill
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
         public string SkillName => _skill?.Name ?? "(none)";
@@ -89,6 +90,7 @@ namespace ProjectAscension.Game
         private void OnSkillReady(SkillResponseDto dto)
         {
             _skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
+            _deliveryStyle = dto.delivery ?? string.Empty; // AI-composed manifestation ("" → derive)
             _manifestation = System.Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
                 ? kind
                 : ManifestationKind.Command;
@@ -160,10 +162,11 @@ namespace ProjectAscension.Game
                 return;
             }
 
-            // Manifestation is derived from the skill's composition (DeliverySpec), so a
-            // projectile flies, a beam hitscans, an area lands — each discovered skill
+            // Manifestation comes from the AI-composed delivery style (how the skill was
+            // composed to manifest); when absent it's derived from the primitives. Either
+            // way a projectile flies, a beam hitscans, a burst lands — each discovered skill
             // delivers differently. The effect numbers stay with SkillResolver (ResolveAt).
-            var spec = DeliveryInference.From(skill, tuning);
+            var spec = DeliveryStyles.ForStyle(_deliveryStyle, tuning) ?? DeliveryInference.From(skill, tuning);
             var origin = aimSource != null ? aimSource.position : transform.position;
             var dir = aimSource != null ? aimSource.forward : transform.forward;
 

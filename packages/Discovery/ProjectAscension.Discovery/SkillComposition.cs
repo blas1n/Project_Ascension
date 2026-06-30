@@ -13,11 +13,13 @@ public sealed record PowerBudget(int Total);
 public sealed record ComposedPrimitive(PrimitiveKind Kind, int Magnitude, int Range = 0, int Duration = 0);
 
 /// <summary>
-/// A composed skill: AI-authored identity (name/description) over a whitelisted,
-/// budget-bounded set of primitives. Immutable — once created and validated it is
-/// frozen into a deterministic entity (ADR 0002).
+/// A composed skill: AI-authored identity (name/description), a whitelisted, budget-bounded
+/// set of effect primitives, and the <see cref="Delivery"/> style (how it manifests — a
+/// value from <see cref="DeliveryStyleCatalog"/>, or "" to let the executor derive it).
+/// Immutable — once created and validated it is frozen into a deterministic entity (ADR 0002).
 /// </summary>
-public sealed record SkillComposition(string Name, string Description, IReadOnlyList<ComposedPrimitive> Primitives);
+public sealed record SkillComposition(
+    string Name, string Description, IReadOnlyList<ComposedPrimitive> Primitives, string Delivery = "");
 
 /// <summary>
 /// A prior discovered skill this discovery builds on — retrieved from the lineage

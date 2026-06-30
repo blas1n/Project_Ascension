@@ -13,7 +13,7 @@ public static class SkillCompositionParser
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
-    private sealed record Dto(string? Name, string? Description, PrimitiveDto[]? Primitives);
+    private sealed record Dto(string? Name, string? Description, PrimitiveDto[]? Primitives, string? Delivery);
     private sealed record PrimitiveDto(string? Kind, int Magnitude, int Range, int Duration);
 
     public static SkillComposition? TryParse(string? text)
@@ -41,7 +41,9 @@ public static class SkillCompositionParser
             primitives.Add(new ComposedPrimitive(kind, p.Magnitude, p.Range, p.Duration));
         }
 
-        return new SkillComposition(dto.Name ?? string.Empty, dto.Description ?? string.Empty, primitives);
+        return new SkillComposition(
+            dto.Name ?? string.Empty, dto.Description ?? string.Empty, primitives,
+            DeliveryStyleCatalog.Normalize(dto.Delivery));
     }
 
     private static bool TryExtractObject(string text, out string json)
