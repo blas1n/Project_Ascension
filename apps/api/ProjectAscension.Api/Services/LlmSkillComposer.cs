@@ -41,7 +41,16 @@ public class LlmSkillComposer : ISkillComposer
 
         try
         {
-            var options = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            // Seed is derived from the discovery's identity, so the composition is frozen and
+            // reproducible (ADR 0002) yet distinct per discovery — two near-identical seeds no
+            // longer collapse to one identical skill. Temperature lets the behavior profile
+            // actually steer the output rather than snapping to a canonical answer.
+            var options = new ChatOptions
+            {
+                ResponseFormat = ChatResponseFormat.Json,
+                Seed = request.Seed,
+                Temperature = 0.7f,
+            };
             var response = await _chat.GetResponseAsync(prompt, options, cts.Token);
 
             var parsed = SkillCompositionParser.TryParse(response.Text);

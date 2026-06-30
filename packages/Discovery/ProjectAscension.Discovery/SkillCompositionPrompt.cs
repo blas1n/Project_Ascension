@@ -16,6 +16,13 @@ public static class SkillCompositionPrompt
                 "\n", g.Select(p => $"- {p.Kind} (cost {p.BaseCost}): {p.Blurb}"))));
         var tags = request.ContextTags.Count > 0 ? string.Join(", ", request.ContextTags) : "none";
 
+        var profile = request.BehaviorProfile ?? Array.Empty<BehaviorWeight>();
+        var behaviorSection = profile.Count == 0
+            ? string.Empty
+            : "\nHow the player fought (the EMPHASIS matters — let it shape which effects dominate; the same equipment fought differently must yield a different skill):\n"
+              + string.Join("\n", profile.OrderByDescending(b => b.Count).Select(b => $"- {b.Behavior}: {b.Count}"))
+              + "\n";
+
         var lineage = request.Lineage ?? Array.Empty<PriorArt>();
         var lineageSection = lineage.Count == 0
             ? string.Empty
@@ -31,7 +38,7 @@ Theme: {request.Theme}
 Context (equipment / situation): {tags}
 Primary behavior to center the skill on: {request.PrimaryBehavior}
 Power budget: {request.Budget.Total}.
-{lineageSection}
+{behaviorSection}{lineageSection}
 Build the skill ONLY from these effect primitives:
 {primitives}
 
