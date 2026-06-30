@@ -116,11 +116,23 @@ namespace ProjectAscension.Game
             }
             else if (_manifestation == ManifestationKind.Weapon)
             {
-                // Mint a new equippable weapon into inventory only — the player chooses to
-                // equip it later from the city loadout (equipping then contributes its
-                // context tag, opening further discoveries). No auto-equip mid-expedition.
+                // Mint a new equippable weapon. With a session (the full Bootstrap→City→
+                // Frontier flow) it goes to inventory only; the player equips it from the
+                // city loadout. WITHOUT a session (the Frontier scene played directly) there
+                // is no city inventory to hold it, so equip it now rather than silently drop
+                // it — the prior null-safe AddWeapon made discovered weapons vanish.
                 var weapon = WeaponData.CreateDiscovered(_skill.Name, _skill, "spell:" + Slug(_skill.Name));
-                GameSession.Instance?.PlayerState?.AddWeapon(weapon);
+                var state = GameSession.Instance?.PlayerState;
+                if (state != null)
+                {
+                    state.AddWeapon(weapon);
+                    Debug.Log($"[SkillCaster] \"{_skill.Name}\" added to inventory ({state.OwnedWeapons.Count} owned) — equip it in the city.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[SkillCaster] No GameSession (Frontier played directly) — equipping \"{_skill.Name}\" now. Start from Bootstrap for the inventory/city loop.");
+                    FindAnyObjectByType<Loadout>()?.EquipLeft(weapon);
+                }
             }
 
             Debug.Log($"[SkillCaster] Discovered \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
