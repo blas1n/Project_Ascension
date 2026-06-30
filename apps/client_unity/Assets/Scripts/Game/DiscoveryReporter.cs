@@ -105,7 +105,13 @@ namespace ProjectAscension.Game
         private void OnEvaluated(EvaluateResponseDto response)
         {
             if (response != null && response.fired && !string.IsNullOrEmpty(response.discoveryId))
+            {
                 Fired?.Invoke(response.discoveryId);
+                // A discovery just fired; drop the persistence so the score falls back below
+                // threshold — the next discovery must be built up again, not re-fired every
+                // window off the same sustained play (which produced duplicate discoveries).
+                _persistence = 0;
+            }
         }
 
         private EvaluateRequestDto BuildRequest()

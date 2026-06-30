@@ -60,9 +60,13 @@ namespace ProjectAscension.Game
 
         /// <summary>Fetch a discovered skill from the server and equip it for casting. The
         /// content is composed asynchronously by the AI, so this polls until it's Ready.</summary>
+        private readonly HashSet<string> _loaded = new HashSet<string>();
+
         public void LoadSkill(string discoveryId)
         {
             if (_api == null || string.IsNullOrEmpty(discoveryId)) return;
+            // The discovery trigger can re-report the same id across windows — load each once.
+            if (!_loaded.Add(discoveryId)) return;
             StartCoroutine(PollSkill(discoveryId));
         }
 
@@ -90,8 +94,17 @@ namespace ProjectAscension.Game
                 : ManifestationKind.Command;
 
             // Register into the session's set — weapon (a new equippable) or command.
+            var set = GameSession.Instance?.DiscoveredSkills;
+            if (set != null)
+                foreach (var known in set.All)
+                    if (known.Name == _skill.Name) // already discovered (a near-identical re-fire) — don't duplicate
+                    {
+                        Debug.Log($"[SkillCaster] \"{_skill.Name}\" already discovered — skipping duplicate.");
+                        return;
+                    }
+
             var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill);
-            GameSession.Instance?.DiscoveredSkills?.Add(discovered);
+            set?.Add(discovered);
 
             // A command is invoked by its assigned combo; a passive applies continuously.
             if (_manifestation == ManifestationKind.Command)
@@ -105,17 +118,11 @@ namespace ProjectAscension.Game
             }
             else if (_manifestation == ManifestationKind.Weapon)
             {
-                // Mint a new equippable weapon, add it to inventory, select it (so it
-                // persists across City<->Frontier), and equip it now — equipping
-                // contributes its context tag, opening further discoveries (the loop).
+                // Mint a new equippable weapon into inventory only — the player chooses to
+                // equip it later from the city loadout (equipping then contributes its
+                // context tag, opening further discoveries). No auto-equip mid-expedition.
                 var weapon = WeaponData.CreateDiscovered(_skill.Name, _skill, "spell:" + Slug(_skill.Name));
-                var state = GameSession.Instance?.PlayerState;
-                if (state != null)
-                {
-                    state.AddWeapon(weapon);
-                    state.SetLeft(weapon);
-                }
-                FindAnyObjectByType<Loadout>()?.EquipLeft(weapon);
+                GameSession.Instance?.PlayerState?.AddWeapon(weapon);
             }
 
             Debug.Log($"[SkillCaster] Discovered \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
