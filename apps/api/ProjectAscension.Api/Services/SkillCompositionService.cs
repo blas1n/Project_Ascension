@@ -243,26 +243,38 @@ public class SkillCompositionService : ISkillCompositionService
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{BehaviorSignature(r.Behaviors)}";
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DominantAttack(r.Behaviors)}";
     }
 
-    // A coarse, stable summary of HOW the player fought: the behaviors that are a real part
-    // of the play (at least half the dominant behavior's count), name-sorted. Incidental
-    // actions are filtered out so the signature doesn't churn window-to-window, while a
-    // genuine shift in play style (charging → skirmishing) changes it and earns a new
-    // discovery. The persistence reset on fire (DiscoveryReporter) gates the cadence, so
-    // this spaces discoveries rather than spamming them. Heuristic threshold — tunable.
-    private static string BehaviorSignature(IReadOnlyList<BehaviorCount> behaviors)
+    // The attack behaviors that define a skill's character (vs. movement, which only flavors
+    // it). The dominant one decides the play style — and the delivery.
+    private static readonly string[] AttackBehaviors = { "ChargedAttack", "RangedAttack", "MeleeAttack" };
+
+    // The play style that defines the skill: the dominant ATTACK behavior. Movement
+    // (jump/dodge) is deliberately excluded from the claim — varying it produced separate
+    // discoveries that the composer couldn't tell apart, i.e. duplicate weapons. So the same
+    // attack style claims once (whatever the footwork), and a genuinely different attack
+    // style (charging vs. rapid fire vs. melee) earns a distinct discovery.
+    private static string DominantAttack(IReadOnlyList<BehaviorCount> behaviors)
     {
-        if (behaviors.Count == 0) return "-";
-        int max = behaviors.Max(b => b.Count);
-        if (max <= 0) return "-";
-        var significant = behaviors
-            .Where(b => b.Count * 2 >= max) // >= 50% of the dominant behavior
-            .Select(b => b.Behavior)
-            .OrderBy(b => b, StringComparer.Ordinal);
-        return string.Join("+", significant);
+        BehaviorCount? top = null;
+        foreach (var b in behaviors)
+            if (b.Count > 0 && Array.IndexOf(AttackBehaviors, b.Behavior) >= 0 && (top is null || b.Count > top.Count))
+                top = b;
+        return top?.Behavior ?? "-";
     }
+
+    // The delivery is DERIVED from the dominant attack, not picked by the LLM — the model's
+    // own choice collapsed to one style (every skill a hitscan beam), defeating the variety.
+    // Charged → a focused beam, rapid ranged → flying projectiles, melee → a close burst, so
+    // how the player fought visibly shapes how the skill manifests.
+    private static string DeliveryForBehavior(IReadOnlyList<BehaviorCount> behaviors) => DominantAttack(behaviors) switch
+    {
+        "ChargedAttack" => "beam",
+        "MeleeAttack" => "burst",
+        "RangedAttack" => "projectile",
+        _ => "beam",
+    };
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
     {
@@ -290,7 +302,12 @@ public class SkillCompositionService : ISkillCompositionService
             {
                 skill.Name = outcome.Skill.Name;
                 skill.Description = outcome.Skill.Description;
-                skill.Delivery = outcome.Skill.Delivery; // AI-composed manifestation style
+                // Delivery is derived from how the player fought (not the LLM's pick, which
+                // collapsed to a single style) so play visibly varies the manifestation.
+                List<BehaviorCount> fought;
+                try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
+                catch (JsonException) { fought = new(); }
+                skill.Delivery = DeliveryForBehavior(fought);
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
