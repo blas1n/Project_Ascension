@@ -233,6 +233,35 @@ public class SkillCompositionServiceTests
         => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", contextTags, "Projectile",
             new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
 
+    private static EvaluateTriggerRequest EvalBehavior(Guid actor, params BehaviorCount[] behaviors)
+        => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
+            behaviors, Persistence: 0);
+
+    [Fact]
+    public async Task Evaluate_SameCombinationFoughtDifferently_ClaimsADistinctDiscovery()
+    {
+        // The whole point of behavior-driven composition: the same equipment fought a
+        // different way must be a NEW discovery, not blocked by the first claim.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        var actor = Guid.NewGuid();
+        var charging = await service.EvaluateAndTriggerAsync(
+            EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
+        var skirmishing = await service.EvaluateAndTriggerAsync(
+            EvalBehavior(actor, new BehaviorCount("RangedAttack", 120), new BehaviorCount("Dodge", 110)));
+        // Same play again → no new claim (idempotent), so it's spacing not spam.
+        var chargingAgain = await service.EvaluateAndTriggerAsync(
+            EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
+
+        Assert.True(charging.Fired);
+        Assert.True(skirmishing.Fired);          // different play style → distinct discovery
+        Assert.False(chargingAgain.Fired);       // same play style → same claim
+        Assert.Equal(2, discoveries.Discoveries.Count);
+    }
+
     [Fact]
     public async Task Evaluate_VolatileCatalystTags_DoNotFragmentTheClaim()
     {
