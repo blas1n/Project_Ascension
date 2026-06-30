@@ -43,6 +43,11 @@ namespace ProjectAscension.Domain.Entities
         public string? Name { get; set; }
         public string? Description { get; set; }
         public string? PrimitivesJson { get; set; }
+
+        /// <summary>AI-composed delivery style (how the skill manifests — "projectile" /
+        /// "beam" / "burst"; see DeliveryStyleCatalog). "" → the executor derives delivery
+        /// from the primitives (offline/stub/legacy fallback).</summary>
+        public string Delivery { get; set; } = string.Empty;
         public int? PowerCost { get; set; }
 
         /// <summary>How the skill is wielded — "Weapon" (a synthesized-magic weapon) or

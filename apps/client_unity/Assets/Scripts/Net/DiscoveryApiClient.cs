@@ -51,6 +51,7 @@ namespace ProjectAscension.Net
         public string[] contextTags;     // discovery context — equipment tags bind use (ADR 0005)
         public string[] behaviors;       // behaviors that discovered it (recorded)
         public string[] invocationCombo; // a command's assigned button combo, e.g. ["Jump","RightClick"]
+        public string delivery;          // AI-composed manifestation style: "projectile"|"beam"|"burst" ("" → derive)
     }
 
     /// <summary>

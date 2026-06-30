@@ -41,6 +41,26 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             Assert.Equal(DeliveryMotion.None, fallback.Motion); // no projectile/area → hitscan
         }
 
+        [Theory]
+        [InlineData("projectile", DeliveryMotion.Projectile, DeliveryOrigin.Muzzle)]
+        [InlineData("beam", DeliveryMotion.None, DeliveryOrigin.Muzzle)]
+        [InlineData("burst", DeliveryMotion.None, DeliveryOrigin.AimPoint)]
+        public void ForStyle_MapsTheAiComposedStyleToAxes(string style, DeliveryMotion motion, DeliveryOrigin origin)
+        {
+            var spec = DeliveryStyles.ForStyle(style, CombatTuning.Default);
+            Assert.NotNull(spec);
+            Assert.Equal(motion, spec!.Motion);
+            Assert.Equal(origin, spec.Origin);
+        }
+
+        [Fact]
+        public void ForStyle_UnknownOrEmpty_ReturnsNull_SoCallerFallsBackToInference()
+        {
+            Assert.Null(DeliveryStyles.ForStyle("teleport-swarm", CombatTuning.Default));
+            Assert.Null(DeliveryStyles.ForStyle("", CombatTuning.Default));
+            Assert.Null(DeliveryStyles.ForStyle(null, CombatTuning.Default));
+        }
+
         [Fact]
         public void PersistentFlag_IsReservedAndNotProducedYet()
         {

@@ -269,6 +269,7 @@ public class SkillCompositionService : ISkillCompositionService
             {
                 skill.Name = outcome.Skill.Name;
                 skill.Description = outcome.Skill.Description;
+                skill.Delivery = outcome.Skill.Delivery; // AI-composed manifestation style
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
@@ -322,7 +323,7 @@ public class SkillCompositionService : ISkillCompositionService
 
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives,
-            skill.Manifestation, contextTags, behaviors, invocationCombo);
+            skill.Manifestation, contextTags, behaviors, invocationCombo, skill.Delivery);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)
