@@ -53,7 +53,7 @@ public class SkillCompositionService : ISkillCompositionService
 
         var created = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, Array.Empty<string>(), budget.Total,
+            request.ContextTags, request.PrimaryBehavior, Array.Empty<BehaviorCount>(), budget.Total,
             Array.Empty<Guid>(), request.IdempotencyKey, ct);
         return created.Id;
     }
@@ -79,10 +79,9 @@ public class SkillCompositionService : ISkillCompositionService
 
         // Claim the behavior region once (first-discoverer) via an idempotency key,
         // so repeated evaluations of a still-growing signature don't re-fire it.
-        var behaviors = request.Behaviors.Select(b => b.Behavior).ToList();
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, behaviors, budget.Total, parents, RegionKey(request), ct);
+            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, RegionKey(request), ct);
 
         // Report fired ONLY for a newly-claimed discovery. An idempotent re-hit returns the
         // existing one — reporting fired=true there made the client re-process the same
@@ -92,7 +91,7 @@ public class SkillCompositionService : ISkillCompositionService
 
     private async Task<(Guid Id, bool IsNew)> CreateDiscoveryAsync(
         Guid actorId, Guid regionId, DiscoveryType type, string theme,
-        IReadOnlyList<string> contextTags, string primaryBehavior, IReadOnlyList<string> behaviors, int budget,
+        IReadOnlyList<string> contextTags, string primaryBehavior, IReadOnlyList<BehaviorCount> behaviorCounts, int budget,
         IReadOnlyList<Guid> parentDiscoveryIds, string? idempotencyKey,
         CancellationToken ct)
     {
@@ -136,7 +135,8 @@ public class SkillCompositionService : ISkillCompositionService
             Theme = theme,
             ContextTagsJson = JsonSerializer.Serialize(contextTags),
             PrimaryBehavior = primaryBehavior,
-            BehaviorsJson = JsonSerializer.Serialize(behaviors),
+            BehaviorsJson = JsonSerializer.Serialize(behaviorCounts.Select(b => b.Behavior).ToList()),
+            BehaviorProfileJson = JsonSerializer.Serialize(behaviorCounts),
             PowerBudget = budget,
             IdempotencyKey = idempotencyKey,
             CreatedAt = DateTime.UtcNow,
@@ -341,7 +341,24 @@ public class SkillCompositionService : ISkillCompositionService
             return false;
         }
 
-        request = new CompositionRequest(skill.Theme, tags ?? new List<string>(), primary, new PowerBudget(skill.PowerBudget));
+        // How the player fought (weighted) — the signal that differentiates skills built on
+        // the same combination. And a seed from the discovery's identity so the composition
+        // is reproducible yet unique per discovery (no two collapse to the same skill).
+        List<SkillForge.BehaviorWeight> profile;
+        try
+        {
+            profile = (JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new List<BehaviorCount>())
+                .Select(b => new SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
+        }
+        catch (JsonException)
+        {
+            profile = new List<SkillForge.BehaviorWeight>();
+        }
+
+        var seed = BitConverter.ToInt64(skill.DiscoveryId.ToByteArray(), 0);
+        request = new CompositionRequest(
+            skill.Theme, tags ?? new List<string>(), primary, new PowerBudget(skill.PowerBudget),
+            Lineage: null, BehaviorProfile: profile, Seed: seed);
         return true;
     }
 

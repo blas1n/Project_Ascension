@@ -32,6 +32,11 @@ namespace ProjectAscension.Domain.Entities
         /// "MeleeAttack"]) — a Command is invoked by re-performing this combo. JSON array.</summary>
         public string BehaviorsJson { get; set; } = "[]";
 
+        /// <summary>How the player fought, as weighted counts (e.g. [{"Behavior":"RangedAttack",
+        /// "Count":200}]). Fed to the composer so the same combination fought differently yields
+        /// a different skill (discovery.md — behavior must matter). JSON array.</summary>
+        public string BehaviorProfileJson { get; set; } = "[]";
+
         public int PowerBudget { get; set; }
 
         // Content (filled when Ready).
