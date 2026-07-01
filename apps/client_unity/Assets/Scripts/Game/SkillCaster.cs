@@ -36,6 +36,7 @@ namespace ProjectAscension.Game
         private FocusPool _focus;
         private Skill _skill;
         private string _deliveryStyle = ""; // AI-composed delivery style for the held weapon skill
+        private float _intensity = 1f;      // VFX grandeur, from the skill's power (common..legendary)
 
         public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
         public string SkillName => _skill?.Name ?? "(none)";
@@ -91,6 +92,7 @@ namespace ProjectAscension.Game
         {
             _skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
             _deliveryStyle = dto.delivery ?? string.Empty; // AI-composed manifestation ("" → derive)
+            _intensity = SkillVfx.Intensity(dto.powerCost); // grander VFX for rarer/stronger skills
             _manifestation = System.Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
                 ? kind
                 : ManifestationKind.Command;
@@ -178,18 +180,31 @@ namespace ProjectAscension.Game
             var origin = aimSource != null ? aimSource.position : transform.position;
             var dir = aimSource != null ? aimSource.forward : transform.forward;
 
+            // Composed VFX: the delivery is the SHAPE, the skill's theme the element COLOUR,
+            // its power the INTENSITY — assembled per skill (see SkillVfx).
+            var color = SkillVfx.ElementColor(skill.Name);
+
             if (spec.Motion == DeliveryMotion.Projectile)
             {
-                SpawnProjectile(origin, dir, spec, point => ResolveAt(skill, point, spec));
+                SpawnProjectile(origin, dir, spec, color, point =>
+                {
+                    SkillVfx.Burst(point, color, _intensity);
+                    ResolveAt(skill, point, spec);
+                });
                 return;
             }
 
-            // Instant deliveries — around the caster (Self/nova), a strike at the aimed point
-            // (AimPoint/burst), or a hitscan line (Muzzle/beam).
+            // Instant deliveries — a ring around the caster (Self/nova), an eruption at the
+            // aimed point (AimPoint/burst), or a beam of light (Muzzle+Line/beam).
             var resolvePoint = spec.Origin == DeliveryOrigin.Self
                 ? transform.position
                 : AimPoint(origin, dir, spec.Range);
-            if (spec.Origin != DeliveryOrigin.Self) ShowTracer(origin, resolvePoint);
+            if (spec.Origin == DeliveryOrigin.Self)
+                SkillVfx.Nova(resolvePoint, color, spec.Radius, _intensity);
+            else if (spec.Shape == DeliveryShape.Line)
+                SkillVfx.Beam(origin, resolvePoint, color, _intensity);
+            else
+                SkillVfx.Burst(resolvePoint, color, _intensity);
             ResolveAt(skill, resolvePoint, spec);
         }
 
@@ -201,7 +216,6 @@ namespace ProjectAscension.Game
             var targets = TargetsAround(point, spec.Radius);
             var resolution = SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
             Apply(resolution, targets);
-            ShowImpact(point);
         }
 
         private List<IDamageable> TargetsAround(Vector3 point, float radius)
@@ -221,38 +235,13 @@ namespace ProjectAscension.Game
                 ? hit.point
                 : origin + dir * range;
 
-        private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, System.Action<Vector3> onImpact)
+        private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, Color color, System.Action<Vector3> onImpact)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "SkillProjectile";
-            go.transform.localScale = Vector3.one * 0.25f;
             Destroy(go.GetComponent<Collider>()); // the projectile does its own linecast
-            if (go.TryGetComponent<Renderer>(out var r)) r.material.color = new Color(1f, 0.55f, 0.15f);
-            go.AddComponent<SkillProjectile>().Launch(origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, targetMask, onImpact);
-        }
-
-        private static void ShowImpact(Vector3 point)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.name = "SkillImpact";
-            go.transform.position = point;
-            go.transform.localScale = Vector3.one * 0.8f;
-            Destroy(go.GetComponent<Collider>());
-            if (go.TryGetComponent<Renderer>(out var r)) r.material.color = new Color(1f, 0.6f, 0.2f);
-            Destroy(go, 0.08f);
-        }
-
-        private static void ShowTracer(Vector3 from, Vector3 to)
-        {
-            var go = new GameObject("SkillTracer");
-            var lr = go.AddComponent<LineRenderer>();
-            lr.material = new Material(Shader.Find("Sprites/Default"));
-            lr.startColor = lr.endColor = new Color(1f, 0.55f, 0.15f);
-            lr.startWidth = lr.endWidth = 0.07f;
-            lr.positionCount = 2;
-            lr.SetPosition(0, from);
-            lr.SetPosition(1, to);
-            Destroy(go, 0.06f);
+            go.AddComponent<SkillProjectile>().Launch(
+                origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, targetMask, onImpact, color, _intensity);
         }
 
         private static float SqrDistance(IDamageable d, Vector3 origin)

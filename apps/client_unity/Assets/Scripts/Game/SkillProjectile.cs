@@ -19,6 +19,10 @@ namespace ProjectAscension.Game
         private bool _spent;
 
         public void Launch(Vector3 position, Vector3 direction, float speed, float gravity, float range, LayerMask mask, Action<Vector3> onImpact)
+            => Launch(position, direction, speed, gravity, range, mask, onImpact, SkillVfx.ElementColor(null), 1f);
+
+        public void Launch(Vector3 position, Vector3 direction, float speed, float gravity, float range,
+            LayerMask mask, Action<Vector3> onImpact, Color color, float intensity)
         {
             transform.position = position;
             _velocity = direction.normalized * speed;
@@ -26,6 +30,18 @@ namespace ProjectAscension.Game
             _remaining = speed > 0.01f ? range / speed : 0.01f;
             _mask = mask;
             _onImpact = onImpact;
+
+            // Stylized look: a glowing orb of the skill's element, with a fading trail scaled
+            // by its power — readable silhouette first (art direction).
+            transform.localScale = Vector3.one * (0.25f + 0.12f * (intensity - 1f));
+            if (TryGetComponent<Renderer>(out var r)) r.material = SkillVfx.Glow(color);
+            var trail = gameObject.AddComponent<TrailRenderer>();
+            trail.time = 0.22f;
+            trail.startWidth = 0.22f * intensity;
+            trail.endWidth = 0f;
+            trail.material = SkillVfx.Glow(color);
+            trail.startColor = color;
+            trail.endColor = new Color(color.r, color.g, color.b, 0f);
         }
 
         private void Update()
