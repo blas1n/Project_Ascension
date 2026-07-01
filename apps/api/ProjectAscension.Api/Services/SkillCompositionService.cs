@@ -77,15 +77,17 @@ public class SkillCompositionService : ISkillCompositionService
         // Budget scales with the score, so a stronger pattern yields a richer skill.
         var budget = BudgetRules.FromScore(outcome.Score, tuning);
 
-        // Claim the region once per essential play (first-discoverer) via an idempotency key.
-        // Deliberately COARSE and stable: actor + stable equipment + dominant ATTACK style
-        // only. Real play makes the exact behavior set flicker window-to-window (a stray
-        // jump/dodge crossing a threshold) and the score climb via knowledge depth, so finer
-        // keys (the significant-behavior set, or the rarity tier) fragmented the SAME play
-        // into a stream of near-identical discoveries — the duplicate weapons the player saw.
+        // Claim key = play STYLE (the delivery it maps to: beam/projectile/arc/nova/burst) +
+        // RARITY TIER. The style keeps the variety without fragmenting on stray movement; the
+        // rarity turns "the same play, harder" into a PROGRESSION, not a duplicate — a higher
+        // score yields a rarer, richer discovery (bigger budget) built on the weaker one via
+        // the lineage and kept mechanically DISTINCT by the retry-on-duplicate loop (the
+        // earlier rarity attempt looked like duplicates only because the tiers were identical).
+        // Bounded by the ~5 rarity tiers — it climbs to Legendary and stops.
+        var claimKey = $"{RegionKey(request)}:{outcome.Rarity}";
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, RegionKey(request), ct);
+            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, claimKey, ct);
 
         // Report fired ONLY for a newly-claimed discovery. An idempotent re-hit returns the
         // existing one — reporting fired=true there made the client re-process the same
