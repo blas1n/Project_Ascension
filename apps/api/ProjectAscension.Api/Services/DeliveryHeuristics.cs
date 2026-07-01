@@ -28,20 +28,27 @@ public static class DeliveryHeuristics
     /// prompt guides the model with: attack decides beam/projectile, mobility the mobile
     /// variant. Charged+still → beam, charged+mobile → nova, rapid+still → projectile,
     /// rapid+mobile → arc, melee → burst.</summary>
+    private static readonly string[] Movement = { "Jump", "Dodge" };
+
     public static string ForBehavior(IReadOnlyList<BehaviorCount> behaviors)
     {
         var attack = DominantAttack(behaviors);
-        if (attack == "MeleeAttack") return "burst";
         if (attack == "-") return "beam";
 
-        int mobility = 0, attackCount = 0;
+        int mobility = 0, totalAttacks = 0, dominantCount = 0;
         foreach (var b in behaviors)
         {
-            if (b.Behavior is "Jump" or "Dodge") mobility += b.Count;
-            else if (b.Behavior == attack) attackCount += b.Count;
+            if (Array.IndexOf(Movement, b.Behavior) >= 0) mobility += b.Count;
+            else if (Array.IndexOf(AttackBehaviors, b.Behavior) >= 0) totalAttacks += b.Count;
+            if (b.Behavior == attack) dominantCount += b.Count;
         }
-        bool high = mobility * 2 >= attackCount; // movement at least half the attack count
 
+        // Movement-dominated play (over 1.5x the attacks) is a self-cast technique (a Command);
+        // it erupts around the caster. Mirrors the prompt's classification.
+        if (mobility * 2 > totalAttacks * 3) return "nova";
+        if (attack == "MeleeAttack") return "burst";
+
+        bool high = mobility * 2 >= dominantCount; // movement at least half the attack count
         return attack switch
         {
             "ChargedAttack" => high ? "nova" : "beam",

@@ -59,6 +59,12 @@ public class CompositionVarietySimulation
             new Scenario("bow-rapid", PrimitiveKind.Projectile, new[] { "bow" }, new[] { ("RangedAttack", 60) }),
             new Scenario("bow-mobile", PrimitiveKind.Projectile, new[] { "bow" }, new[] { ("RangedAttack", 35), ("Dodge", 40) }),
             new Scenario("pistol-charge", PrimitiveKind.Beam, new[] { "pistol" }, new[] { ("ChargedAttack", 50), ("Dodge", 10) }),
+            // Edge cases: ambiguous mix, exact tie, and extreme intensities.
+            new Scenario("triple-mixed", PrimitiveKind.Beam, new[] { "arcane" }, new[] { ("ChargedAttack", 30), ("RangedAttack", 28), ("MeleeAttack", 25) }),
+            new Scenario("tie-mobility", PrimitiveKind.Beam, new[] { "arcane" }, new[] { ("RangedAttack", 40), ("Dodge", 40) }),
+            new Scenario("mixed-rapid-dom", PrimitiveKind.Beam, new[] { "arcane" }, new[] { ("RangedAttack", 45), ("ChargedAttack", 30) }),
+            new Scenario("extreme-charge", PrimitiveKind.Beam, new[] { "arcane" }, new[] { ("ChargedAttack", 300) }),
+            new Scenario("extreme-melee", PrimitiveKind.Area, new[] { "blade" }, new[] { ("MeleeAttack", 200) }),
         };
 
         var deliveries = new List<string>();
@@ -137,6 +143,9 @@ public class CompositionVarietySimulation
             ("melee", PrimitiveKind.Area, new[] { ("MeleeAttack", 60) }),
             ("charge-mobile", PrimitiveKind.Beam, new[] { ("ChargedAttack", 40), ("Jump", 35) }),
             ("rapid-mobile", PrimitiveKind.Beam, new[] { ("RangedAttack", 40), ("Dodge", 35) }),
+            ("charge-still-2", PrimitiveKind.Beam, new[] { ("ChargedAttack", 70) }),
+            ("melee-mobile", PrimitiveKind.Area, new[] { ("MeleeAttack", 50), ("Jump", 30) }),
+            ("rapid-still-2", PrimitiveKind.Projectile, new[] { ("RangedAttack", 55) }),
         };
         var lineage = new List<PriorArt>();
         var effectSignatures = new List<string>();
