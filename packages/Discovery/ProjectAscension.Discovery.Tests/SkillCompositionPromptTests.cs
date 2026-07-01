@@ -18,7 +18,7 @@ public class SkillCompositionPromptTests
         var prompt = SkillCompositionPrompt.Build(
             Req(new BehaviorWeight("RangedAttack", 200), new BehaviorWeight("ChargedAttack", 30)));
 
-        Assert.Contains("How the player fought", prompt);
+        Assert.Contains("HOW THE PLAYER FOUGHT", prompt);
         Assert.Contains("RangedAttack: 200", prompt);
         Assert.Contains("ChargedAttack: 30", prompt);
     }
@@ -41,6 +41,6 @@ public class SkillCompositionPromptTests
         var prompt = SkillCompositionPrompt.Build(
             new CompositionRequest("t", new[] { "arcane" }, PrimitiveKind.Beam, new PowerBudget(40)));
 
-        Assert.DoesNotContain("How the player fought", prompt);
+        Assert.DoesNotContain("HOW THE PLAYER FOUGHT", prompt);
     }
 }

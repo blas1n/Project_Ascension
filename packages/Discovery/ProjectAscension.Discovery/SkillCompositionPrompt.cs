@@ -20,9 +20,13 @@ public static class SkillCompositionPrompt
         var profile = request.BehaviorProfile ?? Array.Empty<BehaviorWeight>();
         var behaviorSection = profile.Count == 0
             ? string.Empty
-            : "\nHow the player fought (the EMPHASIS matters — let it shape which effects dominate; the same equipment fought differently must yield a different skill):\n"
+            : "\nHOW THE PLAYER FOUGHT — this is the fingerprint that must make this skill UNIQUE. Read the emphasis and let it drive BOTH the effects AND the delivery. Two players with the same equipment who fought differently MUST get mechanically different skills:\n"
               + string.Join("\n", profile.OrderByDescending(b => b.Count).Select(b => $"- {b.Behavior}: {b.Count}"))
-              + "\n";
+              + "\nGuidance (adapt, don't copy):\n"
+              + "- sustained ChargedAttack -> a heavy, focused, high-magnitude payload (a beam or one big hit)\n"
+              + "- rapid RangedAttack -> many light, fast-flying projectiles\n"
+              + "- MeleeAttack -> close-range burst / area effects\n"
+              + "- lots of Dodge / Jump -> fast, evasive, mobile delivery (short darts, dash-linked, homing)\n";
 
         var lineage = request.Lineage ?? Array.Empty<PriorArt>();
         var lineageSection = lineage.Count == 0
@@ -43,12 +47,12 @@ Power budget: {request.Budget.Total}.
 Build the skill ONLY from these effect primitives:
 {primitives}
 
-Choose how the skill is DELIVERED — pick the one style that best fits its fantasy and the play pattern above (the delivery is independent of the effects: e.g. a burst can carry damage-over-time, a projectile can carry an area effect):
+Choose how the skill is DELIVERED — pick the style that matches HOW THEY FOUGHT (see above), not a default. The delivery is independent of the effects (a burst can carry damage-over-time, a projectile can carry an area effect):
 {deliveries}
 
 Rules:
 - List 1 to 4 primitives in PRIORITY ORDER (most important first). For each give: magnitude (potency, 1 to {CompositionValidator.MaxMagnitude}), and optionally range (reach/area, 0 to {CompositionValidator.MaxParameterTier}) and duration (persistence, 0 to {CompositionValidator.MaxParameterTier}). Omit range/duration (or use 0) when they don't suit the effect.
-- Center the skill on the primary behavior's mechanic.
+- Let the play pattern above drive the choice of primitives AND delivery — a charging player and a mobile skirmisher with the same weapon should read as clearly different skills. Do NOT default to the same composition every time.
 - You do NOT need to do the budget math: the engine scales magnitude and parameters down to fit the power budget, keeping your highest-priority primitives. Focus on a cohesive composition and an evocative name + one-sentence description.
 - Write the name and description in English.
 

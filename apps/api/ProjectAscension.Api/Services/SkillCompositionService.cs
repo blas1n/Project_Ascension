@@ -243,7 +243,25 @@ public class SkillCompositionService : ISkillCompositionService
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DominantAttack(r.Behaviors)}";
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{BehaviorSignature(r.Behaviors)}";
+    }
+
+    // The behaviors that are a real part of the play (>= half the dominant behavior's count),
+    // name-sorted — a stable fingerprint that distinguishes deliberate play (charging while
+    // jumping vs. standing) yet filters incidental actions. Now that the improved prompt
+    // makes the composer differentiate these, a finer claim earns distinct skills instead of
+    // duplicates; the persistence reset on fire still gates the cadence.
+    private static string BehaviorSignature(IReadOnlyList<BehaviorCount> behaviors)
+    {
+        if (behaviors.Count == 0) return "-";
+        int max = 0;
+        foreach (var b in behaviors) if (b.Count > max) max = b.Count;
+        if (max <= 0) return "-";
+        var significant = behaviors
+            .Where(b => b.Count * 2 >= max)
+            .Select(b => b.Behavior)
+            .OrderBy(b => b, StringComparer.Ordinal);
+        return string.Join("+", significant);
     }
 
     // The attack behaviors that define a skill's character (vs. movement, which only flavors
@@ -302,12 +320,14 @@ public class SkillCompositionService : ISkillCompositionService
             {
                 skill.Name = outcome.Skill.Name;
                 skill.Description = outcome.Skill.Description;
-                // Delivery is derived from how the player fought (not the LLM's pick, which
-                // collapsed to a single style) so play visibly varies the manifestation.
+                // The AI composes the delivery; when it omits one, derive it from how the
+                // player fought so the manifestation still varies.
                 List<BehaviorCount> fought;
                 try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
                 catch (JsonException) { fought = new(); }
-                skill.Delivery = DeliveryForBehavior(fought);
+                skill.Delivery = string.IsNullOrEmpty(outcome.Skill.Delivery)
+                    ? DeliveryForBehavior(fought)
+                    : outcome.Skill.Delivery;
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
