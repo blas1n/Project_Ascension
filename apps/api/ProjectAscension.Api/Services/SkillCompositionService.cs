@@ -77,11 +77,15 @@ public class SkillCompositionService : ISkillCompositionService
         // Budget scales with the score, so a stronger pattern yields a richer skill.
         var budget = BudgetRules.FromScore(outcome.Score, tuning);
 
-        // Claim the behavior region once (first-discoverer) via an idempotency key,
-        // so repeated evaluations of a still-growing signature don't re-fire it.
+        // Claim the behavior region once per SIGNIFICANCE TIER (first-discoverer) via an
+        // idempotency key. The rarity is part of the key on purpose: the same behavior fought
+        // harder scores higher and yields a distinct, stronger discovery ("동일 행동이라도
+        // 점수에 따라 달라야 한다"), which then builds on the weaker one via the lineage — a
+        // real same-play chain, bounded by the ~5 rarity tiers so it can't spam.
+        var claimKey = $"{RegionKey(request)}:{outcome.Rarity}";
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, RegionKey(request), ct);
+            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, claimKey, ct);
 
         // Report fired ONLY for a newly-claimed discovery. An idempotent re-hit returns the
         // existing one — reporting fired=true there made the client re-process the same

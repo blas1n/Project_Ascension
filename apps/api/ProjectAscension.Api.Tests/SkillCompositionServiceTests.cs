@@ -238,6 +238,31 @@ public class SkillCompositionServiceTests
             behaviors, Persistence: 0);
 
     [Fact]
+    public async Task Evaluate_SameBehaviorHarder_ClaimsAStrongerDiscoveryByRarity()
+    {
+        // "동일 행동이라도 점수에 따라 달라야 한다": the same play fought HARDER scores higher,
+        // which crosses into a higher rarity tier and yields a NEW, stronger discovery — not
+        // blocked by the first claim. Bounded by the ~5 rarity tiers, so it can't spam.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        var actor = Guid.NewGuid();
+        EvaluateTriggerRequest Charged(int count, int persistence) =>
+            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
+                new[] { new BehaviorCount("ChargedAttack", count) }, persistence);
+
+        var modest = await service.EvaluateAndTriggerAsync(Charged(60, 2));       // lower score → lower rarity
+        var mastered = await service.EvaluateAndTriggerAsync(Charged(500, 25));   // much higher → higher rarity
+
+        Assert.True(modest.Fired);
+        Assert.True(mastered.Fired);                                  // higher rarity → distinct, stronger discovery
+        Assert.NotEqual(modest.DiscoveryId, mastered.DiscoveryId);
+        Assert.Equal(2, discoveries.Discoveries.Count);
+    }
+
+    [Fact]
     public async Task Evaluate_SameCombinationFoughtDifferently_ClaimsADistinctDiscovery()
     {
         // The whole point of behavior-driven composition: the same equipment fought a
