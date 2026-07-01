@@ -290,14 +290,15 @@ public class SkillCompositionService : ISkillCompositionService
             {
                 skill.Name = outcome.Skill.Name;
                 skill.Description = outcome.Skill.Description;
-                // Split of concerns proven by the variety simulation: the LLM composes the
-                // EFFECT well (varied primitives) but its DELIVERY pick converges (~2 of 5
-                // styles), so the manifestation is derived deterministically from how the
-                // player fought — reliable variety the model wasn't providing.
+                // The AI composes the delivery (guided by the prompt's behavior->delivery
+                // rules); the behavior-derived heuristic is only a fallback for when it omits
+                // one. The variety simulation measures whether the prompt keeps it varied.
                 List<BehaviorCount> fought;
                 try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
                 catch (JsonException) { fought = new(); }
-                skill.Delivery = DeliveryHeuristics.ForBehavior(fought);
+                skill.Delivery = string.IsNullOrEmpty(outcome.Skill.Delivery)
+                    ? DeliveryHeuristics.ForBehavior(fought)
+                    : outcome.Skill.Delivery;
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes

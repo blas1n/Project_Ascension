@@ -52,11 +52,11 @@ public class CompositionVarietySimulation
             new Scenario("charge-mobile", PrimitiveKind.Beam, new[] { ("ChargedAttack", 40), ("Jump", 30) }),
         };
 
-        var rawLlmDeliveries = new List<string>();
+        var deliveries = new List<string>();
         var effectSignatures = new List<string>();
 
         _out.WriteLine($"model: {model}");
-        _out.WriteLine($"{"play",-14} | {"llmDelivery",-11} | {"name",-30} | primitives");
+        _out.WriteLine($"{"play",-14} | {"delivery",-11} | {"name",-30} | primitives");
         for (int i = 0; i < scenarios.Length; i++)
         {
             var s = scenarios[i];
@@ -71,21 +71,22 @@ public class CompositionVarietySimulation
 
             var skill = outcome.Skill!;
             var prims = string.Join(",", skill.Primitives.Select(p => $"{p.Kind}x{p.Magnitude}"));
-            rawLlmDeliveries.Add(skill.Delivery);
+            deliveries.Add(skill.Delivery);
             effectSignatures.Add(prims);
             _out.WriteLine($"{s.Name,-14} | {skill.Delivery,-11} | {skill.Name,-30} | {prims}");
         }
 
         int distinctEffects = effectSignatures.Distinct().Count();
-        _out.WriteLine($"\ndistinct EFFECTS (LLM's job): {distinctEffects}/{scenarios.Length}" +
-                       $" | distinct LLM deliveries (informational — production derives delivery" +
-                       $" from play, not the LLM): {rawLlmDeliveries.Distinct().Count()}/{scenarios.Length}");
+        int distinctDeliveries = deliveries.Distinct().Count();
+        _out.WriteLine($"\ndistinct EFFECTS: {distinctEffects}/{scenarios.Length}" +
+                       $" | distinct DELIVERIES: {distinctDeliveries}/{scenarios.Length}");
 
-        // The LLM owns the EFFECT (primitives); this guards its variety against the
-        // "static recipe" regression. Delivery is derived deterministically from play (the
-        // LLM's own delivery pick converges), so it is reported but not asserted here — the
-        // DeliveryForBehavior mapping is covered by fast deterministic tests instead.
+        // Both are the composer's job (delivery is prompt-guided by play, with the behavior
+        // heuristic only a fallback). These guard against the "static recipe" regression —
+        // if the prompt stops keeping delivery varied, this fails and we tune the prompt.
         Assert.True(distinctEffects >= 4,
             $"effect variety too low ({distinctEffects}/{scenarios.Length}) — different play produced near-identical primitives.");
+        Assert.True(distinctDeliveries >= 3,
+            $"delivery variety too low ({distinctDeliveries}/{scenarios.Length}) — the composer is converging on one manifestation; strengthen the delivery guidance in the prompt.");
     }
 }
