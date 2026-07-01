@@ -105,4 +105,73 @@ public class CompositionVarietySimulation
         Assert.True(matchRate >= 0.75,
             $"delivery generalization too low ({matchRate:P0}) — the prompt may be overfit; observe the MISS rows and tune.");
     }
+
+    /// <summary>
+    /// The discovery graph: a skill composed from prior discoveries (lineage RAG), which is
+    /// effectively infinite in this game — each discovery is the seed of the next. This drives
+    /// a chain where every generation is composed with the previous ones as lineage and checks
+    /// it keeps EVOLVING (the prompt's "extend, do not merely repeat"), not collapsing into a
+    /// repeated skill.
+    /// </summary>
+    [Fact]
+    public async Task LineageChain_KeepsEvolving_DoesNotRepeat()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            _out.WriteLine("SKIPPED: set OLLAMA_ENDPOINT to run the lineage-chain simulation.");
+            return;
+        }
+        var model = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "qwen3-coder:30b";
+        IChatClient chat = new OllamaApiClient(new Uri(endpoint), model);
+        var composer = new LlmSkillComposer(
+            chat, new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(90) }, NullLogger<LlmSkillComposer>.Instance);
+
+        // The realistic graph: each generation is a DIFFERENT play (a new discovery) built on
+        // the growing lineage of prior discoveries. The question is whether the lineage still
+        // lets the current play drive the skill, or drags every generation toward the ancestors.
+        (string Name, PrimitiveKind Primary, (string, int)[] Play)[] gens =
+        {
+            ("charge-still", PrimitiveKind.Beam, new[] { ("ChargedAttack", 60) }),
+            ("rapid-still", PrimitiveKind.Beam, new[] { ("RangedAttack", 60) }),
+            ("melee", PrimitiveKind.Area, new[] { ("MeleeAttack", 60) }),
+            ("charge-mobile", PrimitiveKind.Beam, new[] { ("ChargedAttack", 40), ("Jump", 35) }),
+            ("rapid-mobile", PrimitiveKind.Beam, new[] { ("RangedAttack", 40), ("Dodge", 35) }),
+        };
+        var lineage = new List<PriorArt>();
+        var effectSignatures = new List<string>();
+        var deliveries = new List<string>();
+
+        _out.WriteLine($"model: {model} | different play each generation, lineage accumulates");
+        _out.WriteLine($"{"gen",-14} | {"delivery",-11} | {"name",-28} | primitives");
+        for (int gen = 0; gen < gens.Length; gen++)
+        {
+            var g = gens[gen];
+            var profile = g.Play.Select(p => new BehaviorWeight(p.Item1, p.Item2)).ToList();
+            var request = new CompositionRequest(
+                "an expedition discovery", new[] { "arcane" }, g.Primary, new PowerBudget(50),
+                // Feed the most recent ancestors, like the service's RAG (bounded).
+                Lineage: lineage.TakeLast(4).ToList(), BehaviorProfile: profile, Seed: 2000 + gen);
+
+            var outcome = await CompositionPipeline.ForgeAsync(request, composer, maxAttempts: 3);
+            Assert.True(outcome.Forged && outcome.Skill is not null,
+                $"{g.Name}: composition deferred ({outcome.LastValidation.Error}).");
+
+            var skill = outcome.Skill!;
+            var prims = string.Join(",", skill.Primitives.Select(p => $"{p.Kind}x{p.Magnitude}"));
+            lineage.Add(new PriorArt(skill.Name, skill.Description ?? string.Empty, skill.Primitives));
+            effectSignatures.Add(prims);
+            deliveries.Add(skill.Delivery);
+            _out.WriteLine($"{g.Name,-14} | {skill.Delivery,-11} | {skill.Name,-28} | {prims}");
+        }
+
+        int distinct = effectSignatures.Distinct().Count();
+        _out.WriteLine($"\ndistinct skills across the chain: {distinct}/{gens.Length}" +
+                       $" | distinct deliveries: {deliveries.Distinct().Count()}/5");
+
+        // Even with a growing lineage, different play must still yield different skills — the
+        // graph must not drag every generation toward its ancestors.
+        Assert.True(distinct >= 4,
+            $"lineage chain converged ({distinct}/{gens.Length} distinct) — the lineage dragged generations toward the ancestors instead of letting the current play drive; strengthen the prompt.");
+    }
 }
