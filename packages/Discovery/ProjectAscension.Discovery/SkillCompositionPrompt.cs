@@ -47,7 +47,12 @@ Power budget: {request.Budget.Total}.
 Build the skill ONLY from these effect primitives:
 {primitives}
 
-Choose how the skill is DELIVERED — pick the style that matches HOW THEY FOUGHT (see above), not a default. The delivery is independent of the effects (a burst can carry damage-over-time, a projectile can carry an area effect):
+Choose how the skill is DELIVERED. This MUST reflect the dominant way they attacked, so different play reads as a clearly different manifestation — do NOT default every skill to the same style:
+- sustained / charged attacks -> beam (a focused, held ray)
+- rapid ranged attacks -> projectile (fast-flying bolts)
+- melee attacks -> burst (a close eruption at the target)
+- very mobile play (lots of dodging/jumping) -> lean projectile, fast and evasive
+Delivery is independent of the effects (a burst can carry damage-over-time, a projectile can carry an area effect). Pick exactly ONE:
 {deliveries}
 
 Rules:
