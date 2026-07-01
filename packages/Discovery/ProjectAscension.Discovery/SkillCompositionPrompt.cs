@@ -8,6 +8,28 @@ namespace ProjectAscension.SkillForge;
 /// </summary>
 public static class SkillCompositionPrompt
 {
+    private static readonly string[] Attacks = { "ChargedAttack", "RangedAttack", "MeleeAttack" };
+
+    // Pre-classify the raw counts so the model doesn't have to infer "charged vs rapid" and
+    // "mobile vs stationary" itself (it mis-inferred that) — it just applies the delivery grid.
+    private static string ClassifyPlay(IReadOnlyList<BehaviorWeight> profile)
+    {
+        var dominant = profile.Where(b => Attacks.Contains(b.Behavior)).OrderByDescending(b => b.Count).FirstOrDefault();
+        if (dominant is null) return "no clear attack";
+        int mobility = profile.Where(b => b.Behavior is "Jump" or "Dodge").Sum(b => b.Count);
+        bool high = mobility * 2 >= dominant.Count; // movement is at least half the attack count
+        var attack = dominant.Behavior switch
+        {
+            "ChargedAttack" => "CHARGED/sustained",
+            "RangedAttack" => "RAPID ranged",
+            "MeleeAttack" => "MELEE",
+            _ => dominant.Behavior,
+        };
+        return dominant.Behavior == "MeleeAttack"
+            ? "attack = MELEE"
+            : $"attack = {attack}; mobility = {(high ? "HIGH (weaving/leaping)" : "LOW (standing ground)")}";
+    }
+
     public static string Build(CompositionRequest request)
     {
         var primitives = string.Join("\n\n", PrimitiveCatalog.All
@@ -22,11 +44,8 @@ public static class SkillCompositionPrompt
             ? string.Empty
             : "\nHOW THE PLAYER FOUGHT — this is the fingerprint that must make this skill UNIQUE. Read the emphasis and let it drive BOTH the effects AND the delivery. Two players with the same equipment who fought differently MUST get mechanically different skills:\n"
               + string.Join("\n", profile.OrderByDescending(b => b.Count).Select(b => $"- {b.Behavior}: {b.Count}"))
-              + "\nGuidance (adapt, don't copy):\n"
-              + "- sustained ChargedAttack -> a heavy, focused, high-magnitude payload (a beam or one big hit)\n"
-              + "- rapid RangedAttack -> many light, fast-flying projectiles\n"
-              + "- MeleeAttack -> close-range burst / area effects\n"
-              + "- lots of Dodge / Jump -> fast, evasive, mobile delivery (short darts, dash-linked, homing)\n";
+              + $"\nPLAY CLASSIFICATION (use this directly with the delivery grid below): {ClassifyPlay(profile)}\n"
+              + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked.\n";
 
         var lineage = request.Lineage ?? Array.Empty<PriorArt>();
         var lineageSection = lineage.Count == 0
@@ -41,18 +60,19 @@ $@"You are composing a unique combat skill for a discovery in a fantasy MMOFPS.
 
 Theme: {request.Theme}
 Context (equipment / situation): {tags}
-Primary behavior to center the skill on: {request.PrimaryBehavior}
+Weapon's base mechanic: {request.PrimaryBehavior} (context only — do NOT force the delivery to match it; the PLAY CLASSIFICATION below decides the delivery)
 Power budget: {request.Budget.Total}.
 {behaviorSection}{lineageSection}
 Build the skill ONLY from these effect primitives:
 {primitives}
 
-Choose how the skill is DELIVERED. This MUST reflect the dominant way they attacked, so different play reads as a clearly different manifestation — do NOT default every skill to the same style:
-- sustained / charged attacks -> beam (a focused, held ray)
-- rapid ranged attacks -> projectile (fast-flying bolts)
-- melee attacks -> burst (a close eruption at the target)
-- very mobile play (lots of dodging/jumping) -> lean projectile, fast and evasive
-Delivery is independent of the effects (a burst can carry damage-over-time, a projectile can carry an area effect). Pick exactly ONE:
+Choose how the skill is DELIVERED strictly from the PLAY CLASSIFICATION above. The ATTACK decides beam vs projectile; the MOBILITY decides the mobile variant. Match this grid EXACTLY:
+- attack CHARGED + mobility LOW  -> beam
+- attack CHARGED + mobility HIGH -> nova
+- attack RAPID   + mobility LOW  -> projectile   (a stream of bolts — NOT a beam; beam is only for CHARGED)
+- attack RAPID   + mobility HIGH -> arc
+- attack MELEE                   -> burst
+Do NOT collapse RAPID into beam, and do NOT default everything to one style. Delivery is independent of the effects. Pick exactly ONE:
 {deliveries}
 
 Rules:

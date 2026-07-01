@@ -12,9 +12,11 @@ public static class DeliveryStyleCatalog
 {
     public static readonly IReadOnlyList<(string Style, string Blurb)> All = new[]
     {
-        ("projectile", "a bolt or orb that travels through the air and resolves where it hits"),
-        ("beam", "an instant ray that strikes the first target along the aim line"),
-        ("burst", "an area that erupts at the point you aim at"),
+        ("projectile", "fast straight-flying bolts — rapid fire from a set stance"),
+        ("arc", "a lobbed shot that arcs through the air and drops — thrown on the move"),
+        ("beam", "a focused, held ray that strikes along the aim line — a charged shot, standing ground"),
+        ("burst", "an area that erupts at the point you aim at — close, committed strikes"),
+        ("nova", "an area that erupts in a ring around YOU — for weaving and leaping while you charge"),
     };
 
     private static readonly HashSet<string> Known =

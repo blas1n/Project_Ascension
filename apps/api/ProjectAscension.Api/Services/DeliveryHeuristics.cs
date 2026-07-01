@@ -24,13 +24,29 @@ public static class DeliveryHeuristics
         return top?.Behavior ?? "-";
     }
 
-    /// <summary>Charged → a focused beam, rapid ranged → flying projectiles, melee → a close
-    /// burst — so how the player fought visibly shapes how the skill manifests.</summary>
-    public static string ForBehavior(IReadOnlyList<BehaviorCount> behaviors) => DominantAttack(behaviors) switch
+    /// <summary>The fallback manifestation when the LLM omits a delivery — the same grid the
+    /// prompt guides the model with: attack decides beam/projectile, mobility the mobile
+    /// variant. Charged+still → beam, charged+mobile → nova, rapid+still → projectile,
+    /// rapid+mobile → arc, melee → burst.</summary>
+    public static string ForBehavior(IReadOnlyList<BehaviorCount> behaviors)
     {
-        "ChargedAttack" => "beam",
-        "MeleeAttack" => "burst",
-        "RangedAttack" => "projectile",
-        _ => "beam",
-    };
+        var attack = DominantAttack(behaviors);
+        if (attack == "MeleeAttack") return "burst";
+        if (attack == "-") return "beam";
+
+        int mobility = 0, attackCount = 0;
+        foreach (var b in behaviors)
+        {
+            if (b.Behavior is "Jump" or "Dodge") mobility += b.Count;
+            else if (b.Behavior == attack) attackCount += b.Count;
+        }
+        bool high = mobility * 2 >= attackCount; // movement at least half the attack count
+
+        return attack switch
+        {
+            "ChargedAttack" => high ? "nova" : "beam",
+            "RangedAttack" => high ? "arc" : "projectile",
+            _ => "beam",
+        };
+    }
 }

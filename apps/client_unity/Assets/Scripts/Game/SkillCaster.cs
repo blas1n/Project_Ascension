@@ -184,11 +184,12 @@ namespace ProjectAscension.Game
                 return;
             }
 
-            // Instant deliveries — a hitscan line (Muzzle) or a strike at the aimed point
-            // (AimPoint). (Persistent deliveries — zone / turret / summon — are a reserved
-            // axis the inference does not produce yet.)
-            var resolvePoint = AimPoint(origin, dir, spec.Range);
-            ShowTracer(origin, resolvePoint);
+            // Instant deliveries — around the caster (Self/nova), a strike at the aimed point
+            // (AimPoint/burst), or a hitscan line (Muzzle/beam).
+            var resolvePoint = spec.Origin == DeliveryOrigin.Self
+                ? transform.position
+                : AimPoint(origin, dir, spec.Range);
+            if (spec.Origin != DeliveryOrigin.Self) ShowTracer(origin, resolvePoint);
             ResolveAt(skill, resolvePoint, spec);
         }
 
