@@ -232,4 +232,67 @@ public class CompositionVarietySimulation
         Assert.True(sizes.Last() > sizes.First(),
             $"the strongest tier ({sizes.Last()}) is not stronger than the weakest ({sizes.First()}) — score isn't scaling power.");
     }
+
+    /// <summary>
+    /// Manifestation coverage: a high-freedom game, so a discovery isn't always a new weapon.
+    /// Magic-offensive play should yield a WEAPON; a non-magic/mobility technique (primary
+    /// Dash — "magic + non-magic → a command, not a weapon") should yield a COMMAND; a
+    /// defensive lean a PASSIVE. Observes what SkillManifest.Classify produces per play so a
+    /// bug (e.g. every discovery becoming a weapon) is caught before playtest.
+    /// </summary>
+    [Fact]
+    public async Task Manifestation_MatchesTheKindOfPlay()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            _out.WriteLine("SKIPPED: set OLLAMA_ENDPOINT to run the manifestation simulation.");
+            return;
+        }
+        var model = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "qwen3-coder:30b";
+        IChatClient chat = new OllamaApiClient(new Uri(endpoint), model);
+        var composer = new LlmSkillComposer(
+            chat, new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(90) }, NullLogger<LlmSkillComposer>.Instance);
+
+        // (name, primary, tags, expected manifestation, play)
+        var cases = new (string Name, PrimitiveKind Primary, string[] Tags, ManifestationKind Expect, (string, int)[] Play)[]
+        {
+            ("magic-charge", PrimitiveKind.Beam, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("ChargedAttack", 60) }),
+            ("magic-rapid", PrimitiveKind.Projectile, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
+            ("bow-rapid", PrimitiveKind.Projectile, new[] { "bow" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
+            ("nonmagic-dash", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Command, new[] { ("MeleeAttack", 25), ("Dodge", 40), ("Jump", 35) }),
+            ("nonmagic-mobile", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Command, new[] { ("Jump", 50), ("Dodge", 45), ("MeleeAttack", 15) }),
+            ("guard-lean", PrimitiveKind.Blink, new[] { "ward", "nonmagic" }, ManifestationKind.Command, new[] { ("Dodge", 55), ("Jump", 30) }),
+        };
+
+        var results = new List<(string name, ManifestationKind expect, ManifestationKind actual)>();
+        _out.WriteLine($"model: {model}");
+        _out.WriteLine($"{"play",-16} | {"expect",-8} | {"actual",-8} | {"ok",-4} | primitives");
+        foreach (var c in cases)
+        {
+            var profile = c.Play.Select(p => new BehaviorWeight(p.Item1, p.Item2)).ToList();
+            var request = new CompositionRequest(
+                "an expedition discovery", c.Tags, c.Primary, new PowerBudget(50),
+                Lineage: null, BehaviorProfile: profile, Seed: 4000 + results.Count);
+
+            var outcome = await CompositionPipeline.ForgeAsync(request, composer, maxAttempts: 3);
+            Assert.True(outcome.Forged && outcome.Skill is not null, $"{c.Name}: deferred ({outcome.LastValidation.Error}).");
+            var skill = outcome.Skill!;
+            var actual = SkillManifest.Classify(skill);
+            var prims = string.Join(",", skill.Primitives.Select(p => $"{p.Kind}"));
+            results.Add((c.Name, c.Expect, actual));
+            _out.WriteLine($"{c.Name,-16} | {c.Expect,-8} | {actual,-8} | {(actual == c.Expect ? "ok" : "MISS"),-4} | {prims}");
+        }
+
+        int matched = results.Count(r => r.actual == r.expect);
+        int distinctKinds = results.Select(r => r.actual).Distinct().Count();
+        _out.WriteLine($"\nmanifestation matches: {matched}/{results.Count} | distinct kinds produced: {distinctKinds}");
+
+        // The system must produce more than one manifestation kind (not everything a weapon),
+        // and mostly match the intent.
+        Assert.True(distinctKinds >= 2,
+            $"only {distinctKinds} manifestation kind(s) — non-weapon discoveries (commands) aren't arising; the composition/prompt collapses everything to a weapon.");
+        Assert.True(matched >= results.Count - 1,
+            $"manifestation mismatch ({matched}/{results.Count}) — observe the MISS rows; the play isn't steering weapon-vs-command.");
+    }
 }
