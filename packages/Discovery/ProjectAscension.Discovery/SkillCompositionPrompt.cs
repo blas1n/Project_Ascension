@@ -18,10 +18,11 @@ public static class SkillCompositionPrompt
         int mobility = profile.Where(b => b.Behavior is "Jump" or "Dodge").Sum(b => b.Count);
         if (attacks == 0 && mobility == 0) return "no clear pattern";
 
-        // Movement-dominated play is a TECHNIQUE, not an attack — it should become a Command
-        // (a move the player invokes), not an offensive weapon. This is the "magic + non-magic
-        // -> a command, not a new weapon" path.
-        if (mobility > attacks)
+        // Movement-DOMINATED play (moved far more than attacked — over 1.5x) is a TECHNIQUE,
+        // a Command the player invokes, not an offensive weapon. A player who also attacks a
+        // lot is an evasive attacker (a weapon), not a technique. This is the "magic + non-
+        // magic -> a command, not a new weapon" path.
+        if (mobility * 2 > attacks * 3)
             return "a MOBILITY TECHNIQUE (moved far more than attacked). Compose it ONLY from Mobility (Dash, Blink) and Control (Knockback, Slow, Stun) primitives. Do NOT include ANY Offensive primitive (no Projectile, Beam, Area, DamageOverTime, Chain, Fork, Pierce, Homing) — it is an invoked movement/control move (a Command), not an attack";
 
         var dominant = profile.Where(b => Attacks.Contains(b.Behavior)).OrderByDescending(b => b.Count).First();
