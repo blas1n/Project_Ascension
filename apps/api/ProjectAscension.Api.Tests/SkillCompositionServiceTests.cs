@@ -238,28 +238,28 @@ public class SkillCompositionServiceTests
             behaviors, Persistence: 0);
 
     [Fact]
-    public async Task Evaluate_SameBehaviorHarder_ClaimsAStrongerDiscoveryByRarity()
+    public async Task Evaluate_SameAttackStyleWithStrayMovement_ClaimsOnce()
     {
-        // "동일 행동이라도 점수에 따라 달라야 한다": the same play fought HARDER scores higher,
-        // which crosses into a higher rarity tier and yields a NEW, stronger discovery — not
-        // blocked by the first claim. Bounded by the ~5 rarity tiers, so it can't spam.
+        // The duplicate fix: real play flickers (a stray jump/dodge, a rising score), but the
+        // same attack style must claim ONCE — not a fresh near-identical discovery per window.
         var discoveries = new FakeDiscoveryRepo();
         var skills = new FakeSkillRepo();
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
         var actor = Guid.NewGuid();
-        EvaluateTriggerRequest Charged(int count, int persistence) =>
+        EvaluateTriggerRequest Ranged(int persistence, params BehaviorCount[] extra) =>
             new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
-                new[] { new BehaviorCount("ChargedAttack", count) }, persistence);
+                new[] { new BehaviorCount("RangedAttack", 200) }.Concat(extra).ToArray(), persistence);
 
-        var modest = await service.EvaluateAndTriggerAsync(Charged(60, 2));       // lower score → lower rarity
-        var mastered = await service.EvaluateAndTriggerAsync(Charged(500, 25));   // much higher → higher rarity
+        var plain = await service.EvaluateAndTriggerAsync(Ranged(2));
+        var withJump = await service.EvaluateAndTriggerAsync(Ranged(6, new BehaviorCount("Jump", 40)));
+        var withDodge = await service.EvaluateAndTriggerAsync(Ranged(12, new BehaviorCount("Dodge", 50)));
 
-        Assert.True(modest.Fired);
-        Assert.True(mastered.Fired);                                  // higher rarity → distinct, stronger discovery
-        Assert.NotEqual(modest.DiscoveryId, mastered.DiscoveryId);
-        Assert.Equal(2, discoveries.Discoveries.Count);
+        Assert.True(plain.Fired);
+        Assert.False(withJump.Fired);   // still rapid-ranged → same claim, despite the jump + higher score
+        Assert.False(withDodge.Fired);  // still rapid-ranged → same claim
+        Assert.Single(discoveries.Discoveries);
     }
 
     [Fact]

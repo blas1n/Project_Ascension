@@ -77,15 +77,15 @@ public class SkillCompositionService : ISkillCompositionService
         // Budget scales with the score, so a stronger pattern yields a richer skill.
         var budget = BudgetRules.FromScore(outcome.Score, tuning);
 
-        // Claim the behavior region once per SIGNIFICANCE TIER (first-discoverer) via an
-        // idempotency key. The rarity is part of the key on purpose: the same behavior fought
-        // harder scores higher and yields a distinct, stronger discovery ("동일 행동이라도
-        // 점수에 따라 달라야 한다"), which then builds on the weaker one via the lineage — a
-        // real same-play chain, bounded by the ~5 rarity tiers so it can't spam.
-        var claimKey = $"{RegionKey(request)}:{outcome.Rarity}";
+        // Claim the region once per essential play (first-discoverer) via an idempotency key.
+        // Deliberately COARSE and stable: actor + stable equipment + dominant ATTACK style
+        // only. Real play makes the exact behavior set flicker window-to-window (a stray
+        // jump/dodge crossing a threshold) and the score climb via knowledge depth, so finer
+        // keys (the significant-behavior set, or the rarity tier) fragmented the SAME play
+        // into a stream of near-identical discoveries — the duplicate weapons the player saw.
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
-            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, claimKey, ct);
+            request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, RegionKey(request), ct);
 
         // Report fired ONLY for a newly-claimed discovery. An idempotent re-hit returns the
         // existing one — reporting fired=true there made the client re-process the same
@@ -236,36 +236,17 @@ public class SkillCompositionService : ISkillCompositionService
 
     private static string RegionKey(EvaluateTriggerRequest r)
     {
-        // The claim key must be STABLE across a growing signature (the idempotency intent),
-        // so it is built from the essential combination only — primary behavior + stable
-        // context (base equipment, knowledge), excluding the volatile catalysts above —
-        // PLUS a stable behavior signature so the SAME combination fought DIFFERENTLY claims
-        // a new discovery (CLAUDE.md / discovery.md: behavior must matter; otherwise the
-        // behavior-driven composition is unreachable — the first claim blocks the rest).
+        // Stable across the flicker of real play: the essential combination only — primary
+        // behavior + stable equipment tags (volatile catalysts excluded) + the dominant
+        // ATTACK STYLE. Different attack styles (charging vs. rapid fire vs. melee) still
+        // claim distinct discoveries — that variety is real and stable — but a stray jump or
+        // dodge, a rising score, and incidental behaviors no longer fragment the same play.
         var stable = r.ContextTags
             .Where(t => !VolatileTagPrefixes.Any(p => t.StartsWith(p, StringComparison.Ordinal)))
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{BehaviorSignature(r.Behaviors)}";
-    }
-
-    // The behaviors that are a real part of the play (>= half the dominant behavior's count),
-    // name-sorted — a stable fingerprint that distinguishes deliberate play (charging while
-    // jumping vs. standing) yet filters incidental actions. Now that the improved prompt
-    // makes the composer differentiate these, a finer claim earns distinct skills instead of
-    // duplicates; the persistence reset on fire still gates the cadence.
-    private static string BehaviorSignature(IReadOnlyList<BehaviorCount> behaviors)
-    {
-        if (behaviors.Count == 0) return "-";
-        int max = 0;
-        foreach (var b in behaviors) if (b.Count > max) max = b.Count;
-        if (max <= 0) return "-";
-        var significant = behaviors
-            .Where(b => b.Count * 2 >= max)
-            .Select(b => b.Behavior)
-            .OrderBy(b => b, StringComparer.Ordinal);
-        return string.Join("+", significant);
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.DominantAttack(r.Behaviors)}";
     }
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
