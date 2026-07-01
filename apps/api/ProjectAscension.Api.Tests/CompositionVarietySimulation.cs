@@ -86,7 +86,7 @@ public class CompositionVarietySimulation
         // if the prompt stops keeping delivery varied, this fails and we tune the prompt.
         Assert.True(distinctEffects >= 4,
             $"effect variety too low ({distinctEffects}/{scenarios.Length}) — different play produced near-identical primitives.");
-        Assert.True(distinctDeliveries >= 3,
+        Assert.True(distinctDeliveries >= 4,
             $"delivery variety too low ({distinctDeliveries}/{scenarios.Length}) — the composer is converging on one manifestation; strengthen the delivery guidance in the prompt.");
     }
 }

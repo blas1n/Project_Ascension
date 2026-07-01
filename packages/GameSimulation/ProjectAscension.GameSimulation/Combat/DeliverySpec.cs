@@ -72,12 +72,21 @@ namespace ProjectAscension.GameSimulation.Combat
                 case "projectile":
                     return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.Projectile, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
                         Speed: t.DeliveryProjectileSpeed, Gravity: t.DeliveryProjectileGravity, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
+                case "arc":
+                    // A lobbed projectile — reuses the projectile executor with gravity so it
+                    // arcs and drops (thrown on the move).
+                    return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.Projectile, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
+                        Speed: t.DeliveryProjectileSpeed * 0.85f, Gravity: 18f, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
                 case "beam":
                     return new DeliverySpec(DeliveryOrigin.Muzzle, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Line,
                         Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryHitscanRadius, Lifetime: 0f, TickInterval: 0f);
                 case "burst":
                     return new DeliverySpec(DeliveryOrigin.AimPoint, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
                         Speed: 0f, Gravity: 0f, Range: t.DeliveryRange, Radius: t.DeliveryAreaRadius, Lifetime: 0f, TickInterval: 0f);
+                case "nova":
+                    // Erupts around the caster (weaving/leaping while charging).
+                    return new DeliverySpec(DeliveryOrigin.Self, DeliveryMotion.None, DeliveryTrigger.OnImpact, DeliveryShape.Sphere,
+                        Speed: 0f, Gravity: 0f, Range: 0f, Radius: t.DeliveryAreaRadius * 1.2f, Lifetime: 0f, TickInterval: 0f);
                 default:
                     return null; // unknown/none → caller falls back to DeliveryInference
             }
