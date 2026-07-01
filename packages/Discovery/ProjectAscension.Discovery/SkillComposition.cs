@@ -55,4 +55,7 @@ public sealed record CompositionRequest(
     PowerBudget Budget,
     IReadOnlyList<PriorArt>? Lineage = null,
     IReadOnlyList<BehaviorWeight>? BehaviorProfile = null,
-    long Seed = 0);
+    long Seed = 0,
+    // Primitive-combinations already taken (by the lineage or a rejected attempt) that the
+    // composer MUST NOT reproduce — the retry loop grows this until the skill is distinct.
+    IReadOnlyList<string>? Avoid = null);
