@@ -174,4 +174,62 @@ public class CompositionVarietySimulation
         Assert.True(distinct >= 4,
             $"lineage chain converged ({distinct}/{gens.Length} distinct) — the lineage dragged generations toward the ancestors instead of letting the current play drive; strengthen the prompt.");
     }
+
+    /// <summary>
+    /// Mastering the SAME play: the score climbs (harder/longer → higher rarity → higher
+    /// budget), each stronger discovery built on the weaker one via the lineage. This is a
+    /// real same-play chain ("동일 행동이라도 점수에 따라 달라야 한다") — it must EVOLVE into
+    /// richer skills, not reproduce the ancestor. Observes whether rising budget + lineage
+    /// grow the composition.
+    /// </summary>
+    [Fact]
+    public async Task SamePlayRisingScore_EvolvesIntoStrongerSkills()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            _out.WriteLine("SKIPPED: set OLLAMA_ENDPOINT to run the mastery-chain simulation.");
+            return;
+        }
+        var model = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "qwen3-coder:30b";
+        IChatClient chat = new OllamaApiClient(new Uri(endpoint), model);
+        var composer = new LlmSkillComposer(
+            chat, new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(90) }, NullLogger<LlmSkillComposer>.Instance);
+
+        var profile = new List<BehaviorWeight> { new("ChargedAttack", 60) }; // one play, mastered harder
+        var budgets = new[] { 16, 30, 44, 58, 64 };                          // rising rarity/score
+        var lineage = new List<PriorArt>();
+        var signatures = new List<string>();
+        var sizes = new List<int>();
+
+        _out.WriteLine($"model: {model} | same play (ChargedAttack 60), rising budget + lineage");
+        _out.WriteLine($"{"budget",-7} | {"delivery",-9} | {"name",-28} | primitives");
+        for (int gen = 0; gen < budgets.Length; gen++)
+        {
+            var request = new CompositionRequest(
+                "an expedition discovery", new[] { "arcane" }, PrimitiveKind.Beam, new PowerBudget(budgets[gen]),
+                Lineage: lineage.TakeLast(4).ToList(), BehaviorProfile: profile, Seed: 3000 + gen);
+
+            var outcome = await CompositionPipeline.ForgeAsync(request, composer, maxAttempts: 3);
+            Assert.True(outcome.Forged && outcome.Skill is not null,
+                $"budget {budgets[gen]}: composition deferred ({outcome.LastValidation.Error}).");
+
+            var skill = outcome.Skill!;
+            var prims = string.Join(",", skill.Primitives.Select(p => $"{p.Kind}x{p.Magnitude}"));
+            lineage.Add(new PriorArt(skill.Name, skill.Description ?? string.Empty, skill.Primitives));
+            signatures.Add(prims);
+            sizes.Add(skill.Primitives.Sum(p => p.Magnitude));
+            _out.WriteLine($"{budgets[gen],-7} | {skill.Delivery,-9} | {skill.Name,-28} | {prims}");
+        }
+
+        int distinct = signatures.Distinct().Count();
+        _out.WriteLine($"\ndistinct skills: {distinct}/{budgets.Length} | total magnitude by tier: [{string.Join(", ", sizes)}]");
+
+        // The mastered chain must produce distinct, generally stronger skills — not the same
+        // recipe renamed. (Total magnitude should trend up with the budget.)
+        Assert.True(distinct >= 4,
+            $"same-play mastery chain converged ({distinct}/{budgets.Length}) — rising score didn't evolve the skill; the composition isn't using budget/lineage to grow it.");
+        Assert.True(sizes.Last() > sizes.First(),
+            $"the strongest tier ({sizes.Last()}) is not stronger than the weakest ({sizes.First()}) — score isn't scaling power.");
+    }
 }
