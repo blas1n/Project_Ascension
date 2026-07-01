@@ -264,36 +264,6 @@ public class SkillCompositionService : ISkillCompositionService
         return string.Join("+", significant);
     }
 
-    // The attack behaviors that define a skill's character (vs. movement, which only flavors
-    // it). The dominant one decides the play style — and the delivery.
-    private static readonly string[] AttackBehaviors = { "ChargedAttack", "RangedAttack", "MeleeAttack" };
-
-    // The play style that defines the skill: the dominant ATTACK behavior. Movement
-    // (jump/dodge) is deliberately excluded from the claim — varying it produced separate
-    // discoveries that the composer couldn't tell apart, i.e. duplicate weapons. So the same
-    // attack style claims once (whatever the footwork), and a genuinely different attack
-    // style (charging vs. rapid fire vs. melee) earns a distinct discovery.
-    private static string DominantAttack(IReadOnlyList<BehaviorCount> behaviors)
-    {
-        BehaviorCount? top = null;
-        foreach (var b in behaviors)
-            if (b.Count > 0 && Array.IndexOf(AttackBehaviors, b.Behavior) >= 0 && (top is null || b.Count > top.Count))
-                top = b;
-        return top?.Behavior ?? "-";
-    }
-
-    // The delivery is DERIVED from the dominant attack, not picked by the LLM — the model's
-    // own choice collapsed to one style (every skill a hitscan beam), defeating the variety.
-    // Charged → a focused beam, rapid ranged → flying projectiles, melee → a close burst, so
-    // how the player fought visibly shapes how the skill manifests.
-    private static string DeliveryForBehavior(IReadOnlyList<BehaviorCount> behaviors) => DominantAttack(behaviors) switch
-    {
-        "ChargedAttack" => "beam",
-        "MeleeAttack" => "burst",
-        "RangedAttack" => "projectile",
-        _ => "beam",
-    };
-
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
     {
         var pending = await _skills.GetPendingAsync(batchSize, ct);
@@ -320,14 +290,14 @@ public class SkillCompositionService : ISkillCompositionService
             {
                 skill.Name = outcome.Skill.Name;
                 skill.Description = outcome.Skill.Description;
-                // The AI composes the delivery; when it omits one, derive it from how the
-                // player fought so the manifestation still varies.
+                // Split of concerns proven by the variety simulation: the LLM composes the
+                // EFFECT well (varied primitives) but its DELIVERY pick converges (~2 of 5
+                // styles), so the manifestation is derived deterministically from how the
+                // player fought — reliable variety the model wasn't providing.
                 List<BehaviorCount> fought;
                 try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
                 catch (JsonException) { fought = new(); }
-                skill.Delivery = string.IsNullOrEmpty(outcome.Skill.Delivery)
-                    ? DeliveryForBehavior(fought)
-                    : outcome.Skill.Delivery;
+                skill.Delivery = DeliveryHeuristics.ForBehavior(fought);
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
