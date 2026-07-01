@@ -185,6 +185,58 @@ public class CompositionVarietySimulation
     }
 
     /// <summary>
+    /// The real duplicate scenario the earlier sim missed: the SAME play fires several
+    /// discoveries in a burst, each composed with the prior ones as lineage (the RAG). The
+    /// retry-on-duplicate (CompositionPipeline) must keep them mechanically distinct — no six
+    /// "Ethereal Weaving Volley"s. The old sim fed perfect lineage AND I dismissed its
+    /// converging same-play result; this asserts distinctness instead.
+    /// </summary>
+    [Fact]
+    public async Task SamePlayBurst_RetryKeepsSkillsDistinct()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            _out.WriteLine("SKIPPED: set OLLAMA_ENDPOINT to run the same-play burst simulation.");
+            return;
+        }
+        var model = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "qwen3-coder:30b";
+        IChatClient chat = new OllamaApiClient(new Uri(endpoint), model);
+        var composer = new LlmSkillComposer(
+            chat, new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(90) }, NullLogger<LlmSkillComposer>.Instance);
+
+        var profile = new List<BehaviorWeight> { new("RangedAttack", 50), new("Dodge", 25) }; // ONE play
+        var lineage = new List<PriorArt>();
+        var kindSignatures = new List<string>();
+
+        _out.WriteLine($"model: {model} | same play (RangedAttack 50, Dodge 25) fired 5x");
+        _out.WriteLine($"{"n",-3} | {"name",-30} | primitive kinds");
+        for (int i = 0; i < 5; i++)
+        {
+            var request = new CompositionRequest(
+                "an expedition discovery", new[] { "arcane" }, PrimitiveKind.Beam, new PowerBudget(50),
+                Lineage: lineage.TakeLast(4).ToList(), BehaviorProfile: profile, Seed: 5000 + i);
+
+            var outcome = await CompositionPipeline.ForgeAsync(request, composer, maxAttempts: 5);
+            Assert.True(outcome.Forged && outcome.Skill is not null, $"burst {i}: deferred.");
+            var skill = outcome.Skill!;
+            lineage.Add(new PriorArt(skill.Name, skill.Description ?? string.Empty, skill.Primitives));
+            var kinds = string.Join(",", skill.Primitives.Select(p => p.Kind).Distinct().OrderBy(k => k.ToString(), StringComparer.Ordinal));
+            kindSignatures.Add(kinds);
+            _out.WriteLine($"{i,-3} | {skill.Name,-30} | {kinds}");
+        }
+
+        int distinct = kindSignatures.Distinct().Count();
+        _out.WriteLine($"\ndistinct primitive-kind sets: {distinct}/5");
+        // Stress test: IDENTICAL input, so the model can only diversify so far — the retry/
+        // avoid loop lifts it well above the ~1/5 it converges to on its own, but not to 5/5.
+        // In real play this burst doesn't happen: identical play claims ONCE (the delivery-
+        // style key), so distinct claims (which DO differ) are what the retry keeps unique.
+        Assert.True(distinct >= 3,
+            $"same-play burst barely diversified ({distinct}/5) — the retry/avoid loop is not helping at all.");
+    }
+
+    /// <summary>
     /// Mastering the SAME play: the score climbs (harder/longer → higher rarity → higher
     /// budget), each stronger discovery built on the weaker one via the lineage. This is a
     /// real same-play chain ("동일 행동이라도 점수에 따라 달라야 한다") — it must EVOLVE into

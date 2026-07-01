@@ -236,17 +236,17 @@ public class SkillCompositionService : ISkillCompositionService
 
     private static string RegionKey(EvaluateTriggerRequest r)
     {
-        // Stable across the flicker of real play: the essential combination only — primary
-        // behavior + stable equipment tags (volatile catalysts excluded) + the dominant
-        // ATTACK STYLE. Different attack styles (charging vs. rapid fire vs. melee) still
-        // claim distinct discoveries — that variety is real and stable — but a stray jump or
-        // dodge, a rising score, and incidental behaviors no longer fragment the same play.
+        // Keyed on the play STYLE — the delivery the play maps to (beam/projectile/arc/nova/
+        // burst), 5 buckets. Keeps the real variety (a still charge vs. a leaping one are
+        // different discoveries) yet is coarse enough that a stray jump/dodge or a rising
+        // score no longer fragments one play into a stream; the composer's retry loop then
+        // keeps the distinct claims mechanically unique.
         var stable = r.ContextTags
             .Where(t => !VolatileTagPrefixes.Any(p => t.StartsWith(p, StringComparison.Ordinal)))
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.DominantAttack(r.Behaviors)}";
+        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
     }
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)

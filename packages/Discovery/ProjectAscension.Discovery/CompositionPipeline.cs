@@ -32,14 +32,42 @@ public static class CompositionPipeline
     {
         if (maxAttempts < 1) maxAttempts = 1;
 
+        // Primitive-combinations already taken — start from the lineage the RAG gave us, and
+        // grow it as we reject duplicates, so the retry actively steers AWAY from them.
+        var avoid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var art in request.Lineage ?? Array.Empty<PriorArt>())
+            avoid.Add(KindSignature(art.Primitives));
+
         ValidationResult last = ValidationResult.Fail(CompositionError.EmptyComposition);
+        SkillComposition? lastValid = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var skill = await composer.ComposeAsync(request, ct).ConfigureAwait(false);
+            // Vary the seed and pass the avoid-set each attempt so a retry produces something
+            // genuinely different, not the same output the model converged on.
+            var attemptReq = request with { Seed = request.Seed + attempt, Avoid = avoid.ToList() };
+            var skill = await composer.ComposeAsync(attemptReq, ct).ConfigureAwait(false);
             last = CompositionValidator.Validate(skill, request.Budget);
-            if (last.IsValid)
-                return CompositionOutcome.Success(skill, last, attempt);
+            if (!last.IsValid) continue;
+
+            var signature = KindSignature(skill.Primitives);
+            if (!avoid.Contains(signature))
+                return CompositionOutcome.Success(skill, last, attempt); // distinct — done
+
+            // A duplicate of an existing skill: remember it, forbid it next attempt, keep it
+            // only as a last resort so we never defer a discovery to nothing.
+            avoid.Add(signature);
+            lastValid = skill;
         }
-        return CompositionOutcome.Deferred(last, maxAttempts);
+
+        // Every attempt duplicated an existing skill — accept the last valid one rather than
+        // leave the discovery empty (rare; the retry usually finds a distinct composition).
+        return lastValid is not null
+            ? CompositionOutcome.Success(lastValid, last, maxAttempts)
+            : CompositionOutcome.Deferred(last, maxAttempts);
     }
+
+    // The distinct primitive KINDS a skill is built from (order/magnitude-independent) — two
+    // skills sharing this signature are the "same" mechanically, i.e. duplicates.
+    private static string KindSignature(IReadOnlyList<ComposedPrimitive> primitives)
+        => string.Join(",", primitives.Select(p => p.Kind).Distinct().OrderBy(k => k.ToString(), StringComparer.Ordinal));
 }

@@ -56,6 +56,13 @@ public static class SkillCompositionPrompt
               + $"\nPLAY CLASSIFICATION (use this directly with the delivery grid below): {ClassifyPlay(profile)}\n"
               + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked. A MOBILITY TECHNIQUE is the exception: use ONLY Mobility + Control primitives (Dash, Blink, Knockback, Slow, Stun) and NO Offensive primitives at all.\n";
 
+        var avoid = request.Avoid ?? Array.Empty<string>();
+        var avoidSection = avoid.Count == 0
+            ? string.Empty
+            : "\nFORBIDDEN — these exact primitive combinations are ALREADY discovered. Your skill MUST use a DIFFERENT set of primitives (not just different magnitudes):\n"
+              + string.Join("\n", avoid.Select(a => $"- {a}"))
+              + "\n";
+
         var lineage = request.Lineage ?? Array.Empty<PriorArt>();
         var lineageSection = lineage.Count == 0
             ? string.Empty
@@ -71,7 +78,7 @@ Theme: {request.Theme}
 Context (equipment / situation): {tags}
 Weapon's base mechanic: {request.PrimaryBehavior} (context only — do NOT force the delivery to match it; the PLAY CLASSIFICATION below decides the delivery)
 Power budget: {request.Budget.Total}.
-{behaviorSection}{lineageSection}
+{behaviorSection}{avoidSection}{lineageSection}
 Build the skill ONLY from these effect primitives:
 {primitives}
 
