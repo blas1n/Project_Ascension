@@ -14,9 +14,17 @@ public static class SkillCompositionPrompt
     // "mobile vs stationary" itself (it mis-inferred that) — it just applies the delivery grid.
     private static string ClassifyPlay(IReadOnlyList<BehaviorWeight> profile)
     {
-        var dominant = profile.Where(b => Attacks.Contains(b.Behavior)).OrderByDescending(b => b.Count).FirstOrDefault();
-        if (dominant is null) return "no clear attack";
+        int attacks = profile.Where(b => Attacks.Contains(b.Behavior)).Sum(b => b.Count);
         int mobility = profile.Where(b => b.Behavior is "Jump" or "Dodge").Sum(b => b.Count);
+        if (attacks == 0 && mobility == 0) return "no clear pattern";
+
+        // Movement-dominated play is a TECHNIQUE, not an attack — it should become a Command
+        // (a move the player invokes), not an offensive weapon. This is the "magic + non-magic
+        // -> a command, not a new weapon" path.
+        if (mobility > attacks)
+            return "a MOBILITY TECHNIQUE (moved far more than attacked). Compose it ONLY from Mobility (Dash, Blink) and Control (Knockback, Slow, Stun) primitives. Do NOT include ANY Offensive primitive (no Projectile, Beam, Area, DamageOverTime, Chain, Fork, Pierce, Homing) — it is an invoked movement/control move (a Command), not an attack";
+
+        var dominant = profile.Where(b => Attacks.Contains(b.Behavior)).OrderByDescending(b => b.Count).First();
         bool high = mobility * 2 >= dominant.Count; // movement is at least half the attack count
         var attack = dominant.Behavior switch
         {
@@ -45,7 +53,7 @@ public static class SkillCompositionPrompt
             : "\nHOW THE PLAYER FOUGHT — this is the fingerprint that must make this skill UNIQUE. Read the emphasis and let it drive BOTH the effects AND the delivery. Two players with the same equipment who fought differently MUST get mechanically different skills:\n"
               + string.Join("\n", profile.OrderByDescending(b => b.Count).Select(b => $"- {b.Behavior}: {b.Count}"))
               + $"\nPLAY CLASSIFICATION (use this directly with the delivery grid below): {ClassifyPlay(profile)}\n"
-              + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked.\n";
+              + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked. A MOBILITY TECHNIQUE is the exception: use ONLY Mobility + Control primitives (Dash, Blink, Knockback, Slow, Stun) and NO Offensive primitives at all.\n";
 
         var lineage = request.Lineage ?? Array.Empty<PriorArt>();
         var lineageSection = lineage.Count == 0
@@ -72,6 +80,7 @@ Choose how the skill is DELIVERED strictly from the PLAY CLASSIFICATION above. T
 - attack RAPID   + mobility LOW  -> projectile   (a stream of bolts — NOT a beam; beam is only for CHARGED)
 - attack RAPID   + mobility HIGH -> arc
 - attack MELEE                   -> burst
+- a MOBILITY TECHNIQUE           -> nova (it erupts around the caster)
 Do NOT collapse RAPID into beam, and do NOT default everything to one style. Delivery is independent of the effects. Pick exactly ONE:
 {deliveries}
 
