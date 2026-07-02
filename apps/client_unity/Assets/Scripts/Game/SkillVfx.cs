@@ -262,6 +262,45 @@ namespace ProjectAscension.Game
             ps.Play();
         }
 
+        /// <summary>A control accent at a target — slow reads cold, stun sparks overhead,
+        /// knockback a neutral puff. Kind-specific colour (clearer than the element colour).</summary>
+        public static void ControlAccent(Vector3 point, ControlKind kind, float intensity)
+        {
+            switch (kind)
+            {
+                case ControlKind.Slow: Nova(point, new Color(0.4f, 0.85f, 1f), 0.8f, intensity * 0.8f); break;       // frost ring at the feet
+                case ControlKind.Stun: Burst(point + Vector3.up * 1.6f, new Color(1f, 0.9f, 0.4f), intensity * 0.8f); break; // stars overhead
+                case ControlKind.Knockback: Burst(point, new Color(0.9f, 0.9f, 1f), intensity); break;              // white push puff
+            }
+        }
+
+        /// <summary>A protective shell of motes around the caster — a shield/barrier grant.</summary>
+        public static void ShieldBubble(Vector3 center, float intensity)
+        {
+            var go = new GameObject("SkillVfx_Shield");
+            go.transform.position = center;
+            var ps = Configure(go, new Color(0.4f, 0.85f, 0.9f), intensity);
+            var main = ps.main;
+            main.startSpeed = 0f;       // motes hold on the shell → a bubble outline
+            main.startSize = 0.18f * intensity;
+            main.startLifetime = 0.6f;
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 1.1f;
+            var emission = ps.emission;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(60 * intensity)) });
+            ps.Play();
+            Object.Destroy(go, 1.0f);
+        }
+
+        /// <summary>A motion streak along a dash/blink from start to end.</summary>
+        public static void DashStreak(Vector3 from, Vector3 dir, float distance, float intensity)
+        {
+            var to = from + dir.normalized * distance;
+            Beam(from, to, new Color(0.75f, 0.55f, 1f), intensity);
+        }
+
         // A short-lived additive-ish particle burst, coloured + scaled by intensity.
         private static ParticleSystem Configure(GameObject go, Color color, float intensity)
         {

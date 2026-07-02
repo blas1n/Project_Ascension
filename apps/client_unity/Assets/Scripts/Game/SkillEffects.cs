@@ -5,12 +5,11 @@ using ProjectAscension.GameSimulation.Combat;
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// Placeholder presentation for a skill's non-damage effects — control, shield, and
-    /// mobility. Real feedback needs VFX/animation assets; until those exist these are
-    /// code stubs that log and apply the minimal functional change, so a cast still
-    /// reads correctly and an asset-driven view can replace each method later.
-    /// Optional component on the caster; <see cref="SkillCaster"/> falls back to logs
-    /// when it is absent.
+    /// Presentation for a skill's non-damage effects — control, shield, and mobility. The
+    /// composed <see cref="SkillVfx"/> supplies the look (control accent, shield bubble,
+    /// dash streak); this component applies the functional change and plays the accent.
+    /// Optional component on the caster; <see cref="SkillCaster"/> falls back to logs when
+    /// it is absent. Damage absorption / animation / swept collision are still simplified.
     /// </summary>
     public sealed class SkillEffects : MonoBehaviour
     {
@@ -18,27 +17,25 @@ namespace ProjectAscension.Game
 
         public void PlayControl(IDamageable target, ControlKind kind)
         {
-            // TODO(assets): knockback impulse / slow / stun VFX + a hook into target AI.
-            Debug.Log($"[SkillEffects] {kind} applied to {NameOf(target)} (stub).", this);
+            if (target is Component c) SkillVfx.ControlAccent(c.transform.position, kind, 1f);
         }
 
         public void GrantShield(float amount)
         {
-            // TODO(assets): shield-bubble VFX + real damage absorption. Tracked for now.
+            // TODO(assets): real damage absorption. Tracked + a shield bubble for now.
             if (amount <= 0f) return;
             ActiveShield += amount;
-            Debug.Log($"[SkillEffects] Shield +{amount:F0} (total {ActiveShield:F0}) (stub).", this);
+            SkillVfx.ShieldBubble(transform.position, 1f);
         }
 
         public void PlayDash(Vector3 direction, float distance)
         {
-            // Functional placeholder: snap forward. Real dash = animation + trail VFX +
-            // a swept collision check.
+            // Functional placeholder: snap forward + a motion streak. Real dash =
+            // animation + a swept collision check.
             if (distance <= 0f) return;
+            var from = transform.position;
             transform.position += direction.normalized * distance;
-            Debug.Log($"[SkillEffects] Dash {distance:F0} (stub).", this);
+            SkillVfx.DashStreak(from, direction, distance, 1f);
         }
-
-        private static string NameOf(IDamageable d) => d is Component c ? c.gameObject.name : "target";
     }
 }
