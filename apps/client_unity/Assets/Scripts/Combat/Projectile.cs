@@ -23,6 +23,15 @@ namespace ProjectAscension.Combat
         private float _lifetime;
         private GameObject _owner;
         private float _age;
+        private Color _impactColor = Color.white;
+
+        // The bolt can't hit anything for this long after launch, so it can't self-destruct
+        // on a collider it spawns overlapping (the muzzle, the ground under the camera, the
+        // caster) before it has cleared the barrel — which read as "the shot never appears".
+        private const float ArmDelay = 0.05f;
+
+        /// <summary>Colour of the impact burst spawned when this bolt hits (set by the factory).</summary>
+        public void SetImpactColor(Color color) => _impactColor = color;
 
         public void Launch(Vector3 direction, float speed, float damage, GameObject owner, float lifetime = 5f, float gravity = 0f)
         {
@@ -61,18 +70,25 @@ namespace ProjectAscension.Combat
 
         private void OnTriggerEnter(Collider other)
         {
+            if (_age < ArmDelay) return; // still clearing the muzzle — ignore spawn overlaps
             if (_owner != null && (other.gameObject == _owner || other.transform.IsChildOf(_owner.transform)))
                 return;
 
             if (other.TryGetComponent<IDamageable>(out var target))
             {
                 target.TakeDamage(_damage, _owner);
-                Destroy(gameObject);
+                Impact();
             }
             else if (!other.isTrigger)
             {
-                Destroy(gameObject); // hit environment
+                Impact(); // hit environment
             }
+        }
+
+        private void Impact()
+        {
+            CombatVfx.Burst(transform.position, _impactColor);
+            Destroy(gameObject);
         }
     }
 }

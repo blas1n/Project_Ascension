@@ -19,7 +19,7 @@ namespace ProjectAscension.Equipment
                     target.TakeDamage(Data.Damage, ctx.Attacker);
             }
 
-            CombatDebug.Sphere(center, SwingRadius, new Color(1f, 0.2f, 0.2f));
+            CombatVfx.Burst(center, new Color(1f, 0.45f, 0.3f), SwingRadius); // swing arc
         }
     }
 }
