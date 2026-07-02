@@ -48,11 +48,13 @@ namespace ProjectAscension.Game
         public static float Intensity(int powerCost) => Mathf.Clamp(0.8f + powerCost / 60f, 0.8f, 1.8f);
 
         // A bright, unlit material for trails/lines/particles (URP-safe, reads as a glow with
-        // bloom on; still stylised without it).
+        // bloom on; still stylised without it). The colour is pushed past 1.0 into HDR so the
+        // bright core crosses the URP bloom threshold and blooms (see SkillVfxBloom).
+        private const float HdrBoost = 1.5f;
         public static Material Glow(Color color)
         {
             var mat = new Material(Shader.Find("Sprites/Default"));
-            mat.color = color;
+            mat.color = new Color(color.r * HdrBoost, color.g * HdrBoost, color.b * HdrBoost, color.a);
             return mat;
         }
 
