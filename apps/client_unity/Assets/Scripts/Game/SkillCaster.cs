@@ -25,7 +25,6 @@ namespace ProjectAscension.Game
     {
         [SerializeField] private string serverUrl = "";
         [SerializeField] private Transform aimSource;
-        [SerializeField] private float radius = 6f;
         [SerializeField] private LayerMask targetMask = ~0;
         [SerializeField] private float dotInterval = 1f;
 
