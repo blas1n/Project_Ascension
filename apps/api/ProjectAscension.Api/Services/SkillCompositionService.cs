@@ -11,7 +11,7 @@ namespace ProjectAscension.Api.Services;
 
 public class SkillCompositionService : ISkillCompositionService
 {
-    private const int MaxComposeAttempts = 3;
+    private const int MaxComposeAttempts = 5; // more room to find a distinct composition now that the actor-wide Avoid set is larger
     private const int MaxLineageContext = 4;
 
     private readonly IDiscoveryRepository _discoveries;
@@ -222,6 +222,19 @@ public class SkillCompositionService : ISkillCompositionService
         catch (JsonException) { return new List<string>(); }
     }
 
+    // The primitive-KIND signature of an already-composed skill, matching
+    // CompositionPipeline.KindSignature, so the actor-wide Avoid set forbids its effect.
+    private static string? KindSignatureOf(string? primitivesJson)
+    {
+        if (string.IsNullOrWhiteSpace(primitivesJson)) return null;
+        try
+        {
+            var prims = JsonSerializer.Deserialize<List<ComposedPrimitive>>(primitivesJson);
+            return prims is { Count: > 0 } ? CompositionPipeline.KindSignature(prims) : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
     private static IReadOnlyDictionary<string, int> ToBehaviorCounts(IReadOnlyList<BehaviorCount> behaviors)
     {
         var counts = new Dictionary<string, int>();
@@ -254,6 +267,20 @@ public class SkillCompositionService : ISkillCompositionService
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
     {
         var pending = await _skills.GetPendingAsync(batchSize, ct);
+
+        // Actor-wide dedup: every discovered skill must be mechanically distinct from every
+        // skill ALREADY composed, not just from its lineage. Two plays on different behavior
+        // lines could otherwise land on the same primitive-KIND set — identical effects under
+        // different names, which reads as a duplicate. Seed from all Ready skills and grow the
+        // set as we compose this batch (so same-pass siblings also stay distinct). Slice = one
+        // actor; in the MMO this should be scoped per-discoverer (first-discoverer is personal).
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in await _skills.GetReadyAsync(ct))
+        {
+            var sig = KindSignatureOf(s.PrimitivesJson);
+            if (sig is not null) taken.Add(sig);
+        }
+
         foreach (var skill in pending)
         {
             if (!TryBuildRequest(skill, out var request))
@@ -265,8 +292,13 @@ public class SkillCompositionService : ISkillCompositionService
             }
 
             // RAG: retrieve the composed lineage so the AI extends prior discoveries
-            // (discovery.md 발견 그래프 — the graph is used, not just recorded).
-            request = request with { Lineage = await RetrieveLineageAsync(skill.DiscoveryId, ct) };
+            // (discovery.md 발견 그래프 — the graph is used, not just recorded). Avoid = the
+            // actor-wide taken set so the retry steers away from every existing effect.
+            request = request with
+            {
+                Lineage = await RetrieveLineageAsync(skill.DiscoveryId, ct),
+                Avoid = taken.ToList(),
+            };
 
             var startedAt = Stopwatch.GetTimestamp();
             var outcome = await CompositionPipeline.ForgeAsync(request, _composer, MaxComposeAttempts, ct);
@@ -287,6 +319,7 @@ public class SkillCompositionService : ISkillCompositionService
                     ? DeliveryHeuristics.ForBehavior(fought)
                     : outcome.Skill.Delivery;
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
+                taken.Add(CompositionPipeline.KindSignature(outcome.Skill.Primitives)); // keep same-batch siblings distinct
                 skill.PowerCost = outcome.LastValidation.TotalCost;
                 // Deterministic, server-authoritative: a synthesized-magic skill becomes
                 // a weapon; everything else a command (design note / discovery.md).

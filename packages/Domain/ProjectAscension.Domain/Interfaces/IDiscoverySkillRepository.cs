@@ -14,6 +14,9 @@ namespace ProjectAscension.Domain.Interfaces
         Task<IReadOnlyList<DiscoverySkill>> GetByDiscoveryIdsAsync(IEnumerable<Guid> discoveryIds, CancellationToken ct = default);
         Task<DiscoverySkill?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default);
         Task<IReadOnlyList<DiscoverySkill>> GetPendingAsync(int limit, CancellationToken ct = default);
+        /// <summary>All composed (Ready) skills — used to keep every new discovery
+        /// mechanically distinct from those already discovered (actor-wide dedup).</summary>
+        Task<IReadOnlyList<DiscoverySkill>> GetReadyAsync(CancellationToken ct = default);
         Task UpdateAsync(DiscoverySkill skill, CancellationToken ct = default);
     }
 }

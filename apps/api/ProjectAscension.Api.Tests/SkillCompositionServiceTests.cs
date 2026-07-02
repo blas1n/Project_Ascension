@@ -38,6 +38,10 @@ public class SkillCompositionServiceTests
             => Task.FromResult<IReadOnlyList<DiscoverySkill>>(
                 Skills.Where(s => s.Status == DiscoveryContentStatus.Pending).Take(limit).ToList());
 
+        public Task<IReadOnlyList<DiscoverySkill>> GetReadyAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<DiscoverySkill>>(
+                Skills.Where(s => s.Status == DiscoveryContentStatus.Ready).ToList());
+
         public Task UpdateAsync(DiscoverySkill skill, CancellationToken ct = default) => Task.CompletedTask; // mutated in place
     }
 
@@ -145,6 +149,34 @@ public class SkillCompositionServiceTests
         Assert.Equal(DiscoveryContentStatus.Ready, skills.Skills[0].Status);
         Assert.False(string.IsNullOrEmpty(skills.Skills[0].Name));
         Assert.Equal(1, completed);
+    }
+
+    [Fact]
+    public async Task ComposePending_SeedsAvoidWithExistingReadySkillEffects()
+    {
+        // Actor-wide dedup: a new composition must be told to avoid the primitive-KIND set of
+        // an already-composed skill — even one on a different line — so it can't reproduce the
+        // same effect under a different name (the recurring "two identical skills" bug).
+        var skills = new FakeSkillRepo();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Existing",
+            // Kind 0 = Projectile, Kind 4 = DamageOverTime → signature "DamageOverTime,Projectile".
+            PrimitivesJson = "[{\"Kind\":0,\"Magnitude\":1},{\"Kind\":4,\"Magnitude\":1}]",
+            CreatedAt = DateTime.UtcNow,
+        });
+        skills.Skills.Add(Pending());
+
+        var composer = new CapturingComposer();
+        using var metrics = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, composer: composer)
+            .ComposePendingAsync(10);
+
+        Assert.NotNull(composer.Last);
+        Assert.Contains("DamageOverTime,Projectile", composer.Last!.Avoid ?? new List<string>());
     }
 
     [Fact]
