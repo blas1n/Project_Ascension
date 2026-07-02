@@ -186,7 +186,8 @@ namespace ProjectAscension.Game
 
             if (spec.Motion == DeliveryMotion.Projectile)
             {
-                SpawnProjectile(origin, dir, spec, color, point =>
+                bool homing = HasPrimitive(skill, SkillPrimitiveKind.Homing);
+                SpawnProjectile(origin, dir, spec, color, homing, point =>
                 {
                     SkillVfx.Burst(point, color, _intensity);
                     ResolveAt(skill, point, spec);
@@ -216,6 +217,21 @@ namespace ProjectAscension.Game
             var targets = TargetsAround(point, spec.Radius);
             var resolution = SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
             Apply(resolution, targets);
+
+            // Composed VFX: the skill's primitives add impact accents (chain arcs, fork
+            // streaks, a knockback shockwave, a lingering damage-over-time pool, a leech
+            // tether) on top of the delivery shape.
+            var points = new List<Vector3>(targets.Count);
+            foreach (var t in targets)
+                if (t is Component c) points.Add(c.transform.position);
+            SkillVfx.PlayImpactModifiers(skill, point, points, transform.position, _intensity);
+        }
+
+        private static bool HasPrimitive(Skill skill, SkillPrimitiveKind kind)
+        {
+            foreach (var p in skill.Primitives)
+                if (p.Kind == kind) return true;
+            return false;
         }
 
         private List<IDamageable> TargetsAround(Vector3 point, float radius)
@@ -235,13 +251,14 @@ namespace ProjectAscension.Game
                 ? hit.point
                 : origin + dir * range;
 
-        private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, Color color, System.Action<Vector3> onImpact)
+        private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, Color color, bool homing, System.Action<Vector3> onImpact)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "SkillProjectile";
             Destroy(go.GetComponent<Collider>()); // the projectile does its own linecast
             go.AddComponent<SkillProjectile>().Launch(
                 origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, targetMask, onImpact, color, _intensity);
+            if (homing) SkillVfx.HomingAccent(go, color, _intensity); // curling motes trail
         }
 
         private static float SqrDistance(IDamageable d, Vector3 origin)

@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
 {
@@ -102,6 +104,162 @@ namespace ProjectAscension.Game
             burst.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(48 * intensity)) });
             ps.Play();
             Object.Destroy(go, 1.2f);
+        }
+
+        // ----- Per-primitive modifiers ---------------------------------------------------
+        // The composed skill's PRIMITIVES layer extra accents on top of the delivery shape,
+        // the same way they layer extra effects on top of the damage. A skill that chains
+        // arcs between its targets; one that knocks back throws a shockwave; a lingering
+        // damage-over-time leaves a hazard pool; a fork splits into streaks. Assembled from
+        // the skill's own data — no per-skill asset.
+
+        /// <summary>Reads a resolved skill's primitives and plays the matching impact accents
+        /// at <paramref name="impact"/>. Homing is a flight accent (see <see cref="HomingAccent"/>),
+        /// handled where the projectile is spawned.</summary>
+        public static void PlayImpactModifiers(Skill skill, Vector3 impact, IReadOnlyList<Vector3> targets, Vector3 casterPos, float intensity)
+        {
+            if (skill == null) return;
+            var color = ElementColor(skill.Name);
+
+            bool chain = false, fork = false, knockback = false, leech = false;
+            int dotDuration = -1;
+            foreach (var p in skill.Primitives)
+            {
+                switch (p.Kind)
+                {
+                    case SkillPrimitiveKind.Chain: chain = true; break;
+                    case SkillPrimitiveKind.Fork: fork = true; break;
+                    case SkillPrimitiveKind.Knockback: knockback = true; break;
+                    case SkillPrimitiveKind.Leech: leech = true; break;
+                    case SkillPrimitiveKind.DamageOverTime: dotDuration = Mathf.Max(dotDuration, p.Duration); break;
+                }
+            }
+
+            if (knockback) Shockwave(impact, color, intensity);
+            if (dotDuration >= 0) Lingering(impact, color, 1.3f * intensity, intensity, 1.6f + dotDuration * 0.8f);
+            if (fork) Fork(impact, color, intensity);
+            if (chain && targets != null) ChainThrough(impact, targets, color, intensity);
+            if (leech) Beam(impact, casterPos, color, intensity * 0.5f); // a faint tether draining back
+        }
+
+        /// <summary>A flat expanding ring on the ground — a knockback's shockwave.</summary>
+        public static void Shockwave(Vector3 center, Color color, float intensity)
+        {
+            var go = new GameObject("SkillVfx_Shockwave");
+            go.transform.position = center + Vector3.up * 0.1f;
+            go.transform.rotation = Quaternion.Euler(90f, 0f, 0f); // circle lies flat on the ground
+            var ps = Configure(go, color, intensity);
+            var main = ps.main;
+            main.startSpeed = 8f * intensity;
+            main.startSize = 0.35f * intensity;
+            main.startLifetime = 0.35f;
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.15f;
+            shape.arc = 360f;
+            var emission = ps.emission;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(40 * intensity)) });
+            ps.Play();
+            Object.Destroy(go, 0.8f);
+        }
+
+        /// <summary>A lingering hazard pool at a point — a damage-over-time's residue.</summary>
+        public static void Lingering(Vector3 point, Color color, float radius, float intensity, float seconds)
+        {
+            var go = new GameObject("SkillVfx_Lingering");
+            go.transform.position = point;
+            var ps = Configure(go, color, intensity);
+            var main = ps.main;
+            main.duration = seconds;
+            main.startSpeed = 0.4f;
+            main.startSize = 0.3f * intensity;
+            main.startLifetime = 0.9f;
+            main.gravityModifier = -0.05f; // gentle upward drift
+            var emission = ps.emission;
+            emission.rateOverTime = 14f * intensity; // continuous, not a one-shot burst
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = radius;
+            shape.arc = 360f;
+            ps.Play();
+            Object.Destroy(go, seconds + 1.2f);
+        }
+
+        /// <summary>Streaks fanning out from the impact — a fork splitting.</summary>
+        public static void Fork(Vector3 origin, Color color, float intensity)
+        {
+            float[] angles = { -35f, -12f, 12f, 35f };
+            foreach (var a in angles)
+            {
+                var dir = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
+                Beam(origin, origin + dir * (1.6f * intensity), color, intensity * 0.7f);
+            }
+        }
+
+        // Jagged arcs hopping impact -> target -> target — a chain lightning look.
+        private static void ChainThrough(Vector3 impact, IReadOnlyList<Vector3> targets, Color color, float intensity)
+        {
+            var prev = impact;
+            int hops = 0;
+            foreach (var t in targets)
+            {
+                if ((t - impact).sqrMagnitude < 0.04f) continue; // skip the primary at the impact point
+                ChainArc(prev, t, color, intensity);
+                prev = t;
+                if (++hops >= 4) break;
+            }
+        }
+
+        /// <summary>A single jagged arc between two points.</summary>
+        public static void ChainArc(Vector3 from, Vector3 to, Color color, float intensity)
+        {
+            var go = new GameObject("SkillVfx_ChainArc");
+            var lr = go.AddComponent<LineRenderer>();
+            lr.material = Glow(color);
+            lr.startColor = lr.endColor = color;
+            lr.startWidth = lr.endWidth = 0.07f * intensity;
+            lr.numCapVertices = 2;
+            const int segs = 6;
+            lr.positionCount = segs + 1;
+            var perp = Vector3.Cross((to - from).normalized, Vector3.up);
+            for (int i = 0; i <= segs; i++)
+            {
+                var p = Vector3.Lerp(from, to, i / (float)segs);
+                if (i != 0 && i != segs)
+                    p += perp * (((i % 2 == 0) ? 1f : -1f) * 0.18f * intensity); // alternating jag
+                lr.SetPosition(i, p);
+            }
+            Object.Destroy(go, 0.14f);
+        }
+
+        /// <summary>Curling motes left behind a homing projectile (call once, on the projectile).
+        /// World-space simulation makes the motes hang in the air as a curving trail as it flies.</summary>
+        public static void HomingAccent(GameObject projectile, Color color, float intensity)
+        {
+            if (projectile == null) return;
+            var child = new GameObject("SkillVfx_HomingMotes");
+            child.transform.SetParent(projectile.transform, false);
+            var ps = child.AddComponent<ParticleSystem>();
+            ps.Stop();
+            var main = ps.main;
+            main.duration = 4f;
+            main.loop = true;
+            main.startLifetime = 0.35f;
+            main.startSpeed = 0.6f;
+            main.startSize = 0.11f * intensity;
+            main.startColor = color;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var emission = ps.emission;
+            emission.rateOverTime = 36f;
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.12f;
+            var renderer = child.GetComponent<ParticleSystemRenderer>();
+            renderer.material = Glow(color);
+            ps.Play();
         }
 
         // A short-lived additive-ish particle burst, coloured + scaled by intensity.
