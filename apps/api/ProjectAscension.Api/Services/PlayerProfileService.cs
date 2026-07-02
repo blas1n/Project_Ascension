@@ -34,9 +34,11 @@ public class PlayerProfileService : IPlayerProfileService
 
         p.Currency = System.Math.Max(0, request.Currency);
         p.Reputation = System.Math.Max(0, request.Reputation);
+        // Sum duplicate keys instead of ToDictionary (which throws on a repeated key → 500).
         var resources = (request.Resources ?? System.Array.Empty<ResourceCount>())
             .Where(r => !string.IsNullOrEmpty(r.Key) && r.Count > 0)
-            .ToDictionary(r => r.Key, r => r.Count);
+            .GroupBy(r => r.Key)
+            .ToDictionary(g => g.Key, g => g.Sum(r => r.Count));
         p.ResourcesJson = JsonSerializer.Serialize(resources);
         p.SoldKnowledgeJson = JsonSerializer.Serialize(request.SoldKnowledge ?? System.Array.Empty<string>());
 
