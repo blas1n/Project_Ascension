@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace ProjectAscension.Combat
 {
-    /// <summary>Spawns a placeholder projectile (no art yet).</summary>
+    /// <summary>Spawns a projectile with composed VFX — a glowing bolt, a fading trail, a
+    /// muzzle flash at the origin, and an impact burst on hit (see CombatVfx).</summary>
     public static class ProjectileFactory
     {
         public static void Spawn(AttackContext ctx, float speed, float damage, Color color, float radius = 0.12f, float gravity = 0f)
@@ -20,9 +21,14 @@ namespace ProjectAscension.Combat
 
             var renderer = go.GetComponent<Renderer>();
             if (renderer != null)
-                renderer.material.color = color;
+                renderer.material = CombatVfx.Glow(color); // bright, URP-safe, blooms
 
-            go.AddComponent<Projectile>().Launch(ctx.Direction, speed, damage, ctx.Attacker, gravity: gravity);
+            CombatVfx.AddTrail(go, color);
+            CombatVfx.Burst(go.transform.position, color, 0.7f); // muzzle flash
+
+            var projectile = go.AddComponent<Projectile>();
+            projectile.SetImpactColor(color);
+            projectile.Launch(ctx.Direction, speed, damage, ctx.Attacker, gravity: gravity);
         }
     }
 }
