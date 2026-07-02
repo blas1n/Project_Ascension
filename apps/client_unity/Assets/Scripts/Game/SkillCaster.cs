@@ -49,8 +49,14 @@ namespace ProjectAscension.Game
         private void Awake()
         {
             _self = GetComponent<HitReceiver>();
-            _effects = GetComponent<SkillEffects>(); // optional presentation stub
-            _passives = GetComponent<PassiveModifiers>(); // optional, for passive lifesteal
+            // Discovered-skill drivers. These were never placed in the scene, so a Command
+            // never fired (no ComboInvoker to catch its combo) and passives never applied (no
+            // PassiveModifiers). Provision them on the player here so discovered Commands and
+            // passives actually work; SkillEffects presents dash/shield/control.
+            _effects = GetComponent<SkillEffects>() ?? gameObject.AddComponent<SkillEffects>();
+            _passives = GetComponent<PassiveModifiers>() ?? gameObject.AddComponent<PassiveModifiers>();
+            if (GetComponent<ComboInvoker>() == null) gameObject.AddComponent<ComboInvoker>();
+            if (GetComponent<SkillGuideHud>() == null) gameObject.AddComponent<SkillGuideHud>(); // shows each command's combo
             _focus = GetComponent<FocusPool>();           // optional, gates casts by focus
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
@@ -102,19 +108,19 @@ namespace ProjectAscension.Game
             // them by name meant a genuinely-new discovered weapon never reached inventory.
             var set = GameSession.Instance?.DiscoveredSkills;
 
-            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill);
+            // The command's invocation combo (empty for weapons/passives) — carried on the
+            // DiscoveredSkill so the guide HUD can show the player how to trigger it.
+            IReadOnlyList<InputToken> combo = _manifestation == ManifestationKind.Command
+                ? InputCombo.Parse(dto.invocationCombo ?? new string[0])
+                : System.Array.Empty<InputToken>();
+            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill, combo);
             set?.Add(discovered);
 
             // A command is invoked by its assigned combo; a passive applies continuously.
             if (_manifestation == ManifestationKind.Command)
-            {
-                var combo = InputCombo.Parse(dto.invocationCombo ?? new string[0]);
-                FindAnyObjectByType<ComboInvoker>()?.RegisterCommand(combo, discovered);
-            }
+                (GetComponent<ComboInvoker>() ?? FindAnyObjectByType<ComboInvoker>())?.RegisterCommand(combo, discovered);
             else if (_manifestation == ManifestationKind.Passive)
-            {
-                FindAnyObjectByType<PassiveModifiers>()?.Refresh();
-            }
+                (GetComponent<PassiveModifiers>() ?? FindAnyObjectByType<PassiveModifiers>())?.Refresh();
             else if (_manifestation == ManifestationKind.Weapon)
             {
                 // Mint a new equippable weapon. With a session (the full Bootstrap→City→
