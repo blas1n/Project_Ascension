@@ -36,6 +36,12 @@ public class DiscoverySkillRepository : IDiscoverySkillRepository
             .Take(limit)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<DiscoverySkill>> GetReadyAsync(CancellationToken ct = default)
+        => await _db.DiscoverySkills
+            .AsNoTracking()
+            .Where(s => s.Status == DiscoveryContentStatus.Ready)
+            .ToListAsync(ct);
+
     public async Task UpdateAsync(DiscoverySkill skill, CancellationToken ct = default)
     {
         _db.DiscoverySkills.Update(skill);

@@ -37,6 +37,11 @@ public static class CompositionPipeline
         var avoid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var art in request.Lineage ?? Array.Empty<PriorArt>())
             avoid.Add(KindSignature(art.Primitives));
+        // ...and every skill the actor has already composed (Avoid), so two discoveries on
+        // DIFFERENT behavior lines can't land on the same effect — the lineage alone only
+        // covers the same line, which let cross-line duplicates slip through.
+        foreach (var sig in request.Avoid ?? Array.Empty<string>())
+            if (!string.IsNullOrEmpty(sig)) avoid.Add(sig);
 
         ValidationResult last = ValidationResult.Fail(CompositionError.EmptyComposition);
         SkillComposition? lastValid = null;
@@ -67,7 +72,8 @@ public static class CompositionPipeline
     }
 
     // The distinct primitive KINDS a skill is built from (order/magnitude-independent) — two
-    // skills sharing this signature are the "same" mechanically, i.e. duplicates.
-    private static string KindSignature(IReadOnlyList<ComposedPrimitive> primitives)
+    // skills sharing this signature are the "same" mechanically, i.e. duplicates. Public so
+    // the composition service can seed the actor-wide Avoid set with the same signature.
+    public static string KindSignature(IReadOnlyList<ComposedPrimitive> primitives)
         => string.Join(",", primitives.Select(p => p.Kind).Distinct().OrderBy(k => k.ToString(), StringComparer.Ordinal));
 }
