@@ -37,9 +37,10 @@ namespace ProjectAscension.Player
         public MovementSettings ToMovementSettings()
         {
             var s = PlayerStatsCatalog.Current;
+            int extraJumps = MovementCapabilityCatalog.ExtraJumps; // from discovered mobility passives (double jump)
             return s == null
-                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration)
-                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration);
+                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration, extraJumps)
+                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration, extraJumps);
         }
     }
 }

@@ -15,9 +15,19 @@ public class SkillManifestTests
     }
 
     [Fact]
-    public void MobilityComposition_IsCommand()
+    public void MobilityComposition_IsPassive()
     {
+        // Mobility (Dash/Blink) is a movement CAPABILITY (double jump), used via the movement
+        // input — a passive, not a hotkey command.
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Dash, 3), new ComposedPrimitive(PrimitiveKind.Blink, 1));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+    }
+
+    [Fact]
+    public void ControlComposition_IsCommand()
+    {
+        // Control (Stun/Knockback/Slow) is an actively invoked ability → a hotkey command.
+        var skill = Of(new ComposedPrimitive(PrimitiveKind.Stun, 3), new ComposedPrimitive(PrimitiveKind.Knockback, 1));
         Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill));
     }
 
@@ -30,14 +40,15 @@ public class SkillManifestTests
     }
 
     [Fact]
-    public void UtilityDominantMix_IsCommand()
+    public void MobilityDominantMix_IsPassive()
     {
-        // Dash 3 (mobility) outweighs Shield 1 (defensive) and Projectile 1 (offensive).
+        // Dash 3 (mobility) outweighs Stun 1 (control) and Projectile 1 (offensive) → a
+        // movement-capability passive.
         var skill = Of(
             new ComposedPrimitive(PrimitiveKind.Dash, 3),
-            new ComposedPrimitive(PrimitiveKind.Shield, 1),
+            new ComposedPrimitive(PrimitiveKind.Stun, 1),
             new ComposedPrimitive(PrimitiveKind.Projectile, 1));
-        Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
     }
 
     [Fact]

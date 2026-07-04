@@ -12,7 +12,8 @@ namespace ProjectAscension.GameSimulation.Player
         float Gravity = 20f,
         float GroundY = 0f,
         float DodgeSpeed = 12f,
-        float DodgeDuration = 0.2f
+        float DodgeDuration = 0.2f,
+        int ExtraJumps = 0 // air jumps beyond the ground jump (mobility passives — double jump)
     )
     {
         public static readonly MovementSettings Default = new();

@@ -43,9 +43,17 @@ namespace ProjectAscension.GameSimulation.Player
                 velocity = new Vector3(input.MoveX * settings.MoveSpeed, velocity.Y, input.MoveZ * settings.MoveSpeed);
             }
 
-            // Jump (only when grounded)
-            if (input.Jump && state.IsGrounded)
+            // Jump: from the ground, or an EXTRA air jump (double jump) — but only after a
+            // ground jump (JumpsUsed >= 1) and within the mobility-passive allowance. Walking
+            // off a ledge (JumpsUsed 0, airborne) does not grant a free air jump.
+            int jumpsUsed = state.JumpsUsed;
+            bool canJump = input.Jump &&
+                (state.IsGrounded || (jumpsUsed >= 1 && jumpsUsed < 1 + settings.ExtraJumps));
+            if (canJump)
+            {
                 velocity = new Vector3(velocity.X, settings.JumpVelocity, velocity.Z);
+                jumpsUsed = state.IsGrounded ? 1 : jumpsUsed + 1;
+            }
 
             // Gravity (only when airborne)
             if (!state.IsGrounded)
@@ -60,6 +68,7 @@ namespace ProjectAscension.GameSimulation.Player
             {
                 position = new Vector3(position.X, settings.GroundY, position.Z);
                 velocity = new Vector3(velocity.X, 0f, velocity.Z);
+                jumpsUsed = 0; // landed — refresh jumps
             }
 
             return state with
@@ -69,7 +78,8 @@ namespace ProjectAscension.GameSimulation.Player
                 IsGrounded = isGrounded,
                 InputSequence = input.Sequence,
                 DodgeVelocity = dodgeVelocity,
-                DodgeTimeRemaining = dodgeTimeRemaining < 0f ? 0f : dodgeTimeRemaining
+                DodgeTimeRemaining = dodgeTimeRemaining < 0f ? 0f : dodgeTimeRemaining,
+                JumpsUsed = jumpsUsed
             };
         }
     }

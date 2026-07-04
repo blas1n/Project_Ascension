@@ -26,24 +26,31 @@ public static class SkillManifest
 {
     public static ManifestationKind Classify(SkillComposition composition)
     {
-        int offensive = 0; // Offensive
-        int active = 0;    // Mobility + Control
-        int defensive = 0; // Defensive
+        int offensive = 0;
+        int control = 0;
+        int mobility = 0;
+        int defensive = 0;
         foreach (var p in composition.Primitives)
         {
             if (!PrimitiveCatalog.TryGet(p.Kind, out var def) || def is null) continue;
             switch (def.Category)
             {
                 case PrimitiveCategory.Offensive: offensive += p.Magnitude; break;
+                case PrimitiveCategory.Control: control += p.Magnitude; break;
+                case PrimitiveCategory.Mobility: mobility += p.Magnitude; break;
                 case PrimitiveCategory.Defensive: defensive += p.Magnitude; break;
-                default: active += p.Magnitude; break; // Mobility / Control
             }
         }
 
-        // Offensive-dominant → a weapon you aim and fire. Otherwise mobility/control
-        // (an actively invoked technique) → a command; defensive-dominant (persistent
-        // protection/sustain) → an always-on passive.
-        if (offensive >= active && offensive >= defensive) return ManifestationKind.Weapon;
-        return active >= defensive ? ManifestationKind.Command : ManifestationKind.Passive;
+        // Offensive-dominant → a Weapon you aim and fire. Otherwise:
+        //   Control-dominant → a Command you actively invoke (stun burst, knockback).
+        //   Mobility-dominant → a Passive movement CAPABILITY (double jump, extra dash) —
+        //     used via the movement input, not cast, so it's not a hotkey ability.
+        //   Defensive-dominant → a Passive ward/sustain.
+        if (offensive >= control && offensive >= mobility && offensive >= defensive)
+            return ManifestationKind.Weapon;
+        if (control >= mobility && control >= defensive)
+            return ManifestationKind.Command;
+        return ManifestationKind.Passive; // mobility or defensive
     }
 }

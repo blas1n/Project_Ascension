@@ -19,6 +19,25 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
+        public void Resolve_MobilityGrantsExtraJumps()
+        {
+            // A mobility passive (Dash/Blink) grants extra air jumps — double jump.
+            var effect = PassiveResolver.Resolve(new Skill("Leap",
+                new[] { new SkillPrimitive(SkillPrimitiveKind.Blink, 1) }));
+            Assert.Equal(1, effect.ExtraJumps);
+        }
+
+        [Fact]
+        public void AggregateExtraJumps_IsCapped()
+        {
+            var set = new DiscoveredSkillSet();
+            for (int i = 0; i < 5; i++)
+                set.Add(Passive($"leap-{i}", new SkillPrimitive(SkillPrimitiveKind.Dash, 1)));
+
+            Assert.Equal(PassiveEffect.MaxExtraJumps, set.AggregatePassive().ExtraJumps);
+        }
+
+        [Fact]
         public void AggregateDamageReduction_IsCapped()
         {
             // Many strong wards stack but cannot exceed the cap.
