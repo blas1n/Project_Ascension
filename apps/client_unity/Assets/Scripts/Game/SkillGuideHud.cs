@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
@@ -15,13 +16,27 @@ namespace ProjectAscension.Game
     /// </summary>
     public sealed class SkillGuideHud : MonoBehaviour
     {
+        private Loadout _loadout;
+
         private void OnGUI()
         {
             var set = GameSession.Instance?.DiscoveredSkills;
-            if (set == null || (set.Commands.Count == 0 && set.Passives.Count == 0 && set.Weapons.Count == 0))
-                return;
+            if (set == null) return;
 
             var sb = new StringBuilder();
+
+            // Which weapon each click fires — LMB = right hand, RMB = left hand (PlayerCombat).
+            // Named explicitly because a bare "LMB" in a combo doesn't say which weapon it is,
+            // and the two hands can be swapped.
+            if (_loadout == null) _loadout = FindAnyObjectByType<Loadout>();
+            if (_loadout != null)
+            {
+                sb.AppendLine("IN HAND:");
+                sb.AppendLine($"  LMB → {WeaponName(_loadout.RightSlot)}");
+                sb.AppendLine($"  RMB → {WeaponName(_loadout.LeftSlot)}");
+                sb.AppendLine();
+            }
+
             sb.AppendLine("DISCOVERED SKILLS");
 
             if (set.Commands.Count > 0)
@@ -45,6 +60,12 @@ namespace ProjectAscension.Game
 
             // Top-right, clear of the contract HUD / focus / gold on the left.
             GUI.Label(new Rect(Screen.width - 380f, 20f, 360f, 460f), sb.ToString());
+        }
+
+        private static string WeaponName(EquipmentSlot slot)
+        {
+            var data = slot != null && slot.Current != null ? slot.Current.Data : null;
+            return data != null ? data.DisplayName : "(empty)";
         }
 
         private static string ComboText(IReadOnlyList<InputToken> combo)

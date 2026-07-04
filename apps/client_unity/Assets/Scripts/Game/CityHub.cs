@@ -67,8 +67,10 @@ namespace ProjectAscension.Game
             }
 
             GUILayout.Label("Loadout (chosen from inventory):");
-            DrawWeaponSelector("Left ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
-            DrawWeaponSelector("Right", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
+            // Left hand fires on RMB, right hand on LMB (PlayerCombat) — label it so the combo
+            // guide's "LMB/RMB" is unambiguous.
+            DrawWeaponSelector("Left (RMB) ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
+            DrawWeaponSelector("Right (LMB)", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
             GUILayout.Space(10);
 
             if (contracts.Active == null)
