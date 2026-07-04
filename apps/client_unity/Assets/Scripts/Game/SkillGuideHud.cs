@@ -41,9 +41,16 @@ namespace ProjectAscension.Game
 
             if (set.Commands.Count > 0)
             {
-                sb.AppendLine("\nCommands — press the combo:");
+                var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
+                sb.AppendLine("Commands — press the combo:");
                 foreach (var c in set.Commands)
-                    sb.AppendLine($"  {c.Name}:  {ComboText(c.Combo)}");
+                {
+                    var required = CommandGate.RequiredEquipment(c);
+                    string line = required.Count == 0 || CommandGate.Invocable(c, current)
+                        ? ComboText(c.Combo)
+                        : $"{ComboText(c.Combo)}  [LOCKED — needs {string.Join("/", required)}]";
+                    sb.AppendLine($"  {c.Name}:  {line}");
+                }
             }
             if (set.Passives.Count > 0)
             {

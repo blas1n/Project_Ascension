@@ -21,5 +21,8 @@ namespace ProjectAscension.GameSimulation.Combat
     /// shows it so the player knows how to trigger the command.</summary>
     public sealed record DiscoveredSkill(
         string Name, ManifestationKind Manifestation, Skill Skill,
-        IReadOnlyList<InputToken>? Combo = null);
+        IReadOnlyList<InputToken>? Combo = null,
+        // The discovery's context tags (equipment + situation at discovery). A command whose
+        // combo uses a weapon click is gated by its equipment tags — ADR 0005 (재개정).
+        IReadOnlyList<string>? ContextTags = null);
 }
