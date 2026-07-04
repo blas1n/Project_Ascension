@@ -70,8 +70,19 @@ namespace ProjectAscension.Game
         {
             SyncFromSet(); // pick up any commands added since the last input
             var command = _recognizer.Feed(token, Time.time);
-            if (command == null) return;
+            if (command != null) TryInvoke(command);
+        }
 
+        // A prefix combo (e.g. "Dodge,Jump" when "Dodge,Jump,RMB" also exists) is deferred by
+        // the recognizer; fire it once its extension window lapses.
+        private void Update()
+        {
+            var command = _recognizer.Tick(Time.time);
+            if (command != null) TryInvoke(command);
+        }
+
+        private void TryInvoke(DiscoveredSkill command)
+        {
             // ADR 0005 (재개정): a command whose combo uses a weapon click can only be invoked
             // with the weapon category it was discovered with (a flame+gun technique isn't
             // reproducible with a sword). Behaviour-only combos are unrestricted.

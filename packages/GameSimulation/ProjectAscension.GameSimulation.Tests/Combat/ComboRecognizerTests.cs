@@ -39,13 +39,56 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
-        public void OutsideTheWindow_DoesNotFire()
+        public void GapLongerThanWindow_BreaksTheChain()
         {
             var recognizer = WithCommand(out _, window: 1.0f);
 
             Assert.Null(recognizer.Feed(InputToken.Jump, 0.0f));
             Assert.Null(recognizer.Feed(InputToken.RightClick, 0.5f));
-            Assert.Null(recognizer.Feed(InputToken.LeftClick, 1.2f)); // 1.2s span > 1.0s window
+            Assert.Null(recognizer.Feed(InputToken.LeftClick, 1.7f)); // gap 1.2s > 1.0s → chain broke
+        }
+
+        [Fact]
+        public void PerGapTiming_ForgivesALongTotalSpan()
+        {
+            var recognizer = WithCommand(out var skill, window: 1.5f);
+
+            // Total span 2.0s > window, but each gap is only 1.0s ≤ window — still fires.
+            Assert.Null(recognizer.Feed(InputToken.Jump, 0.0f));
+            Assert.Null(recognizer.Feed(InputToken.RightClick, 1.0f));
+            Assert.Same(skill, recognizer.Feed(InputToken.LeftClick, 2.0f));
+        }
+
+        // Register a short combo that is a prefix of a longer one.
+        private static ComboRecognizer WithPrefixPair(out DiscoveredSkill shortSkill, out DiscoveredSkill longSkill)
+        {
+            var r = new ComboRecognizer(window: 1.5f, disambiguation: 0.4f);
+            shortSkill = Command();
+            longSkill = Command();
+            r.Register(new[] { InputToken.Dodge, InputToken.Jump }, shortSkill);
+            r.Register(new[] { InputToken.Dodge, InputToken.Jump, InputToken.RightClick }, longSkill);
+            return r;
+        }
+
+        [Fact]
+        public void PrefixCombo_IsDeferred_ThenFiresOnTimeout()
+        {
+            var r = WithPrefixPair(out var shortSkill, out _);
+
+            Assert.Null(r.Feed(InputToken.Dodge, 0.0f));
+            Assert.Null(r.Feed(InputToken.Jump, 0.2f)); // completes the prefix but defers (a longer combo exists)
+            Assert.Null(r.Tick(0.5f));                  // before the 0.2+0.4 deadline
+            Assert.Same(shortSkill, r.Tick(0.7f));      // no extension came → the short combo fires
+        }
+
+        [Fact]
+        public void PrefixCombo_ExtendedInTime_FiresTheLongerCombo()
+        {
+            var r = WithPrefixPair(out _, out var longSkill);
+
+            Assert.Null(r.Feed(InputToken.Dodge, 0.0f));
+            Assert.Null(r.Feed(InputToken.Jump, 0.2f));                    // deferred
+            Assert.Same(longSkill, r.Feed(InputToken.RightClick, 0.4f));   // extended within grace → longer fires
         }
 
         [Fact]
