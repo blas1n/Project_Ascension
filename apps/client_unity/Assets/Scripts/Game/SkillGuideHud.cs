@@ -43,7 +43,8 @@ namespace ProjectAscension.Game
                     sb.AppendLine($"  {w.Name}");
             }
 
-            GUI.Label(new Rect(20f, 20f, 480f, 420f), sb.ToString());
+            // Top-right, clear of the contract HUD / focus / gold on the left.
+            GUI.Label(new Rect(Screen.width - 380f, 20f, 360f, 460f), sb.ToString());
         }
 
         private static string ComboText(IReadOnlyList<InputToken> combo)

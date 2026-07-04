@@ -24,6 +24,7 @@ namespace ProjectAscension.Game
     public sealed class SkillCaster : MonoBehaviour
     {
         [SerializeField] private string serverUrl = "";
+        [SerializeField] private string actorId = "11111111-1111-1111-1111-111111111111"; // for restoring prior discoveries
         [SerializeField] private Transform aimSource;
         [SerializeField] private LayerMask targetMask = ~0;
         [SerializeField] private float dotInterval = 1f;
@@ -64,6 +65,30 @@ namespace ProjectAscension.Game
         // A discovered weapon (SpellWeapon) routes its cast here when fired.
         private void OnEnable() => GameplayEvents.SkillCastRequested += ExecuteSkill;
         private void OnDisable() => GameplayEvents.SkillCastRequested -= ExecuteSkill;
+
+        // Restore previously-discovered skills into the session. A discovery's claim persists
+        // server-side, so re-playing the same behavior returns fired=false and the reporter
+        // never re-loads it — without this restore, every command/passive/weapon discovered in
+        // a past session is lost on restart (empty guide, dead commands). Runs only when the
+        // set is empty (a fresh session); re-entering the frontier keeps what's already loaded.
+        private void Start()
+        {
+            if (_api == null || string.IsNullOrEmpty(actorId)) return;
+            var set = GameSession.Instance?.DiscoveredSkills;
+            if (set == null) return;
+            if (set.Weapons.Count > 0 || set.Commands.Count > 0 || set.Passives.Count > 0) return;
+            StartCoroutine(RestoreDiscoveredSkills());
+        }
+
+        private IEnumerator RestoreDiscoveredSkills()
+        {
+            DiscoveryListItemDto[] list = null;
+            yield return _api.GetByActor(actorId, r => list = r);
+            if (list == null) yield break;
+            foreach (var d in list)
+                if (!string.IsNullOrEmpty(d.id))
+                    LoadSkill(d.id); // polls the (already-Ready) skill, adds it to the set + registers it
+        }
 
         /// <summary>Fetch a discovered skill from the server and equip it for casting. The
         /// content is composed asynchronously by the AI, so this polls until it's Ready.</summary>
