@@ -39,6 +39,15 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class DiscoveryListItemDto
+    {
+        public string id;
+        public string type;
+        public string title;
+        public string description;
+    }
+
+    [Serializable]
     public sealed class SkillResponseDto
     {
         public string discoveryId;
@@ -80,6 +89,24 @@ namespace ProjectAscension.Net
             yield return GetJson(
                 $"{_baseUrl}/api/discoveries/{discoveryId}/skill",
                 json => onResult?.Invoke(JsonUtility.FromJson<SkillResponseDto>(json)));
+        }
+
+        [Serializable]
+        private sealed class DiscoveryListWrapper { public DiscoveryListItemDto[] items; }
+
+        /// <summary>All discoveries the actor owns — used to restore previously-discovered
+        /// skills into the session (their claims persist server-side, so re-playing the same
+        /// behavior returns fired=false; without this the skills would be lost on restart).</summary>
+        public IEnumerator GetByActor(string actorId, Action<DiscoveryListItemDto[]> onResult)
+        {
+            yield return GetJson(
+                $"{_baseUrl}/api/discoveries?actorId={actorId}",
+                json =>
+                {
+                    // JsonUtility can't parse a top-level array — wrap it.
+                    var wrapped = JsonUtility.FromJson<DiscoveryListWrapper>("{\"items\":" + json + "}");
+                    onResult?.Invoke(wrapped?.items ?? Array.Empty<DiscoveryListItemDto>());
+                });
         }
 
         private static IEnumerator PostJson(string url, string body, Action<string> onOk)
