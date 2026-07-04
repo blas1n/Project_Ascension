@@ -59,36 +59,21 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             Assert.Same(skill, recognizer.Feed(InputToken.LeftClick, 2.0f));
         }
 
-        // Register a short combo that is a prefix of a longer one.
-        private static ComboRecognizer WithPrefixPair(out DiscoveredSkill shortSkill, out DiscoveredSkill longSkill)
-        {
-            var r = new ComboRecognizer(window: 1.5f, disambiguation: 0.4f);
-            shortSkill = Command();
-            longSkill = Command();
-            r.Register(new[] { InputToken.Dodge, InputToken.Jump }, shortSkill);
-            r.Register(new[] { InputToken.Dodge, InputToken.Jump, InputToken.RightClick }, longSkill);
-            return r;
-        }
-
+        // Combos are assigned prefix-free (ComboAssigner), but two can still share a SUFFIX;
+        // the longest tail match wins, fired immediately.
         [Fact]
-        public void PrefixCombo_IsDeferred_ThenFiresOnTimeout()
+        public void LongestTailMatch_Wins()
         {
-            var r = WithPrefixPair(out var shortSkill, out _);
+            var r = new ComboRecognizer(window: 1.5f);
+            var two = Command();
+            var three = Command();
+            r.Register(new[] { InputToken.Jump, InputToken.RightClick }, two);          // suffix of the next
+            r.Register(new[] { InputToken.Dodge, InputToken.Jump, InputToken.RightClick }, three);
 
             Assert.Null(r.Feed(InputToken.Dodge, 0.0f));
-            Assert.Null(r.Feed(InputToken.Jump, 0.2f)); // completes the prefix but defers (a longer combo exists)
-            Assert.Null(r.Tick(0.5f));                  // before the 0.2+0.4 deadline
-            Assert.Same(shortSkill, r.Tick(0.7f));      // no extension came → the short combo fires
-        }
-
-        [Fact]
-        public void PrefixCombo_ExtendedInTime_FiresTheLongerCombo()
-        {
-            var r = WithPrefixPair(out _, out var longSkill);
-
-            Assert.Null(r.Feed(InputToken.Dodge, 0.0f));
-            Assert.Null(r.Feed(InputToken.Jump, 0.2f));                    // deferred
-            Assert.Same(longSkill, r.Feed(InputToken.RightClick, 0.4f));   // extended within grace → longer fires
+            Assert.Null(r.Feed(InputToken.Jump, 0.2f));
+            // Tail is now both [Jump,RightClick] and [Dodge,Jump,RightClick] — the longer fires.
+            Assert.Same(three, r.Feed(InputToken.RightClick, 0.4f));
         }
 
         [Fact]

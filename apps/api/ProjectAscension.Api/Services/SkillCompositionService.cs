@@ -222,6 +222,39 @@ public class SkillCompositionService : ISkillCompositionService
         catch (JsonException) { return new List<string>(); }
     }
 
+    // Make every existing command's combo prefix-free (in CreatedAt order, so the result is
+    // stable), persisting any that had to change, and return the resulting set to seed new
+    // assignments. Idempotent — once settled, later passes read but don't write.
+    private async Task<List<IReadOnlyList<InputToken>>> ReconcileCommandCombosAsync(CancellationToken ct)
+    {
+        var commands = (await _skills.GetReadyAsync(ct))
+            .Where(s => string.Equals(s.Manifestation, nameof(ManifestationKind.Command), StringComparison.OrdinalIgnoreCase))
+            .OrderBy(s => s.CreatedAt)
+            .ToList();
+
+        var seen = new List<IReadOnlyList<InputToken>>();
+        foreach (var s in commands)
+        {
+            var current = ComboAssigner.Parse(DeserializeTags(s.InvocationComboJson));
+            var reconciled = ComboAssigner.EnsurePrefixFree(current, seen, s.DiscoveryId.ToString());
+            seen.Add(reconciled);
+            if (!SameCombo(current, reconciled))
+            {
+                s.InvocationComboJson = JsonSerializer.Serialize(reconciled.Select(t => t.ToString()).ToList());
+                await _skills.UpdateAsync(s, ct);
+            }
+        }
+        return seen;
+    }
+
+    private static bool SameCombo(IReadOnlyList<InputToken> a, IReadOnlyList<InputToken> b)
+    {
+        if (a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+            if (a[i] != b[i]) return false;
+        return true;
+    }
+
     // The primitive-KIND signature of an already-composed skill, matching
     // CompositionPipeline.KindSignature, so the actor-wide Avoid set forbids its effect.
     private static string? KindSignatureOf(string? primitivesJson)
@@ -281,6 +314,10 @@ public class SkillCompositionService : ISkillCompositionService
             if (sig is not null) taken.Add(sig);
         }
 
+        // Command combos must be PREFIX-FREE across the actor so the client fires the instant a
+        // combo completes. Reconcile the existing commands' combos and seed the set for new ones.
+        var comboSet = await ReconcileCommandCombosAsync(ct);
+
         foreach (var skill in pending)
         {
             if (!TryBuildRequest(skill, out var request))
@@ -328,13 +365,20 @@ public class SkillCompositionService : ISkillCompositionService
 
                 // A command is invoked by a button combo the rule engine assigns
                 // deterministically (decoupled from the discovery behaviors — even a
-                // single-behavior discovery like double jump gets one). Weapons fire on
-                // the attack input, so they need no combo.
-                skill.InvocationComboJson = manifestation == ManifestationKind.Command
-                    ? JsonSerializer.Serialize(ComboAssigner
-                        .Assign(DeserializeTags(skill.BehaviorsJson), skill.DiscoveryId.ToString())
-                        .Select(t => t.ToString()).ToList())
-                    : "[]";
+                // single-behavior discovery like double jump gets one). It is made PREFIX-FREE
+                // against the actor's other commands so the client can fire the instant the
+                // combo completes (no disambiguation delay). Weapons fire on the attack input.
+                if (manifestation == ManifestationKind.Command)
+                {
+                    var combo = ComboAssigner.Assign(DeserializeTags(skill.BehaviorsJson), skill.DiscoveryId.ToString());
+                    combo = ComboAssigner.EnsurePrefixFree(combo, comboSet, skill.DiscoveryId.ToString());
+                    comboSet.Add(combo);
+                    skill.InvocationComboJson = JsonSerializer.Serialize(combo.Select(t => t.ToString()).ToList());
+                }
+                else
+                {
+                    skill.InvocationComboJson = "[]";
+                }
 
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;

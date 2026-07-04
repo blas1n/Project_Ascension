@@ -73,14 +73,6 @@ namespace ProjectAscension.Game
             if (command != null) TryInvoke(command);
         }
 
-        // A prefix combo (e.g. "Dodge,Jump" when "Dodge,Jump,RMB" also exists) is deferred by
-        // the recognizer; fire it once its extension window lapses.
-        private void Update()
-        {
-            var command = _recognizer.Tick(Time.time);
-            if (command != null) TryInvoke(command);
-        }
-
         private void TryInvoke(DiscoveredSkill command)
         {
             // ADR 0005 (재개정): a command whose combo uses a weapon click can only be invoked
