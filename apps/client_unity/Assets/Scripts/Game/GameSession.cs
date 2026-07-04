@@ -35,6 +35,42 @@ namespace ProjectAscension.Game
         /// magic) and commands (techniques). Populated as discoveries are fetched.</summary>
         public DiscoveredSkillSet DiscoveredSkills { get; private set; }
 
+        /// <summary>The player's ability bar — discovered Commands bound to the AbilitySlots
+        /// hotkeys (Q/E/R/F). Session-persistent (like the weapon loadout); defaults to the
+        /// first discovered commands until the player customises it in the city.</summary>
+        public DiscoveredSkill[] CommandSlots { get; } = new DiscoveredSkill[AbilitySlots.SlotCount];
+
+        private bool _slotDefaultsApplied;
+
+        /// <summary>Bind a discovered command (or null) to a hotkey slot.</summary>
+        public void AssignCommandSlot(int index, DiscoveredSkill command)
+        {
+            if (index < 0 || index >= CommandSlots.Length) return;
+            CommandSlots[index] = command;
+            _slotDefaultsApplied = true; // player took control — stop auto-defaulting
+        }
+
+        /// <summary>The slot a command is bound to, or -1 if unassigned.</summary>
+        public int SlotOf(DiscoveredSkill command)
+        {
+            if (command == null) return -1;
+            for (int i = 0; i < CommandSlots.Length; i++)
+                if (ReferenceEquals(CommandSlots[i], command)) return i;
+            return -1;
+        }
+
+        /// <summary>Seed empty slots with the first discovered commands, once, when the player
+        /// hasn't customised the bar (retried until commands finish loading).</summary>
+        public void EnsureDefaultCommandSlots()
+        {
+            if (_slotDefaultsApplied) return;
+            var commands = DiscoveredSkills?.Commands;
+            if (commands == null || commands.Count == 0) return;
+            for (int i = 0; i < CommandSlots.Length && i < commands.Count; i++)
+                CommandSlots[i] = commands[i];
+            _slotDefaultsApplied = true;
+        }
+
         // The combat balance the resolvers use is DB-driven, fetched once at startup into
         // the shared CombatTuningCatalog (so the Player layer can read it too); offline
         // keeps CombatTuning.Default.

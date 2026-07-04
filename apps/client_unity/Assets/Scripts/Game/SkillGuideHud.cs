@@ -43,16 +43,15 @@ namespace ProjectAscension.Game
             {
                 var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
                 sb.AppendLine("Commands — press the key:");
-                int i = 0;
                 foreach (var c in set.Commands)
                 {
-                    string key = AbilitySlots.SlotLabel(i) ?? "unslotted";
+                    int slot = GameSession.Instance != null ? GameSession.Instance.SlotOf(c) : -1;
+                    string key = slot >= 0 ? AbilitySlots.SlotLabel(slot) : "unassigned";
                     var required = CommandGate.RequiredEquipment(c);
                     string status = required.Count > 0 && !CommandGate.Invocable(c, current)
                         ? $"  [LOCKED — needs {string.Join("/", required)}]"
                         : "";
                     sb.AppendLine($"  [{key}] {c.Name}{status}");
-                    i++;
                 }
             }
             if (set.Passives.Count > 0)
