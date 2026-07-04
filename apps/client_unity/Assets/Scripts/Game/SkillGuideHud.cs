@@ -42,14 +42,17 @@ namespace ProjectAscension.Game
             if (set.Commands.Count > 0)
             {
                 var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
-                sb.AppendLine("Commands — press the combo:");
+                sb.AppendLine("Commands — press the key:");
+                int i = 0;
                 foreach (var c in set.Commands)
                 {
+                    string key = AbilitySlots.SlotLabel(i) ?? "unslotted";
                     var required = CommandGate.RequiredEquipment(c);
-                    string line = required.Count == 0 || CommandGate.Invocable(c, current)
-                        ? ComboText(c.Combo)
-                        : $"{ComboText(c.Combo)}  [LOCKED — needs {string.Join("/", required)}]";
-                    sb.AppendLine($"  {c.Name}:  {line}");
+                    string status = required.Count > 0 && !CommandGate.Invocable(c, current)
+                        ? $"  [LOCKED — needs {string.Join("/", required)}]"
+                        : "";
+                    sb.AppendLine($"  [{key}] {c.Name}{status}");
+                    i++;
                 }
             }
             if (set.Passives.Count > 0)
@@ -74,22 +77,5 @@ namespace ProjectAscension.Game
             var data = slot != null && slot.Current != null ? slot.Current.Data : null;
             return data != null ? data.DisplayName : "(empty)";
         }
-
-        private static string ComboText(IReadOnlyList<InputToken> combo)
-        {
-            if (combo == null || combo.Count == 0) return "(no combo)";
-            var parts = new string[combo.Count];
-            for (int i = 0; i < combo.Count; i++) parts[i] = Key(combo[i]);
-            return string.Join(" > ", parts);
-        }
-
-        private static string Key(InputToken t) => t switch
-        {
-            InputToken.Jump => "Jump",
-            InputToken.Dodge => "Dodge",
-            InputToken.LeftClick => "LMB",
-            InputToken.RightClick => "RMB",
-            _ => t.ToString(),
-        };
     }
 }
