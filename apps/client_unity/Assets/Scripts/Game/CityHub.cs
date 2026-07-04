@@ -167,11 +167,20 @@ namespace ProjectAscension.Game
             GUILayout.Label($"DISCOVERIES ({session.Discovery.DiscoveredCount})");
             GUILayout.Space(4);
             bool any = false;
-            foreach (var discovery in session.Discovery.DiscoveredCandidates())
+            // Show each discovered skill WITH how to use it — a weapon you equip and fire, a
+            // command you invoke by its button combo, or an always-on passive. This is the
+            // guide: it's the only place the player learns a command's combo.
+            foreach (var d in session.DiscoveredSkills.All)
             {
-                GUILayout.Label($"• {discovery.Title}");
+                GUILayout.Label($"• {d.Name}  — {UseHint(d)}");
                 any = true;
             }
+            if (!any) // fall back to the journal titles if the skill set isn't populated yet
+                foreach (var discovery in session.Discovery.DiscoveredCandidates())
+                {
+                    GUILayout.Label($"• {discovery.Title}");
+                    any = true;
+                }
             if (!any)
                 GUILayout.Label("None yet — fight and explore to discover.");
 
@@ -359,6 +368,31 @@ namespace ProjectAscension.Game
 
             GUILayout.EndArea();
         }
+
+        // How the player uses a discovered skill — the guide text shown in the DISCOVERIES panel.
+        private static string UseHint(DiscoveredSkill d) => d.Manifestation switch
+        {
+            ManifestationKind.Weapon => "weapon: equip & fire",
+            ManifestationKind.Passive => "passive: always on",
+            _ => "command: " + ComboText(d.Combo),
+        };
+
+        private static string ComboText(IReadOnlyList<InputToken> combo)
+        {
+            if (combo == null || combo.Count == 0) return "(no combo)";
+            var parts = new string[combo.Count];
+            for (int i = 0; i < combo.Count; i++) parts[i] = ComboKey(combo[i]);
+            return string.Join(" > ", parts);
+        }
+
+        private static string ComboKey(InputToken t) => t switch
+        {
+            InputToken.Jump => "Jump",
+            InputToken.Dodge => "Dodge",
+            InputToken.LeftClick => "LMB",
+            InputToken.RightClick => "RMB",
+            _ => t.ToString(),
+        };
 
         // NPCs react to the player's standing (the slice's "명성 — NPC 반응 변화").
         private static string NpcReaction(string role, int reputation)
