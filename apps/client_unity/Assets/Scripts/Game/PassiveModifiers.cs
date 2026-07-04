@@ -1,6 +1,7 @@
 using UnityEngine;
 using ProjectAscension.Combat;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Player;
 
 namespace ProjectAscension.Game
 {
@@ -29,6 +30,7 @@ namespace ProjectAscension.Game
             var effect = set != null ? set.AggregatePassive() : PassiveEffect.None;
             if (_self != null) _self.DamageReduction = effect.DamageReduction;
             Lifesteal = effect.Lifesteal;
+            MovementCapabilityCatalog.Set(effect.ExtraJumps); // e.g. double jump from a mobility passive
         }
     }
 }
