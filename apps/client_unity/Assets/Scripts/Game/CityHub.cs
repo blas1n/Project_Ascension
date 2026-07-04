@@ -172,9 +172,13 @@ namespace ProjectAscension.Game
             // Show each discovered skill WITH how to use it — a weapon you equip and fire, a
             // command you invoke by its button combo, or an always-on passive. This is the
             // guide: it's the only place the player learns a command's combo.
+            int commandIndex = 0;
             foreach (var d in session.DiscoveredSkills.All)
             {
-                GUILayout.Label($"• {d.Name}  — {UseHint(d)}");
+                string hint = d.Manifestation == ManifestationKind.Command
+                    ? CommandHint(d, commandIndex++)
+                    : UseHint(d);
+                GUILayout.Label($"• {d.Name}  — {hint}");
                 any = true;
             }
             if (!any) // fall back to the journal titles if the skill set isn't populated yet
@@ -376,34 +380,18 @@ namespace ProjectAscension.Game
         {
             ManifestationKind.Weapon => "weapon: equip & fire",
             ManifestationKind.Passive => "passive: always on",
-            _ => CommandHint(d),
+            _ => "command",
         };
 
-        // A command shows its combo and, if its clicks are weapon-bound, the equipment it needs
-        // (ADR 0005 재개정) — so the player knows what to equip before departing.
-        private static string CommandHint(DiscoveredSkill d)
+        // A command is cast from its ability hotkey (Q/E/R/F by discovery order); if it's
+        // weapon-bound it also shows the equipment it needs (ADR 0005 재개정), so the player
+        // knows what to equip before departing.
+        private static string CommandHint(DiscoveredSkill d, int commandIndex)
         {
-            var s = "command: " + ComboText(d.Combo);
+            string key = AbilitySlots.SlotLabel(commandIndex) ?? "unslotted";
             var required = CommandGate.RequiredEquipment(d);
-            return required.Count > 0 ? $"{s}  (needs {string.Join("/", required)})" : s;
+            return required.Count > 0 ? $"key [{key}]  (needs {string.Join("/", required)})" : $"key [{key}]";
         }
-
-        private static string ComboText(IReadOnlyList<InputToken> combo)
-        {
-            if (combo == null || combo.Count == 0) return "(no combo)";
-            var parts = new string[combo.Count];
-            for (int i = 0; i < combo.Count; i++) parts[i] = ComboKey(combo[i]);
-            return string.Join(" > ", parts);
-        }
-
-        private static string ComboKey(InputToken t) => t switch
-        {
-            InputToken.Jump => "Jump",
-            InputToken.Dodge => "Dodge",
-            InputToken.LeftClick => "LMB",
-            InputToken.RightClick => "RMB",
-            _ => t.ToString(),
-        };
 
         // NPCs react to the player's standing (the slice's "명성 — NPC 반응 변화").
         private static string NpcReaction(string role, int reputation)

@@ -48,14 +48,13 @@ namespace ProjectAscension.Game
         private void Awake()
         {
             _self = GetComponent<HitReceiver>();
-            // Discovered-skill drivers. These were never placed in the scene, so a Command
-            // never fired (no ComboInvoker to catch its combo) and passives never applied (no
-            // PassiveModifiers). Provision them on the player here so discovered Commands and
-            // passives actually work; SkillEffects presents dash/shield/control.
+            // Discovered-skill drivers, provisioned on the player (they were never placed in a
+            // scene). AbilitySlots casts Commands from hotkeys (Q/E/R/F), PassiveModifiers
+            // applies passives, SkillEffects presents dash/shield/control.
             _effects = GetComponent<SkillEffects>() ?? gameObject.AddComponent<SkillEffects>();
             _passives = GetComponent<PassiveModifiers>() ?? gameObject.AddComponent<PassiveModifiers>();
-            if (GetComponent<ComboInvoker>() == null) gameObject.AddComponent<ComboInvoker>();
-            if (GetComponent<SkillGuideHud>() == null) gameObject.AddComponent<SkillGuideHud>(); // shows each command's combo
+            if (GetComponent<AbilitySlots>() == null) gameObject.AddComponent<AbilitySlots>();
+            if (GetComponent<SkillGuideHud>() == null) gameObject.AddComponent<SkillGuideHud>(); // shows each command's hotkey
             _focus = GetComponent<FocusPool>();           // optional, gates casts by focus
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
@@ -101,9 +100,9 @@ namespace ProjectAscension.Game
             _manifestation = discovered.Manifestation;
 
             // Add to the session's set — the single source of truth. A command is picked up by
-            // the ComboInvoker (which syncs from the set), a passive by PassiveModifiers. We
-            // dedupe by discovery id (LoadSkill, _loaded), NOT by name: distinct discoveries can
-            // share a composed name yet differ mechanically.
+            // AbilitySlots (which syncs from the set), a passive by PassiveModifiers. We dedupe
+            // by discovery id (LoadSkill, _loaded), NOT by name: distinct discoveries can share
+            // a composed name yet differ mechanically.
             GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
             if (_manifestation == ManifestationKind.Passive)
@@ -135,8 +134,8 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
-        /// by weapon fire (<see cref="Cast"/>) and combo-invoked commands
-        /// (<see cref="ComboInvoker"/>).</summary>
+        /// by weapon fire (<see cref="Cast"/>) and hotkey-cast commands
+        /// (<see cref="AbilitySlots"/>).</summary>
         public void ExecuteSkill(Skill skill)
         {
             if (skill == null) return;
