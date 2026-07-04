@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using ProjectAscension.Combat;
 using ProjectAscension.Equipment;
@@ -24,7 +23,6 @@ namespace ProjectAscension.Game
     public sealed class SkillCaster : MonoBehaviour
     {
         [SerializeField] private string serverUrl = "";
-        [SerializeField] private string actorId = "11111111-1111-1111-1111-111111111111"; // for restoring prior discoveries
         [SerializeField] private Transform aimSource;
         [SerializeField] private LayerMask targetMask = ~0;
         [SerializeField] private float dotInterval = 1f;
@@ -66,30 +64,6 @@ namespace ProjectAscension.Game
         private void OnEnable() => GameplayEvents.SkillCastRequested += ExecuteSkill;
         private void OnDisable() => GameplayEvents.SkillCastRequested -= ExecuteSkill;
 
-        // Restore previously-discovered skills into the session. A discovery's claim persists
-        // server-side, so re-playing the same behavior returns fired=false and the reporter
-        // never re-loads it — without this restore, every command/passive/weapon discovered in
-        // a past session is lost on restart (empty guide, dead commands). Runs only when the
-        // set is empty (a fresh session); re-entering the frontier keeps what's already loaded.
-        private void Start()
-        {
-            if (_api == null || string.IsNullOrEmpty(actorId)) return;
-            var set = GameSession.Instance?.DiscoveredSkills;
-            if (set == null) return;
-            if (set.Weapons.Count > 0 || set.Commands.Count > 0 || set.Passives.Count > 0) return;
-            StartCoroutine(RestoreDiscoveredSkills());
-        }
-
-        private IEnumerator RestoreDiscoveredSkills()
-        {
-            DiscoveryListItemDto[] list = null;
-            yield return _api.GetByActor(actorId, r => list = r);
-            if (list == null) yield break;
-            foreach (var d in list)
-                if (!string.IsNullOrEmpty(d.id))
-                    LoadSkill(d.id); // polls the (already-Ready) skill, adds it to the set + registers it
-        }
-
         /// <summary>Fetch a discovered skill from the server and equip it for casting. The
         /// content is composed asynchronously by the AI, so this polls until it's Ready.</summary>
         private readonly HashSet<string> _loaded = new HashSet<string>();
@@ -120,40 +94,24 @@ namespace ProjectAscension.Game
 
         private void OnSkillReady(SkillResponseDto dto)
         {
-            _skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
+            var discovered = DiscoveredSkillFactory.Build(dto, out var weapon);
+            _skill = discovered.Skill;
             _deliveryStyle = dto.delivery ?? string.Empty; // AI-composed manifestation ("" → derive)
             _intensity = SkillVfx.Intensity(dto.powerCost); // grander VFX for rarer/stronger skills
-            _manifestation = System.Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
-                ? kind
-                : ManifestationKind.Command;
+            _manifestation = discovered.Manifestation;
 
-            // Register into the session's set — weapon (a new equippable) or command. We
-            // dedupe by discovery id (LoadSkill, _loaded) but NOT by name: distinct
-            // discoveries can share a composed name yet differ mechanically, and dropping
-            // them by name meant a genuinely-new discovered weapon never reached inventory.
-            var set = GameSession.Instance?.DiscoveredSkills;
+            // Add to the session's set — the single source of truth. A command is picked up by
+            // the ComboInvoker (which syncs from the set), a passive by PassiveModifiers. We
+            // dedupe by discovery id (LoadSkill, _loaded), NOT by name: distinct discoveries can
+            // share a composed name yet differ mechanically.
+            GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
-            // The command's invocation combo (empty for weapons/passives) — carried on the
-            // DiscoveredSkill so the guide HUD can show the player how to trigger it.
-            IReadOnlyList<InputToken> combo = _manifestation == ManifestationKind.Command
-                ? InputCombo.Parse(dto.invocationCombo ?? new string[0])
-                : System.Array.Empty<InputToken>();
-            var discovered = new DiscoveredSkill(_skill.Name, _manifestation, _skill, combo);
-            set?.Add(discovered);
-
-            // A command is invoked by its assigned combo; a passive applies continuously.
-            if (_manifestation == ManifestationKind.Command)
-                (GetComponent<ComboInvoker>() ?? FindAnyObjectByType<ComboInvoker>())?.RegisterCommand(combo, discovered);
-            else if (_manifestation == ManifestationKind.Passive)
+            if (_manifestation == ManifestationKind.Passive)
                 (GetComponent<PassiveModifiers>() ?? FindAnyObjectByType<PassiveModifiers>())?.Refresh();
-            else if (_manifestation == ManifestationKind.Weapon)
+            else if (_manifestation == ManifestationKind.Weapon && weapon != null)
             {
-                // Mint a new equippable weapon. With a session (the full Bootstrap→City→
-                // Frontier flow) it goes to inventory only; the player equips it from the
-                // city loadout. WITHOUT a session (the Frontier scene played directly) there
-                // is no city inventory to hold it, so equip it now rather than silently drop
-                // it — the prior null-safe AddWeapon made discovered weapons vanish.
-                var weapon = WeaponData.CreateDiscovered(_skill.Name, _skill, "spell:" + Slug(_skill.Name));
+                // With a session the weapon goes to inventory (equip in the city); without one
+                // (Frontier played directly) equip it now rather than drop it.
                 var state = GameSession.Instance?.PlayerState;
                 if (state != null)
                 {
@@ -162,7 +120,7 @@ namespace ProjectAscension.Game
                 }
                 else
                 {
-                    Debug.LogWarning($"[SkillCaster] No GameSession (Frontier played directly) — equipping \"{_skill.Name}\" now. Start from Bootstrap for the inventory/city loop.");
+                    Debug.LogWarning($"[SkillCaster] No GameSession — equipping \"{_skill.Name}\" now.");
                     FindAnyObjectByType<Loadout>()?.EquipLeft(weapon);
                 }
             }
@@ -174,15 +132,6 @@ namespace ProjectAscension.Game
         public void Cast()
         {
             if (HasSkill) ExecuteSkill(_skill);
-        }
-
-        private static string Slug(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "discovery";
-            var sb = new StringBuilder(name.Length);
-            foreach (var c in name)
-                sb.Append(char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '-');
-            return sb.ToString();
         }
 
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
