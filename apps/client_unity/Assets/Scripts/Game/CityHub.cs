@@ -71,6 +71,18 @@ namespace ProjectAscension.Game
             // guide's "LMB/RMB" is unambiguous.
             DrawWeaponSelector("Left (RMB) ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
             DrawWeaponSelector("Right (LMB)", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
+
+            // Ability bar: bind discovered commands to the Q/E/R/F hotkeys. Equipment-locked
+            // commands still show here (you equip the weapon to use them, ADR 0005 재개정).
+            var commands = session.DiscoveredSkills.Commands;
+            if (commands.Count > 0)
+            {
+                session.EnsureDefaultCommandSlots();
+                GUILayout.Space(4);
+                GUILayout.Label("Ability slots (hotkeys):");
+                for (int i = 0; i < session.CommandSlots.Length; i++)
+                    DrawAbilitySlot(i, session, commands);
+            }
             GUILayout.Space(10);
 
             if (contracts.Active == null)
@@ -172,11 +184,10 @@ namespace ProjectAscension.Game
             // Show each discovered skill WITH how to use it — a weapon you equip and fire, a
             // command you invoke by its button combo, or an always-on passive. This is the
             // guide: it's the only place the player learns a command's combo.
-            int commandIndex = 0;
             foreach (var d in session.DiscoveredSkills.All)
             {
                 string hint = d.Manifestation == ManifestationKind.Command
-                    ? CommandHint(d, commandIndex++)
+                    ? CommandHint(d, session)
                     : UseHint(d);
                 GUILayout.Label($"• {d.Name}  — {hint}");
                 any = true;
@@ -383,14 +394,15 @@ namespace ProjectAscension.Game
             _ => "command",
         };
 
-        // A command is cast from its ability hotkey (Q/E/R/F by discovery order); if it's
-        // weapon-bound it also shows the equipment it needs (ADR 0005 재개정), so the player
-        // knows what to equip before departing.
-        private static string CommandHint(DiscoveredSkill d, int commandIndex)
+        // A command is cast from the ability hotkey the player bound it to; if it's weapon-bound
+        // it also shows the equipment it needs (ADR 0005 재개정), so the player knows what to
+        // equip before departing.
+        private static string CommandHint(DiscoveredSkill d, GameSession session)
         {
-            string key = AbilitySlots.SlotLabel(commandIndex) ?? "unslotted";
+            int slot = session.SlotOf(d);
             var required = CommandGate.RequiredEquipment(d);
-            return required.Count > 0 ? $"key [{key}]  (needs {string.Join("/", required)})" : $"key [{key}]";
+            string reqTxt = required.Count > 0 ? $"  (needs {string.Join("/", required)})" : "";
+            return slot >= 0 ? $"key [{AbilitySlots.SlotLabel(slot)}]{reqTxt}" : $"unassigned{reqTxt}";
         }
 
         // NPCs react to the player's standing (the slice's "명성 — NPC 반응 변화").
@@ -483,6 +495,29 @@ namespace ProjectAscension.Game
                 if (owned[i] == current) { index = i; break; }
             index = (index + dir + owned.Count) % owned.Count;
             return owned[index];
+        }
+
+        private static void DrawAbilitySlot(int index, GameSession session, IReadOnlyList<DiscoveredSkill> commands)
+        {
+            var current = session.CommandSlots[index];
+            var required = current != null ? CommandGate.RequiredEquipment(current) : System.Array.Empty<string>();
+            string req = required.Count > 0 ? "  needs " + string.Join("/", required) : "";
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"[{AbilitySlots.SlotLabel(index)}] {(current != null ? current.Name : "(none)")}{req}", GUILayout.Width(260));
+            if (GUILayout.Button("<", GUILayout.Width(30))) session.AssignCommandSlot(index, CycleCommand(commands, current, -1));
+            if (GUILayout.Button(">", GUILayout.Width(30))) session.AssignCommandSlot(index, CycleCommand(commands, current, +1));
+            GUILayout.EndHorizontal();
+        }
+
+        // Cycle through the commands plus a "(none)" entry at position 0.
+        private static DiscoveredSkill CycleCommand(IReadOnlyList<DiscoveredSkill> commands, DiscoveredSkill current, int dir)
+        {
+            int n = commands.Count + 1;
+            int idx = 0; // 0 = none
+            for (int i = 0; i < commands.Count; i++)
+                if (ReferenceEquals(commands[i], current)) { idx = i + 1; break; }
+            idx = (idx + dir + n) % n;
+            return idx == 0 ? null : commands[idx - 1];
         }
     }
 }

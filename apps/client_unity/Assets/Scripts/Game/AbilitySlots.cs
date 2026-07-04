@@ -20,39 +20,29 @@ namespace ProjectAscension.Game
     public sealed class AbilitySlots : MonoBehaviour
     {
         public static readonly Key[] SlotKeys = { Key.Q, Key.E, Key.R, Key.F };
+        public const int SlotCount = 4; // = SlotKeys.Length
 
-        /// <summary>The hotkey label for the command at a given slot index, or null if it has
-        /// no slot (more commands than keys). Deterministic (discovery order) so the City and
-        /// Frontier guides agree without this component present.</summary>
+        /// <summary>The hotkey label for a slot index (Q/E/R/F), or null if out of range.</summary>
         public static string SlotLabel(int index)
             => index >= 0 && index < SlotKeys.Length ? SlotKeys[index].ToString() : null;
 
         private SkillCaster _caster;
         private Loadout _loadout;
-        private readonly List<DiscoveredSkill> _slots = new();
 
         private void Awake() => _caster = GetComponent<SkillCaster>() ?? FindAnyObjectByType<SkillCaster>();
 
         private void Update()
         {
-            SyncSlots();
+            var session = GameSession.Instance;
+            if (session == null) return;
+            session.EnsureDefaultCommandSlots(); // seed the bar with the first commands until the player customises it
+
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
-            for (int i = 0; i < _slots.Count && i < SlotKeys.Length; i++)
-                if (keyboard[SlotKeys[i]].wasPressedThisFrame)
-                    Cast(_slots[i]);
-        }
-
-        // Fill slots in discovery order, up to the number of keys. (Reassignment UI is a follow-up.)
-        private void SyncSlots()
-        {
-            var set = GameSession.Instance != null ? GameSession.Instance.DiscoveredSkills : null;
-            if (set == null) return;
-            foreach (var command in set.Commands)
-            {
-                if (_slots.Count >= SlotKeys.Length) break;
-                if (!_slots.Contains(command)) _slots.Add(command);
-            }
+            var slots = session.CommandSlots;
+            for (int i = 0; i < slots.Length && i < SlotKeys.Length; i++)
+                if (slots[i] != null && keyboard[SlotKeys[i]].wasPressedThisFrame)
+                    Cast(slots[i]);
         }
 
         private void Cast(DiscoveredSkill command)
