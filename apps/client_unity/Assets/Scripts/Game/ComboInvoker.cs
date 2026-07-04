@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
@@ -63,14 +64,31 @@ namespace ProjectAscension.Game
         private void OnLeftClicked() => Feed(InputToken.LeftClick);
         private void OnRightClicked() => Feed(InputToken.RightClick);
 
+        private Loadout _loadout;
+
         private void Feed(InputToken token)
         {
             SyncFromSet(); // pick up any commands added since the last input
             var command = _recognizer.Feed(token, Time.time);
             if (command == null) return;
 
+            // ADR 0005 (재개정): a command whose combo uses a weapon click can only be invoked
+            // with the weapon category it was discovered with (a flame+gun technique isn't
+            // reproducible with a sword). Behaviour-only combos are unrestricted.
+            if (!CommandGate.Invocable(command, CurrentEquipment()))
+            {
+                Debug.Log($"[ComboInvoker] \"{command.Name}\" needs {string.Join("/", CommandGate.RequiredEquipment(command))} equipped.");
+                return;
+            }
+
             _caster?.ExecuteSkill(command.Skill);
             Debug.Log($"[ComboInvoker] Invoked \"{command.Name}\" via combo.");
+        }
+
+        private HashSet<string> CurrentEquipment()
+        {
+            if (_loadout == null) _loadout = FindAnyObjectByType<Loadout>();
+            return EquipmentTags.CurrentTags(_loadout);
         }
     }
 }

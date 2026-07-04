@@ -376,8 +376,17 @@ namespace ProjectAscension.Game
         {
             ManifestationKind.Weapon => "weapon: equip & fire",
             ManifestationKind.Passive => "passive: always on",
-            _ => "command: " + ComboText(d.Combo),
+            _ => CommandHint(d),
         };
+
+        // A command shows its combo and, if its clicks are weapon-bound, the equipment it needs
+        // (ADR 0005 재개정) — so the player knows what to equip before departing.
+        private static string CommandHint(DiscoveredSkill d)
+        {
+            var s = "command: " + ComboText(d.Combo);
+            var required = CommandGate.RequiredEquipment(d);
+            return required.Count > 0 ? $"{s}  (needs {string.Join("/", required)})" : s;
+        }
 
         private static string ComboText(IReadOnlyList<InputToken> combo)
         {

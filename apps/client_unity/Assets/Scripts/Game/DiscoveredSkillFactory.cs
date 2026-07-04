@@ -27,7 +27,7 @@ namespace ProjectAscension.Game
                 ? InputCombo.Parse(dto.invocationCombo ?? Array.Empty<string>())
                 : Array.Empty<InputToken>();
 
-            var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo);
+            var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo, dto.contextTags);
             weapon = manifestation == ManifestationKind.Weapon
                 ? WeaponData.CreateDiscovered(skill.Name, skill, "spell:" + Slug(skill.Name))
                 : null;
