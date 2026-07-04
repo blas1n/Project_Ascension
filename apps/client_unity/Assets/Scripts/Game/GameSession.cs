@@ -17,6 +17,7 @@ namespace ProjectAscension.Game
     {
         [SerializeField] private WeaponData[] ownedWeapons;
         [SerializeField] private string serverUrl = ""; // empty → offline (defaults/SO assets)
+        [SerializeField] private string actorId = "11111111-1111-1111-1111-111111111111"; // for restoring discoveries
 
         private const string RegionId = "22222222-2222-2222-2222-222222222222"; // the slice's frontier
 
@@ -86,6 +87,29 @@ namespace ProjectAscension.Game
             {
                 _api = new CatalogApiClient(serverUrl);
                 StartCoroutine(FetchCatalog(_api));
+                // Restore previously-discovered skills at SESSION START (not on frontier entry)
+                // so the city shows them and their weapons are in inventory immediately. A
+                // discovery's claim persists server-side, so re-playing returns fired=false and
+                // the reporter never re-loads it — without this they'd be lost every restart.
+                StartCoroutine(RestoreDiscoveredSkills(new DiscoveryApiClient(serverUrl)));
+            }
+        }
+
+        private IEnumerator RestoreDiscoveredSkills(DiscoveryApiClient discoveryApi)
+        {
+            DiscoveryListItemDto[] list = null;
+            yield return discoveryApi.GetByActor(actorId, r => list = r);
+            if (list == null) yield break;
+            foreach (var item in list)
+            {
+                if (string.IsNullOrEmpty(item.id)) continue;
+                SkillResponseDto dto = null;
+                yield return discoveryApi.GetSkill(item.id, r => dto = r);
+                if (dto == null || dto.status != "Ready" || dto.primitives == null) continue;
+
+                var discovered = DiscoveredSkillFactory.Build(dto, out var weapon);
+                DiscoveredSkills.Add(discovered);
+                if (weapon != null) PlayerState.AddWeapon(weapon); // discovered weapon back in inventory
             }
         }
 

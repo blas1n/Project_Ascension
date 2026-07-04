@@ -20,6 +20,7 @@ namespace ProjectAscension.Game
 
         private ComboRecognizer _recognizer;
         private SkillCaster _caster;
+        private readonly HashSet<DiscoveredSkill> _registered = new HashSet<DiscoveredSkill>();
 
         private void Awake()
         {
@@ -44,9 +45,18 @@ namespace ProjectAscension.Game
             GameplayEvents.RightClicked -= OnRightClicked;
         }
 
-        /// <summary>Register a discovered command's assigned combo (called when its skill loads).</summary>
-        public void RegisterCommand(IReadOnlyList<InputToken> combo, DiscoveredSkill skill)
-            => _recognizer.Register(combo, skill);
+        // Register every discovered Command from the session's set that we haven't yet — the
+        // set is the single source of truth (populated by the session-start restore AND by new
+        // in-frontier discoveries), so this is robust to load ORDER: whenever a command exists
+        // in the set, its combo becomes recognizable, no matter when it arrived.
+        private void SyncFromSet()
+        {
+            var set = GameSession.Instance != null ? GameSession.Instance.DiscoveredSkills : null;
+            if (set == null) return;
+            foreach (var command in set.Commands)
+                if (_registered.Add(command))
+                    _recognizer.Register(command.Combo, command);
+        }
 
         private void OnJumped() => Feed(InputToken.Jump);
         private void OnDodged() => Feed(InputToken.Dodge);
@@ -55,6 +65,7 @@ namespace ProjectAscension.Game
 
         private void Feed(InputToken token)
         {
+            SyncFromSet(); // pick up any commands added since the last input
             var command = _recognizer.Feed(token, Time.time);
             if (command == null) return;
 
