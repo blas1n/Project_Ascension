@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using ProjectAscension.SkillForge;
 
@@ -5,6 +6,65 @@ namespace ProjectAscension.SkillForge.Tests;
 
 public class ComboAssignerTests
 {
+    private static bool StartsWith(IReadOnlyList<InputToken> seq, IReadOnlyList<InputToken> prefix)
+    {
+        if (prefix.Count > seq.Count) return false;
+        for (int i = 0; i < prefix.Count; i++)
+            if (seq[i] != prefix[i]) return false;
+        return true;
+    }
+
+    private static bool Collides(IReadOnlyList<InputToken> a, IReadOnlyList<InputToken> b)
+        => StartsWith(a, b) || StartsWith(b, a);
+
+    [Fact]
+    public void EnsurePrefixFree_KeepsCandidate_WhenNoCollision()
+    {
+        var candidate = new[] { InputToken.Jump, InputToken.Dodge };
+        var result = ComboAssigner.EnsurePrefixFree(candidate, System.Array.Empty<IReadOnlyList<InputToken>>(), "s");
+        Assert.Equal(candidate, result);
+    }
+
+    [Fact]
+    public void EnsurePrefixFree_ResolvesCollision_WhenCandidateIsPrefixOfExisting()
+    {
+        var existing = new IReadOnlyList<InputToken>[]
+            { new[] { InputToken.Dodge, InputToken.Jump, InputToken.RightClick } };
+        var result = ComboAssigner.EnsurePrefixFree(new[] { InputToken.Dodge, InputToken.Jump }, existing, "s1");
+        Assert.False(Collides(result, existing[0]));
+    }
+
+    [Fact]
+    public void EnsurePrefixFree_ResolvesCollision_WhenExistingIsPrefixOfCandidate()
+    {
+        var existing = new IReadOnlyList<InputToken>[] { new[] { InputToken.Dodge, InputToken.Jump } };
+        var result = ComboAssigner.EnsurePrefixFree(
+            new[] { InputToken.Dodge, InputToken.Jump, InputToken.RightClick }, existing, "s2");
+        Assert.False(Collides(result, existing[0]));
+    }
+
+    [Fact]
+    public void EnsurePrefixFree_KeepsTheWholeSetPrefixFree()
+    {
+        var taken = new List<IReadOnlyList<InputToken>>();
+        for (int i = 0; i < 20; i++)
+        {
+            var candidate = ComboAssigner.Assign(null, $"seed-{i}");
+            var combo = ComboAssigner.EnsurePrefixFree(candidate, taken, $"seed-{i}");
+            foreach (var e in taken)
+                Assert.False(Collides(combo, e));
+            taken.Add(combo);
+        }
+    }
+
+    [Fact]
+    public void Parse_RoundTripsTokenNames()
+    {
+        Assert.Equal(
+            new[] { InputToken.Jump, InputToken.RightClick },
+            ComboAssigner.Parse(new[] { "Jump", "RightClick" }).ToArray());
+    }
+
     [Fact]
     public void SingleBehavior_RepeatsIt()
     {

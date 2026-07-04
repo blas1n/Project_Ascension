@@ -85,4 +85,87 @@ public static class ComboAssigner
         }
         return hash;
     }
+
+    // ----- Prefix-free guarantee -------------------------------------------------------------
+    // No command's combo may be a PREFIX of another's (per actor). Then the client can fire the
+    // instant a combo completes — no wait-and-see disambiguation (which added input latency).
+    // This is how fighting games avoid "a short move shadows the longer string": distinct,
+    // non-overlapping inputs.
+
+    /// <summary>Return <paramref name="candidate"/> if it collides with no
+    /// <paramref name="existing"/> combo (neither is a prefix of the other); otherwise the
+    /// shortest deterministic alternative that is prefix-free (short combos preferred).</summary>
+    public static IReadOnlyList<InputToken> EnsurePrefixFree(
+        IReadOnlyList<InputToken> candidate,
+        IEnumerable<IReadOnlyList<InputToken>> existing,
+        string seed)
+    {
+        var taken = new List<IReadOnlyList<InputToken>>();
+        if (existing is not null)
+            foreach (var e in existing)
+                if (e is { Count: > 0 }) taken.Add(e);
+
+        if (candidate is { Count: > 0 } && IsPrefixFree(candidate, taken)) return candidate;
+
+        foreach (var combo in AllCombos()
+            .OrderBy(c => c.Count)               // prefer short combos
+            .ThenBy(c => Fnv(seed + Key(c))))    // deterministic, seed-varied tie-break
+        {
+            if (IsPrefixFree(combo, taken)) return combo;
+        }
+        return candidate; // vocabulary saturated — unreachable for the slice's few commands
+    }
+
+    private static bool IsPrefixFree(IReadOnlyList<InputToken> combo, List<IReadOnlyList<InputToken>> taken)
+    {
+        foreach (var e in taken)
+            if (IsPrefix(combo, e) || IsPrefix(e, combo)) return false; // either direction collides
+        return true;
+    }
+
+    // Is <paramref name="prefix"/> a prefix of <paramref name="seq"/>?
+    private static bool IsPrefix(IReadOnlyList<InputToken> seq, IReadOnlyList<InputToken> prefix)
+    {
+        if (prefix.Count > seq.Count) return false;
+        for (int i = 0; i < prefix.Count; i++)
+            if (seq[i] != prefix[i]) return false;
+        return true;
+    }
+
+    // Every no-immediate-repeat combo of length MinLength..MaxLength.
+    private static IEnumerable<List<InputToken>> AllCombos()
+    {
+        for (int len = MinLength; len <= MaxLength; len++)
+            foreach (var c in Sequences(len, new List<InputToken>()))
+                yield return c;
+    }
+
+    private static IEnumerable<List<InputToken>> Sequences(int len, List<InputToken> prefix)
+    {
+        if (prefix.Count == len)
+        {
+            yield return new List<InputToken>(prefix);
+            yield break;
+        }
+        foreach (var token in Vocabulary)
+        {
+            if (prefix.Count > 0 && prefix[prefix.Count - 1] == token) continue; // no immediate repeat
+            prefix.Add(token);
+            foreach (var c in Sequences(len, prefix)) yield return c;
+            prefix.RemoveAt(prefix.Count - 1);
+        }
+    }
+
+    private static string Key(IReadOnlyList<InputToken> combo) => string.Join(",", combo);
+
+    /// <summary>Parse token-name strings (as stored/sent) back into a combo.</summary>
+    public static IReadOnlyList<InputToken> Parse(IEnumerable<string> tokens)
+    {
+        var combo = new List<InputToken>();
+        if (tokens is null) return combo;
+        foreach (var t in tokens)
+            if (System.Enum.TryParse<InputToken>(t, ignoreCase: true, out var parsed))
+                combo.Add(parsed);
+        return combo;
+    }
 }
