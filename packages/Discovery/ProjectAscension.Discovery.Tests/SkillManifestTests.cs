@@ -8,19 +8,28 @@ public class SkillManifestTests
         => new("Test", "desc", primitives);
 
     [Fact]
-    public void OffensiveComposition_IsWeapon()
+    public void OffensiveComposition_InMagicContext_IsWeapon()
     {
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Projectile, 3), new ComposedPrimitive(PrimitiveKind.Fork, 1));
-        Assert.Equal(ManifestationKind.Weapon, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Weapon, SkillManifest.Classify(skill, magicContext: true));
+    }
+
+    [Fact]
+    public void OffensiveComposition_NonMagic_IsCommand()
+    {
+        // A weapon is magic synthesized from magic (ADR 0005) — a non-magic offensive discovery
+        // (firearm/bow/blade) is a cast hotkey command instead.
+        var skill = Of(new ComposedPrimitive(PrimitiveKind.Projectile, 3), new ComposedPrimitive(PrimitiveKind.Fork, 1));
+        Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill, magicContext: false));
     }
 
     [Fact]
     public void MobilityComposition_IsPassive()
     {
-        // Mobility (Dash/Blink) is a movement CAPABILITY (double jump), used via the movement
-        // input — a passive, not a hotkey command.
+        // Mobility (Dash/Blink) is a movement CAPABILITY (double jump) — a passive, regardless
+        // of magic context.
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Dash, 3), new ComposedPrimitive(PrimitiveKind.Blink, 1));
-        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill, magicContext: true));
     }
 
     [Fact]
@@ -28,15 +37,15 @@ public class SkillManifestTests
     {
         // Control (Stun/Knockback/Slow) is an actively invoked ability → a hotkey command.
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Stun, 3), new ComposedPrimitive(PrimitiveKind.Knockback, 1));
-        Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Command, SkillManifest.Classify(skill, magicContext: false));
     }
 
     [Fact]
-    public void OffensiveDominantMix_IsWeapon()
+    public void OffensiveDominantMix_InMagicContext_IsWeapon()
     {
-        // Projectile 3 (offensive) outweighs Dash 1 (mobility).
+        // Projectile 3 (offensive) outweighs Dash 1 (mobility); magic → a weapon.
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Projectile, 3), new ComposedPrimitive(PrimitiveKind.Dash, 1));
-        Assert.Equal(ManifestationKind.Weapon, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Weapon, SkillManifest.Classify(skill, magicContext: true));
     }
 
     [Fact]
@@ -48,14 +57,14 @@ public class SkillManifestTests
             new ComposedPrimitive(PrimitiveKind.Dash, 3),
             new ComposedPrimitive(PrimitiveKind.Stun, 1),
             new ComposedPrimitive(PrimitiveKind.Projectile, 1));
-        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill, magicContext: true));
     }
 
     [Fact]
     public void DefensiveComposition_IsPassive()
     {
         var skill = Of(new ComposedPrimitive(PrimitiveKind.Leech, 2), new ComposedPrimitive(PrimitiveKind.Barrier, 1));
-        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill, magicContext: false));
     }
 
     [Fact]
@@ -67,6 +76,15 @@ public class SkillManifestTests
             new ComposedPrimitive(PrimitiveKind.Leech, 1),
             new ComposedPrimitive(PrimitiveKind.Dash, 1),
             new ComposedPrimitive(PrimitiveKind.Projectile, 1));
-        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill));
+        Assert.Equal(ManifestationKind.Passive, SkillManifest.Classify(skill, magicContext: true));
+    }
+
+    [Fact]
+    public void IsMagicContext_DetectsArcaneAndSpellTags()
+    {
+        Assert.True(SkillManifest.IsMagicContext(new[] { "firearm", "arcane" }));
+        Assert.True(SkillManifest.IsMagicContext(new[] { "spell:flame-bolt" }));
+        Assert.False(SkillManifest.IsMagicContext(new[] { "bow", "nonmagic" }));
+        Assert.False(SkillManifest.IsMagicContext(System.Array.Empty<string>()));
     }
 }
