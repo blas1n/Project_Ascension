@@ -37,38 +37,36 @@ namespace ProjectAscension.Game
                 sb.AppendLine();
             }
 
-            sb.AppendLine("DISCOVERED SKILLS");
+            // Only what's USABLE right now — the four ability hotkeys and active passives. The
+            // full list (which grows large) lives in the City, so this HUD never overflows.
+            var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
+            var session = GameSession.Instance;
 
-            if (set.Commands.Count > 0)
+            sb.AppendLine("ABILITIES (hotkeys):");
+            var slots = session != null ? session.CommandSlots : null;
+            for (int i = 0; i < AbilitySlots.SlotKeys.Length; i++)
             {
-                var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
-                sb.AppendLine("Commands — press the key:");
-                foreach (var c in set.Commands)
-                {
-                    int slot = GameSession.Instance != null ? GameSession.Instance.SlotOf(c) : -1;
-                    string key = slot >= 0 ? AbilitySlots.SlotLabel(slot) : "unassigned";
-                    var required = CommandGate.RequiredEquipment(c);
-                    string status = required.Count > 0 && !CommandGate.Invocable(c, current)
-                        ? $"  [LOCKED — needs {string.Join("/", required)}]"
-                        : "";
-                    sb.AppendLine($"  [{key}] {c.Name}{status}");
-                }
+                var cmd = slots != null && i < slots.Length ? slots[i] : null;
+                if (cmd == null) { sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] —"); continue; }
+                string lockTxt = !CommandGate.Invocable(cmd, current)
+                    ? $"  [LOCKED: {string.Join("/", CommandGate.RequiredEquipment(cmd))}]"
+                    : "";
+                sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] {cmd.Name} — {SkillSummary.Describe(cmd.Skill)}{lockTxt}");
             }
+
             if (set.Passives.Count > 0)
             {
-                sb.AppendLine("\nPassives — always on:");
+                sb.AppendLine("\nPassives (always on):");
                 foreach (var p in set.Passives)
-                    sb.AppendLine($"  {p.Name}");
-            }
-            if (set.Weapons.Count > 0)
-            {
-                sb.AppendLine("\nWeapons — equip in city, fire to cast:");
-                foreach (var w in set.Weapons)
-                    sb.AppendLine($"  {w.Name}");
+                    sb.AppendLine($"  {p.Name} — {SkillSummary.DescribePassive(p.Skill)}");
             }
 
+            sb.AppendLine($"\nWeapons: {set.Weapons.Count} discovered (equip in city)");
+            if (set.Commands.Count > AbilitySlots.SlotKeys.Length)
+                sb.AppendLine($"Commands: {set.Commands.Count} discovered ({AbilitySlots.SlotKeys.Length} slots — assign in city)");
+
             // Top-right, clear of the contract HUD / focus / gold on the left.
-            GUI.Label(new Rect(Screen.width - 380f, 20f, 360f, 460f), sb.ToString());
+            GUI.Label(new Rect(Screen.width - 380f, 20f, 360f, 300f), sb.ToString());
         }
 
         private static string WeaponName(EquipmentSlot slot)

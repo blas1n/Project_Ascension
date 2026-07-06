@@ -20,6 +20,10 @@ namespace ProjectAscension.Game
         private const int KnowledgePointsPerRep = 5;  // power per standing point from a license sale
         private static readonly string[] TargetKeys = { "", "melee", "ranged", "elite" };
 
+        // Scroll positions for the discovery journal and knowledge market (they grow long).
+        private Vector2 _discoveryScroll;
+        private Vector2 _marketScroll;
+
         // Contract-issuing panel state. The player picks the objective; the server quotes a
         // fair reward + band (so it's a choice, not balance math); the player tunes generosity.
         private ContractPurpose _iPurpose = ContractPurpose.Hunt;
@@ -181,15 +185,18 @@ namespace ProjectAscension.Game
             GUILayout.Label($"DISCOVERIES ({session.Discovery.DiscoveredCount})");
             GUILayout.Space(4);
             bool any = false;
-            // Show each discovered skill WITH how to use it — a weapon you equip and fire, a
-            // command you invoke by its button combo, or an always-on passive. This is the
-            // guide: it's the only place the player learns a command's combo.
+            // Show each discovered skill WITH how to use it (weapon/command hotkey/passive) and
+            // a short EFFECT summary. Scrollable — the list grows well past the panel.
+            _discoveryScroll = GUILayout.BeginScrollView(_discoveryScroll, GUILayout.Height(170));
             foreach (var d in session.DiscoveredSkills.All)
             {
                 string hint = d.Manifestation == ManifestationKind.Command
                     ? CommandHint(d, session)
                     : UseHint(d);
-                GUILayout.Label($"• {d.Name}  — {hint}");
+                string effect = d.Manifestation == ManifestationKind.Passive
+                    ? SkillSummary.DescribePassive(d.Skill)
+                    : SkillSummary.Describe(d.Skill);
+                GUILayout.Label($"• {d.Name}  [{hint}]  {effect}");
                 any = true;
             }
             if (!any) // fall back to the journal titles if the skill set isn't populated yet
@@ -200,10 +207,12 @@ namespace ProjectAscension.Game
                 }
             if (!any)
                 GUILayout.Label("None yet — fight and explore to discover.");
+            GUILayout.EndScrollView();
 
             GUILayout.Space(8);
             GUILayout.Label("KNOWLEDGE MARKET (지식 거래)");
             bool anySellable = false;
+            _marketScroll = GUILayout.BeginScrollView(_marketScroll, GUILayout.Height(120));
             foreach (var discovered in session.DiscoveredSkills.All)
             {
                 if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
@@ -212,7 +221,7 @@ namespace ProjectAscension.Game
                 int rep = KnowledgeValuation.LicenseReputation(discovered.Skill, KnowledgePointsPerRep);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
-                if (GUILayout.Button($"Sell license +{price}g +{rep}rep", GUILayout.Width(180)))
+                if (GUILayout.Button($"Sell +{price}g +{rep}rep", GUILayout.Width(150)))
                 {
                     ps.Currency += price;
                     ps.Reputation += rep;
@@ -222,6 +231,7 @@ namespace ProjectAscension.Game
             }
             if (!anySellable)
                 GUILayout.Label("No unsold knowledge — discover skills to license.");
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
 
             DrawIssuePanel(session, ps);
