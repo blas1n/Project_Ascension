@@ -23,7 +23,7 @@ public static class SkillCompositionPrompt
         // lot is an evasive attacker (a weapon), not a technique. This is the "magic + non-
         // magic -> a command, not a new weapon" path.
         if (mobility * 2 > attacks * 3)
-            return "a MOBILITY TECHNIQUE (moved far more than attacked). Compose it ONLY from Mobility (Dash, Blink) and Control (Knockback, Slow, Stun) primitives. Do NOT include ANY Offensive primitive (no Projectile, Beam, Area, DamageOverTime, Chain, Fork, Pierce, Homing) — it is an invoked movement/control move (a Command), not an attack";
+            return "a MOBILITY TECHNIQUE (moved far more than attacked). Compose it PRIMARILY from Mobility (Dash, Blink) — a movement CAPABILITY like a double jump or dash upgrade, used via the movement input, not cast. Mobility MUST DOMINATE the power budget; you MAY add at most ONE Control primitive (Knockback/Slow/Stun) as a minor accent, never dominant. Do NOT include ANY Offensive primitive (no Projectile, Beam, Area, DamageOverTime, Chain, Fork, Pierce, Homing)";
 
         var dominant = profile.Where(b => Attacks.Contains(b.Behavior)).OrderByDescending(b => b.Count).First();
         bool high = mobility * 2 >= dominant.Count; // movement is at least half the attack count
@@ -54,7 +54,7 @@ public static class SkillCompositionPrompt
             : "\nHOW THE PLAYER FOUGHT — this is the fingerprint that must make this skill UNIQUE. Read the emphasis and let it drive BOTH the effects AND the delivery. Two players with the same equipment who fought differently MUST get mechanically different skills:\n"
               + string.Join("\n", profile.OrderByDescending(b => b.Count).Select(b => $"- {b.Behavior}: {b.Count}"))
               + $"\nPLAY CLASSIFICATION (use this directly with the delivery grid below): {ClassifyPlay(profile)}\n"
-              + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked. A MOBILITY TECHNIQUE is the exception: use ONLY Mobility + Control primitives (Dash, Blink, Knockback, Slow, Stun) and NO Offensive primitives at all.\n";
+              + "Effect guidance (adapt, don't copy): sustained charge -> a heavy focused payload; rapid -> many light fast hits; melee -> close burst/area; high mobility -> evasive, homing, dash-linked. A MOBILITY TECHNIQUE is the exception: use PRIMARILY Mobility (Dash, Blink) so it reads as a movement capability (double jump / dash), Control (Knockback, Slow, Stun) only as a minor non-dominant accent, and NO Offensive primitives at all.\n";
 
         var avoid = request.Avoid ?? Array.Empty<string>();
         var avoidSection = avoid.Count == 0

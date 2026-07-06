@@ -296,10 +296,10 @@ public class CompositionVarietySimulation
 
     /// <summary>
     /// Manifestation coverage: a high-freedom game, so a discovery isn't always a new weapon.
-    /// Magic-offensive play should yield a WEAPON; a non-magic/mobility technique (primary
-    /// Dash — "magic + non-magic → a command, not a weapon") should yield a COMMAND; a
-    /// defensive lean a PASSIVE. Observes what SkillManifest.Classify produces per play so a
-    /// bug (e.g. every discovery becoming a weapon) is caught before playtest.
+    /// Magic-offensive play should yield a WEAPON; a mobility-dominated technique (jump/dodge)
+    /// yields a movement-capability PASSIVE (double jump / dash). Observes what
+    /// SkillManifest.Classify produces per play so a bug (e.g. every discovery becoming a
+    /// weapon, or mobility never producing the double-jump passive) is caught before playtest.
     /// </summary>
     [Fact]
     public async Task Manifestation_MatchesTheKindOfPlay()
@@ -321,9 +321,11 @@ public class CompositionVarietySimulation
             ("magic-charge", PrimitiveKind.Beam, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("ChargedAttack", 60) }),
             ("magic-rapid", PrimitiveKind.Projectile, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
             ("bow-rapid", PrimitiveKind.Projectile, new[] { "bow" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
-            ("nonmagic-dash", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Command, new[] { ("MeleeAttack", 25), ("Dodge", 40), ("Jump", 35) }),
-            ("nonmagic-mobile", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Command, new[] { ("Jump", 50), ("Dodge", 45), ("MeleeAttack", 15) }),
-            ("guard-lean", PrimitiveKind.Blink, new[] { "ward", "nonmagic" }, ManifestationKind.Command, new[] { ("Dodge", 55), ("Jump", 30) }),
+            // Mobility-dominated play → a movement-capability PASSIVE (double jump / dash), not
+            // a hotkey command — mobility techniques compose mobility-dominant (see the prompt).
+            ("nonmagic-dash", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Passive, new[] { ("MeleeAttack", 25), ("Dodge", 40), ("Jump", 35) }),
+            ("nonmagic-mobile", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Passive, new[] { ("Jump", 50), ("Dodge", 45), ("MeleeAttack", 15) }),
+            ("guard-lean", PrimitiveKind.Blink, new[] { "ward", "nonmagic" }, ManifestationKind.Passive, new[] { ("Dodge", 55), ("Jump", 30) }),
         };
 
         var results = new List<(string name, ManifestationKind expect, ManifestationKind actual)>();
