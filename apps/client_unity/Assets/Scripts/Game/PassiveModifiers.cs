@@ -36,6 +36,8 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>Recompute from the session's discovered passives — call when one loads.</summary>
+        private int _lastExtraJumps = -1;
+
         public void Refresh()
         {
             var set = GameSession.Instance != null ? GameSession.Instance.DiscoveredSkills : null;
@@ -43,6 +45,11 @@ namespace ProjectAscension.Game
             if (_self != null) _self.DamageReduction = effect.DamageReduction;
             Lifesteal = effect.Lifesteal;
             MovementCapabilityCatalog.Set(effect.ExtraJumps); // e.g. double jump from a mobility passive
+            if (effect.ExtraJumps != _lastExtraJumps)
+            {
+                _lastExtraJumps = effect.ExtraJumps;
+                Debug.Log($"[Passive] extraJumps={effect.ExtraJumps} (passives={(set != null ? set.Passives.Count : 0)})");
+            }
         }
     }
 }
