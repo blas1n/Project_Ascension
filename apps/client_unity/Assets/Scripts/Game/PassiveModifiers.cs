@@ -20,8 +20,20 @@ namespace ProjectAscension.Game
         /// <summary>Aggregate lifesteal fraction from discovered passives.</summary>
         public float Lifesteal { get; private set; }
 
+        private float _nextRefresh;
+
         private void Awake() => _self = GetComponent<HitReceiver>();
         private void Start() => Refresh();
+
+        // Re-aggregate periodically so a passive that arrives AFTER Start (the session-start
+        // restore is async, or a mid-run discovery) still takes effect — e.g. a double jump
+        // stays granted across scene re-entries instead of silently dropping.
+        private void Update()
+        {
+            if (Time.time < _nextRefresh) return;
+            _nextRefresh = Time.time + 1f;
+            Refresh();
+        }
 
         /// <summary>Recompute from the session's discovered passives — call when one loads.</summary>
         public void Refresh()

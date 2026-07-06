@@ -76,17 +76,17 @@ namespace ProjectAscension.Game
             DrawWeaponSelector("Left (RMB) ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
             DrawWeaponSelector("Right (LMB)", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
 
-            // Ability bar: bind discovered commands to the Q/E/R/F hotkeys. Equipment-locked
-            // commands still show here (you equip the weapon to use them, ADR 0005 재개정).
+            // Ability bar: bind discovered commands to the Q/E/R/F hotkeys. Always shown, so the
+            // player can see the slots even before discovering any command.
             var commands = session.DiscoveredSkills.Commands;
-            if (commands.Count > 0)
-            {
-                session.EnsureDefaultCommandSlots();
-                GUILayout.Space(4);
-                GUILayout.Label("Ability slots (hotkeys):");
+            session.EnsureDefaultCommandSlots();
+            GUILayout.Space(4);
+            GUILayout.Label("Ability slots (hotkeys):");
+            if (commands.Count == 0)
+                GUILayout.Label("  (none yet — discover a non-magic combat skill)");
+            else
                 for (int i = 0; i < session.CommandSlots.Length; i++)
                     DrawAbilitySlot(i, session, commands);
-            }
             GUILayout.Space(10);
 
             if (contracts.Active == null)
@@ -193,10 +193,12 @@ namespace ProjectAscension.Game
                 string hint = d.Manifestation == ManifestationKind.Command
                     ? CommandHint(d, session)
                     : UseHint(d);
-                string effect = d.Manifestation == ManifestationKind.Passive
-                    ? SkillSummary.DescribePassive(d.Skill)
-                    : SkillSummary.Describe(d.Skill);
-                GUILayout.Label($"• {d.Name}  [{hint}]  {effect}");
+                GUILayout.Label($"• {d.Name}  [{hint}]");
+                // The AI-composed description (a sentence, like a real game's skill text).
+                string desc = !string.IsNullOrWhiteSpace(d.Description)
+                    ? d.Description
+                    : SkillSummary.Describe(d.Skill); // fallback if the model gave none
+                GUILayout.Label($"     {desc}");
                 any = true;
             }
             if (!any) // fall back to the journal titles if the skill set isn't populated yet
@@ -400,7 +402,7 @@ namespace ProjectAscension.Game
         private static string UseHint(DiscoveredSkill d) => d.Manifestation switch
         {
             ManifestationKind.Weapon => "weapon: equip & fire",
-            ManifestationKind.Passive => "passive: always on",
+            ManifestationKind.Passive => $"passive: {SkillSummary.DescribePassive(d.Skill)}",
             _ => "command",
         };
 

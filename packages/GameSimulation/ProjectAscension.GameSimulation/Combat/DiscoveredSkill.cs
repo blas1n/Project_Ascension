@@ -24,5 +24,7 @@ namespace ProjectAscension.GameSimulation.Combat
         IReadOnlyList<InputToken>? Combo = null,
         // The discovery's context tags (equipment + situation at discovery). A command whose
         // combo uses a weapon click is gated by its equipment tags — ADR 0005 (재개정).
-        IReadOnlyList<string>? ContextTags = null);
+        IReadOnlyList<string>? ContextTags = null,
+        // The AI-composed flavor description (a sentence, like a real game's skill text).
+        string? Description = null);
 }
