@@ -358,9 +358,11 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 taken.Add(CompositionPipeline.KindSignature(outcome.Skill.Primitives)); // keep same-batch siblings distinct
                 skill.PowerCost = outcome.LastValidation.TotalCost;
-                // Deterministic, server-authoritative: a synthesized-magic skill becomes
-                // a weapon; everything else a command (design note / discovery.md).
-                var manifestation = SkillManifest.Classify(outcome.Skill);
+                // Deterministic, server-authoritative: an offensive skill becomes a WEAPON only
+                // when magic-synthesized-from-magic (arcane/spell context, ADR 0005); a non-magic
+                // offensive discovery is a cast hotkey COMMAND. Mobility → passive, etc.
+                var manifestation = SkillManifest.Classify(
+                    outcome.Skill, SkillManifest.IsMagicContext(DeserializeTags(skill.ContextTagsJson)));
                 skill.Manifestation = manifestation.ToString();
 
                 // A command is invoked by a button combo the rule engine assigns

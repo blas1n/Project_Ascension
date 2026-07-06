@@ -320,7 +320,9 @@ public class CompositionVarietySimulation
         {
             ("magic-charge", PrimitiveKind.Beam, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("ChargedAttack", 60) }),
             ("magic-rapid", PrimitiveKind.Projectile, new[] { "arcane" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
-            ("bow-rapid", PrimitiveKind.Projectile, new[] { "bow" }, ManifestationKind.Weapon, new[] { ("RangedAttack", 60) }),
+            // Non-magic offensive (bow) → a cast COMMAND, not a weapon: a weapon is magic
+            // synthesized from magic (ADR 0005).
+            ("bow-rapid", PrimitiveKind.Projectile, new[] { "bow" }, ManifestationKind.Command, new[] { ("RangedAttack", 60) }),
             // Mobility-dominated play → a movement-capability PASSIVE (double jump / dash), not
             // a hotkey command — mobility techniques compose mobility-dominant (see the prompt).
             ("nonmagic-dash", PrimitiveKind.Dash, new[] { "blade", "nonmagic" }, ManifestationKind.Passive, new[] { ("MeleeAttack", 25), ("Dodge", 40), ("Jump", 35) }),
@@ -341,7 +343,7 @@ public class CompositionVarietySimulation
             var outcome = await CompositionPipeline.ForgeAsync(request, composer, maxAttempts: 3);
             Assert.True(outcome.Forged && outcome.Skill is not null, $"{c.Name}: deferred ({outcome.LastValidation.Error}).");
             var skill = outcome.Skill!;
-            var actual = SkillManifest.Classify(skill);
+            var actual = SkillManifest.Classify(skill, SkillManifest.IsMagicContext(c.Tags));
             var prims = string.Join(",", skill.Primitives.Select(p => $"{p.Kind}"));
             results.Add((c.Name, c.Expect, actual));
             _out.WriteLine($"{c.Name,-16} | {c.Expect,-8} | {actual,-8} | {(actual == c.Expect ? "ok" : "MISS"),-4} | {prims}");

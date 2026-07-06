@@ -24,7 +24,11 @@ public enum ManifestationKind
 /// </summary>
 public static class SkillManifest
 {
-    public static ManifestationKind Classify(SkillComposition composition)
+    /// <param name="magicContext">Whether the discovery was made with MAGIC (an arcane
+    /// catalyst / a spell-weapon). A new WEAPON is "magic synthesized from magic" (ADR 0005) —
+    /// so only an offensive discovery in a magic context becomes an equippable weapon; a
+    /// NON-magic offensive discovery (firearm/bow/blade) is a cast hotkey Command instead.</param>
+    public static ManifestationKind Classify(SkillComposition composition, bool magicContext)
     {
         int offensive = 0;
         int control = 0;
@@ -42,15 +46,28 @@ public static class SkillManifest
             }
         }
 
-        // Offensive-dominant → a Weapon you aim and fire. Otherwise:
-        //   Control-dominant → a Command you actively invoke (stun burst, knockback).
-        //   Mobility-dominant → a Passive movement CAPABILITY (double jump, extra dash) —
-        //     used via the movement input, not cast, so it's not a hotkey ability.
-        //   Defensive-dominant → a Passive ward/sustain.
+        // Offensive-dominant → a WEAPON only when magic-synthesized-from-magic (ADR 0005);
+        //   a non-magic offensive discovery is a cast hotkey COMMAND, not an equippable weapon.
+        // Control-dominant → a Command (actively invoked: stun burst, knockback).
+        // Mobility-dominant → a Passive movement CAPABILITY (double jump), used via movement.
+        // Defensive-dominant → a Passive ward/sustain.
         if (offensive >= control && offensive >= mobility && offensive >= defensive)
-            return ManifestationKind.Weapon;
+            return magicContext ? ManifestationKind.Weapon : ManifestationKind.Command;
         if (control >= mobility && control >= defensive)
             return ManifestationKind.Command;
         return ManifestationKind.Passive; // mobility or defensive
+    }
+
+    /// <summary>Does a discovery's context indicate MAGIC — an arcane catalyst or a
+    /// synthesized spell-weapon (its "spell:" tag)? Only then can an offensive synthesis
+    /// become a new weapon.</summary>
+    public static bool IsMagicContext(IEnumerable<string> contextTags)
+    {
+        if (contextTags is null) return false;
+        foreach (var t in contextTags)
+            if (string.Equals(t, "arcane", System.StringComparison.OrdinalIgnoreCase)
+                || (t != null && t.StartsWith("spell:", System.StringComparison.OrdinalIgnoreCase)))
+                return true;
+        return false;
     }
 }
