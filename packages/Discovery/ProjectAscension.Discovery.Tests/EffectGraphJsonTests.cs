@@ -29,6 +29,15 @@ public class EffectGraphJsonTests
             new Sequence(new EffectNode[] { new Emit(EmitDelivery.Projectile, 1), new Damage(2), new Control(ControlEffect.Knockback, 1) })));
 
     [Fact]
+    public void RoundTrip_OffensiveRiders_DotSpreadHoming()
+        // Phase 4b vocabulary: a homing projectile that chains, burns, and knocks back.
+        => RoundTrips(new Trigger(TriggerKind.OnCast, new Sequence(new EffectNode[]
+        {
+            new Emit(EmitDelivery.Projectile, 1), new Homing(1), new Spread(2),
+            new Damage(1), new Dot(2, 3), new Control(ControlEffect.Knockback, 1),
+        })));
+
+    [Fact]
     public void Parse_FromRawJson_BuildsTheGraph()
     {
         const string raw = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Sequence\",\"steps\":[{\"kind\":\"Emit\",\"delivery\":\"Beam\",\"tier\":1},{\"kind\":\"Damage\",\"tier\":2}]}}";

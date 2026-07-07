@@ -44,6 +44,9 @@ public static class EffectGraphValidator
         Damage d => InRange(d.Tier),
         Control c => InRange(c.Tier),
         Ward w => InRange(w.Tier),
+        Dot dot => InRange(dot.Tier) && dot.Duration >= 0,
+        Spread sp => InRange(sp.Tier),
+        Homing h => InRange(h.Tier),
         _ => true,
     };
 

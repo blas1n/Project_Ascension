@@ -67,6 +67,15 @@ public static class EffectGraphJson
             case Ward w:
                 sb.Append("{\"kind\":\"Ward\",\"effect\":\"").Append(w.Effect).Append("\",\"tier\":").Append(w.Tier).Append('}');
                 break;
+            case Dot dot:
+                sb.Append("{\"kind\":\"Dot\",\"tier\":").Append(dot.Tier).Append(",\"duration\":").Append(dot.Duration).Append('}');
+                break;
+            case Spread sp:
+                sb.Append("{\"kind\":\"Spread\",\"tier\":").Append(sp.Tier).Append('}');
+                break;
+            case Homing h:
+                sb.Append("{\"kind\":\"Homing\",\"tier\":").Append(h.Tier).Append('}');
+                break;
             default:
                 sb.Append("null");
                 break;
@@ -123,6 +132,12 @@ public static class EffectGraphJson
             case "Ward":
                 return TryEnum<WardEffect>(Str(e, "effect"), out var we) && TryTier(e, out var wt)
                     ? new Ward(we, wt) : null;
+            case "Dot":
+                return TryTier(e, out var dott) ? new Dot(dott, TryInt(e, "duration", out var dur) ? dur : 0) : null;
+            case "Spread":
+                return TryTier(e, out var spt) ? new Spread(spt) : null;
+            case "Homing":
+                return TryTier(e, out var ht) ? new Homing(ht) : null;
             default:
                 return null;
         }
@@ -131,10 +146,12 @@ public static class EffectGraphJson
     private static string? Str(JsonElement e, string prop)
         => e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
-    private static bool TryTier(JsonElement e, out int tier)
+    private static bool TryTier(JsonElement e, out int tier) => TryInt(e, "tier", out tier);
+
+    private static bool TryInt(JsonElement e, string prop, out int value)
     {
-        tier = 0;
-        return e.TryGetProperty("tier", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out tier);
+        value = 0;
+        return e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out value);
     }
 
     private static bool TryEnum<T>(string? s, out T value) where T : struct

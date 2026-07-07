@@ -27,4 +27,9 @@ namespace ProjectAscension.GameSimulation.Effects
     public sealed record Damage(int Tier) : EffectNode;
     public sealed record Control(ControlEffect Effect, int Tier) : EffectNode;
     public sealed record Ward(WardEffect Effect, int Tier) : EffectNode;
+
+    // Offensive riders (ADR 0007 Phase 4b) — parity with the primitive combat vocabulary.
+    public sealed record Dot(int Tier, int Duration) : EffectNode;
+    public sealed record Spread(int Tier) : EffectNode;
+    public sealed record Homing(int Tier) : EffectNode;
 }

@@ -50,6 +50,12 @@ namespace ProjectAscension.GameSimulation.Effects
                 case "Ward":
                     return TryEnum<WardEffect>(Get(e, "effect") as string, out var we) && TryTier(e, out var wt)
                         ? new Ward(we, wt) : null;
+                case "Dot":
+                    return TryTier(e, out var dott) ? new Dot(dott, TryInt(e, "duration", out var dur) ? dur : 0) : null;
+                case "Spread":
+                    return TryTier(e, out var spt) ? new Spread(spt) : null;
+                case "Homing":
+                    return TryTier(e, out var ht) ? new Homing(ht) : null;
                 default:
                     return null;
             }
@@ -58,10 +64,12 @@ namespace ProjectAscension.GameSimulation.Effects
         private static object Get(Dictionary<string, object> d, string key)
             => d.TryGetValue(key, out var v) ? v : null;
 
-        private static bool TryTier(Dictionary<string, object> e, out int tier)
+        private static bool TryTier(Dictionary<string, object> e, out int tier) => TryInt(e, "tier", out tier);
+
+        private static bool TryInt(Dictionary<string, object> e, string key, out int value)
         {
-            tier = 0;
-            if (Get(e, "tier") is double d) { tier = (int)d; return true; }
+            value = 0;
+            if (Get(e, key) is double d) { value = (int)d; return true; }
             return false;
         }
 
