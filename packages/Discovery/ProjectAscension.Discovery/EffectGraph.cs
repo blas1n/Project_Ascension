@@ -7,8 +7,10 @@ namespace ProjectAscension.SkillForge;
 // STRUCTURE (which nodes, under which trigger/order); the engine owns each node's mechanic and
 // numbers (ADR 0002). Data only — the interpreter (later phase) executes it deterministically.
 
-/// <summary>When a skill's effect runs.</summary>
-public enum TriggerKind { OnCast, OnJumpInAir, OnDodge, OnHit, Continuous }
+/// <summary>When a skill's effect runs. Extensible: a NEW movement mechanic (e.g. wall-climb)
+/// is just a new trigger + a stock effect — no bespoke engine field. Wall-climb =
+/// Trigger(OnWallContact, Impulse(Up)).</summary>
+public enum TriggerKind { OnCast, OnJumpInAir, OnDodge, OnHit, OnWallContact, Continuous }
 
 /// <summary>How an offensive effect is delivered.</summary>
 public enum EmitDelivery { Projectile, Beam, Burst, Nova }
