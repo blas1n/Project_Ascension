@@ -11,7 +11,6 @@ namespace ProjectAscension.Api.Services;
 
 public class SkillCompositionService : ISkillCompositionService
 {
-    private const int MaxComposeAttempts = 5; // more room to find a distinct composition now that the actor-wide Avoid set is larger
     private const int MaxLineageContext = 4;
 
     private readonly IDiscoveryRepository _discoveries;
@@ -475,7 +474,7 @@ public class SkillCompositionService : ISkillCompositionService
         var seed = BitConverter.ToInt64(skill.DiscoveryId.ToByteArray(), 0);
         request = new CompositionRequest(
             skill.Theme, tags ?? new List<string>(), primary, new PowerBudget(skill.PowerBudget),
-            Lineage: null, BehaviorProfile: profile, Seed: seed);
+            BehaviorProfile: profile, Seed: seed);
         return true;
     }
 

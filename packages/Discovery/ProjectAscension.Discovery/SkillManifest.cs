@@ -24,39 +24,9 @@ public enum ManifestationKind
 /// </summary>
 public static class SkillManifest
 {
-    /// <param name="magicContext">Whether the discovery was made with MAGIC (an arcane
-    /// catalyst / a spell-weapon). A new WEAPON is "magic synthesized from magic" (ADR 0005) —
-    /// so only an offensive discovery in a magic context becomes an equippable weapon; a
-    /// NON-magic offensive discovery (firearm/bow/blade) is a cast hotkey Command instead.</param>
-    public static ManifestationKind Classify(SkillComposition composition, bool magicContext)
-    {
-        int offensive = 0;
-        int control = 0;
-        int mobility = 0;
-        int defensive = 0;
-        foreach (var p in composition.Primitives)
-        {
-            if (!PrimitiveCatalog.TryGet(p.Kind, out var def) || def is null) continue;
-            switch (def.Category)
-            {
-                case PrimitiveCategory.Offensive: offensive += p.Magnitude; break;
-                case PrimitiveCategory.Control: control += p.Magnitude; break;
-                case PrimitiveCategory.Mobility: mobility += p.Magnitude; break;
-                case PrimitiveCategory.Defensive: defensive += p.Magnitude; break;
-            }
-        }
-
-        // Offensive-dominant → a WEAPON only when magic-synthesized-from-magic (ADR 0005);
-        //   a non-magic offensive discovery is a cast hotkey COMMAND, not an equippable weapon.
-        // Control-dominant → a Command (actively invoked: stun burst, knockback).
-        // Mobility-dominant → a Passive movement CAPABILITY (double jump), used via movement.
-        // Defensive-dominant → a Passive ward/sustain.
-        if (offensive >= control && offensive >= mobility && offensive >= defensive)
-            return magicContext ? ManifestationKind.Weapon : ManifestationKind.Command;
-        if (control >= mobility && control >= defensive)
-            return ManifestationKind.Command;
-        return ManifestationKind.Passive; // mobility or defensive
-    }
+    // (The flat-primitive Classify was retired with primitive generation — ADR 0007 Phase 4c;
+    // manifestation is derived from the effect graph now, see ManifestationFromGraph. IsMagicContext
+    // stays: the graph classifier still needs to know whether the discovery was magic.)
 
     /// <summary>Does a discovery's context indicate MAGIC — an arcane catalyst or a
     /// synthesized spell-weapon (its "spell:" tag)? Only then can an offensive synthesis
