@@ -21,6 +21,9 @@ namespace ProjectAscension.Player
         [SerializeField] private float dodgeSpeed = 12f;
         [SerializeField] private float dodgeDuration = 0.2f;
 
+        [Header("Wall-climb (discovered)")]
+        [SerializeField] private float wallClimbSpeed = 4f;
+
         [Header("Camera")]
         [SerializeField] private float lookSensitivity = 0.1f;
         [SerializeField] private float minPitch = -85f;
@@ -37,10 +40,12 @@ namespace ProjectAscension.Player
         public MovementSettings ToMovementSettings()
         {
             var s = PlayerStatsCatalog.Current;
-            int extraJumps = MovementCapabilityCatalog.ExtraJumps; // from discovered mobility passives (double jump)
+            // Movement capabilities come from discovered skills' effect graphs (ADR 0007).
+            int extraJumps = MovementCapabilityCatalog.ExtraJumps; // double jump
+            bool wallClimb = MovementCapabilityCatalog.WallClimb;
             return s == null
-                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration, extraJumps)
-                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration, extraJumps);
+                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration, extraJumps, wallClimb, wallClimbSpeed)
+                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration, extraJumps, wallClimb, wallClimbSpeed);
         }
     }
 }
