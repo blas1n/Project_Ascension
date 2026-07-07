@@ -30,7 +30,7 @@ public sealed class LlmEffectGraphComposer : IEffectGraphComposer
 
     public async Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
     {
-        var prompt = SkillGraphPrompt.Build(request.Theme, request.Profile, request.Budget, request.Avoid);
+        var prompt = SkillGraphPrompt.Build(request.Theme, request.Profile, request.Budget, request.Avoid, request.Lineage);
 
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {

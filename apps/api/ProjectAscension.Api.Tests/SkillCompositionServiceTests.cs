@@ -428,4 +428,39 @@ public class SkillCompositionServiceTests
         Assert.Equal(DiscoveryContentStatus.Pending, deferred.Skills[0].Status);
         Assert.True(deferred.Skills[0].Attempts > 0);
     }
+
+    [Fact]
+    public async Task ComposePending_InjectsGraphLineage()
+    {
+        // RAG (ADR 0007): a pending child is composed with its Ready ancestors' name/description/
+        // graph so the AI evolves prior discoveries rather than starting cold.
+        var skills = new FakeSkillRepo();
+        var lineage = new FakeLineageRepo();
+        var composer = new CapturingGraphComposer();
+        using var metrics = new CompositionMetrics();
+
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = parentId,
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Emberbrand",
+            Description = "A dart of living flame.",
+            EffectGraphJson = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Projectile\",\"tier\":1}}",
+            CreatedAt = DateTime.UtcNow,
+        });
+        var pending = Pending();
+        pending.DiscoveryId = childId;
+        skills.Skills.Add(pending);
+        lineage.Edges.Add(new DiscoveryLineage { ChildDiscoveryId = childId, ParentDiscoveryId = parentId });
+
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, lineage, composer)
+            .ComposePendingAsync(10);
+
+        Assert.NotNull(composer.Last);
+        var prior = Assert.Single(composer.Last!.Lineage!);
+        Assert.Equal("Emberbrand", prior.Name);
+    }
 }
