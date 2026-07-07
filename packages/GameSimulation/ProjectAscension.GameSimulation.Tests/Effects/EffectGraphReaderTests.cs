@@ -46,6 +46,23 @@ namespace ProjectAscension.GameSimulation.Tests.Effects
             Assert.Equal(TriggerKind.OnCast, trigger.Kind);
         }
 
+        [Fact]
+        public void Parse_OffensiveRiders_DotSpreadHoming()
+        {
+            var node = EffectGraphReader.Parse(
+                "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Sequence\",\"steps\":[" +
+                "{\"kind\":\"Emit\",\"delivery\":\"Projectile\",\"tier\":1}," +
+                "{\"kind\":\"Homing\",\"tier\":1}," +
+                "{\"kind\":\"Spread\",\"tier\":2}," +
+                "{\"kind\":\"Dot\",\"tier\":2,\"duration\":3}]}}");
+            var seq = Assert.IsType<Sequence>(Assert.IsType<Trigger>(node).Child);
+            Assert.Collection(seq.Steps,
+                s => Assert.IsType<Emit>(s),
+                s => Assert.IsType<Homing>(s),
+                s => Assert.Equal(2, Assert.IsType<Spread>(s).Tier),
+                s => { var dot = Assert.IsType<Dot>(s); Assert.Equal(2, dot.Tier); Assert.Equal(3, dot.Duration); });
+        }
+
         [Theory]
         [InlineData("not json")]
         [InlineData("{\"trigger\":\"OnCast\"}")]                                          // no effect

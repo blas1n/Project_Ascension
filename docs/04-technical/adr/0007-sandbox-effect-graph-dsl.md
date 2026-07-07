@@ -80,3 +80,90 @@ AI가 스킬의 **구조/로직**을 조합 → 진짜 동적 생성. 엔진은 
 "같은 조합 + 다른 행동 → 다른 스킬"이 *구조* 수준에서 성립하고, 새 개념도 노드 조합으로
 표현되어 **엔진 특수케이스가 필요 없다**. 권위 경계는 ADR 0004/0002 그대로(프로덕션에선
 서버가 그래프 실행을 검증).
+
+## 진행 현황 (2026-07)
+
+- **Phase 1 ✅** (#115): 노드 모델 + 비용 + 검증기.
+- **AI 생성 + 시뮬 + 벽타기 작곡 ✅** (#116): 프롬프트→JSON→파서→검증, 라이브 LLM 입증.
+- **Phase 2 (이동 런타임) ✅**: 2a(#117) 서버가 스킬마다 그래프 생성·저장·서빙 /
+  2b(#118) 클라 인터프리터(`Effects/` + 의존성 없는 `MiniJson`/`EffectGraphReader`,
+  `MovementCapability`) + **`PassiveEffect.ExtraJumps` 제거** / 2c(#119) 벽 접촉 감지 →
+  벽타기 인게임. 더블점프·벽타기 = 그래프 구동, 엔진 특수케이스 0.
+- **Phase 4a ✅** (#120): 발현을 그래프에서 도출(`ManifestationFromGraph`), primitive 폴백.
+- **Phase 4b ⏳** (아래 설계): 공격 **실행** 이관.
+
+## Phase 4b — 공격 실행 이관 (상세 설계)
+
+### 문제
+
+현 오펜시브 실행은 `SkillResolver`(GameSimulation.Combat)가 **평면 프리미티브**를 전투 수치로
+해석한다: `single(Projectile/Beam) / area(Area) / DoT / spread(Chain·Fork·Pierce) / control /
+leech / shield / homing`. 그런데 현재 그래프의 공격 어휘는 `Emit{Projectile/Beam/Burst/Nova} +
+Damage + Control` 뿐이라 **DoT·연쇄·관통·유도·흡혈이 표현 불가**. 이대로 `SkillResolver`를 그래프로
+바꾸면 **전투 다양성이 후퇴** → CLAUDE.md "discovery 시스템 보호" 위반. 따라서 **어휘 확장이 선행**.
+
+### 결정 1 — 관심사 분리형 어휘 확장
+
+프리미티브는 한 노드에 magnitude/range를 뭉쳐(예: Projectile이 데미지 *와* spread 동시 기여)
+있었다. 그래프는 더 깔끔하게 **역할별 노드**로 분리한다(엔진 소유 화이트리스트에 추가):
+
+- **`Emit(delivery, tier)`** — 전달 *형태* + 기본 데미지. `Projectile/Beam` = 단일 타겟,
+  `Burst/Nova` = 광역(area). (기존)
+- **`Damage(tier)`** — 추가 데미지(중첩). (기존)
+- **`Dot(tier, duration)`** — 지속 피해. (신규)
+- **`Spread(tier)`** — 추가 타겟 수(연쇄/관통/분열을 *수치상* 하나로 수렴; 형태 구분은 VFX가
+  전달로 표현). (신규)
+- **`Homing(tier)`** — 유도(수치 없음, 투사체 거동/VFX만). (신규)
+- **`Control(kind, tier)`** — Knockback/Slow/Stun. (기존)
+- **`Ward(Leech, tier)`** — 명중 시 흡혈(오펜시브 시퀀스 안에서). Shield/Barrier/Heal은 방어.
+
+프리미티브 → 그래프 매핑:
+
+| primitive | 그래프 노드 |
+|---|---|
+| Projectile / Beam | `Emit(Projectile/Beam)` (단일) |
+| Area | `Emit(Burst/Nova)` (광역) |
+| Damage 크기 | `Emit.tier` + `Damage(tier)` |
+| DamageOverTime | `Dot(tier, duration)` |
+| Chain / Fork / Pierce | `Spread(tier)` |
+| Homing | `Homing(tier)` |
+| Knockback / Slow / Stun | `Control(kind, tier)` |
+| Leech | `Ward(Leech, tier)` |
+| Shield / Barrier | `Ward(Shield/Barrier, tier)` |
+| Dash / Blink | `Impulse` (이동, Phase 2 완료) |
+
+비용(엔진 소유, 잠정): `Dot (tier+1)*3`, `Spread (tier+1)*2`, `Homing 2(고정)`. 검증기에 반영.
+
+### 결정 2 — 파리티 인터프리터
+
+`GraphSkillResolver.Resolve(EffectNode graph, int availableTargets, CombatTuning) → SkillResolution`
+를 신설한다. 그래프의 트리거 child를 walk 하며 `SkillResolver`와 **동일한 수식**으로
+single/area/dotPerTick/dotTicks/spread/control/leech/shield 를 누적 → 같은 `SkillResolution` 산출.
+숫자는 `CombatTuning`(DB 구동) 그대로 사용하므로 **결정론·서버=클라 동일** 유지. 목표는 동등한
+그래프에 대해 프리미티브 경로와 **수치 파리티**(테스트로 고정).
+
+### 결정 3 — VFX를 그래프에서 구동
+
+VFX(`SkillVfx`)는 이미 `delivery`(형태) + name(색) + powerCost(강도)로 조립된다. 그래프의
+`Emit.Delivery`가 별도 `delivery` 문자열을 **대체**한다: 클라는 파싱된 그래프의 Emit에서 형태를
+읽고, `Homing`이 있으면 유도 투사체 거동을 켠다. `delivery` 문자열은 파생/레거시로 남긴다.
+
+### 결정 4 — 무회귀 스위치
+
+`SkillCaster` 발사 경로: **그래프가 있으면** `GraphSkillResolver` + 그래프 기반 VFX, **없으면**
+기존 `SkillResolver`(프리미티브) + `delivery` 문자열. 새 discovery는 그래프를 갖고(Phase 2a),
+레거시/그래프-실패 스킬은 프리미티브로 계속 동작. 프리미티브 경로는 전면 스위치가 검증될
+때까지 유지.
+
+### 결정 5 — 프롬프트 + 다양성 시뮬 게이트
+
+`EffectGraphPrompt`에 신규 노드(Dot/Spread/Homing) 어휘·사용 지침 추가. `EffectGraphSimulation`을
+확장해 **오펜시브 그래프의 다양성**(전달·DoT·연쇄·유도·컨트롤 분포)이 프리미티브 시절만큼
+넓은지 측정 — 파리티가 시뮬로 확인되기 전엔 전면 스위치하지 않는다.
+
+### 하위 단계
+
+- **4b-1**: 어휘 확장(`Dot`/`Spread`/`Homing`) + 비용/검증기 + JSON 직렬화/파서(서버·클라) + 테스트.
+- **4b-2**: `GraphSkillResolver`(파리티 인터프리터) + 프리미티브 경로와의 수치 파리티 테스트.
+- **4b-3**: `SkillCaster` 스위치(그래프 우선) + 그래프 기반 VFX(Emit/Homing).
+- **4b-4**: 프롬프트 어휘 + 오펜시브 다양성 시뮬. **플레이테스트 게이트** 후 프리미티브 폴백 축소.

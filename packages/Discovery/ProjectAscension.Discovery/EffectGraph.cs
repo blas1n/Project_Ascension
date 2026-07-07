@@ -34,6 +34,14 @@ public sealed record Damage(int Tier) : EffectNode;
 public sealed record Control(ControlEffect Effect, int Tier) : EffectNode;
 public sealed record Ward(WardEffect Effect, int Tier) : EffectNode;
 
+// Offensive riders (ADR 0007 Phase 4b) — bring the graph to primitive parity so the offensive
+// interpreter doesn't regress combat variety. Dot = damage over time; Spread = extra targets
+// (chain/fork/pierce collapse into one — same numbers, delivery carries the look); Homing =
+// targeting aid (no numbers, changes projectile behaviour/VFX only).
+public sealed record Dot(int Tier, int Duration) : EffectNode;
+public sealed record Spread(int Tier) : EffectNode;
+public sealed record Homing(int Tier) : EffectNode;
+
 public static class EffectGraph
 {
     public const int MaxNodes = 8;
@@ -60,6 +68,9 @@ public static class EffectGraph
         Damage d => (d.Tier + 1) * 3,
         Control c => (c.Tier + 1) * 5,
         Ward w => (w.Tier + 1) * 4,
+        Dot dot => (dot.Tier + 1) * 3,
+        Spread sp => (sp.Tier + 1) * 2,
+        Homing => 2,
         _ => 0,
     };
 
