@@ -60,13 +60,11 @@ if (string.Equals(composerProvider, "Ollama", StringComparison.OrdinalIgnoreCase
     var timeoutSeconds = builder.Configuration.GetValue("SkillForge:Ollama:TimeoutSeconds", 30);
     builder.Services.AddSingleton(new LlmComposerOptions { Timeout = TimeSpan.FromSeconds(timeoutSeconds) });
     builder.Services.AddSingleton<IChatClient>(_ => new OllamaApiClient(new Uri(endpoint), model));
-    builder.Services.AddSingleton<ISkillComposer, LlmSkillComposer>();
-    builder.Services.AddSingleton<IEffectGraphComposer, LlmEffectGraphComposer>(); // ADR 0007 effect graph
+    builder.Services.AddSingleton<IEffectGraphComposer, LlmEffectGraphComposer>(); // ADR 0007 — the skill graph (name+desc+graph)
     builder.Services.AddScoped<IContractFlavorComposer, LlmContractFlavorComposer>(); // AI contract postings
 }
 else
 {
-    builder.Services.AddSingleton<ISkillComposer, StubSkillComposer>();
     builder.Services.AddSingleton<IEffectGraphComposer, StubEffectGraphComposer>();
     builder.Services.AddScoped<IContractFlavorComposer, StubContractFlavorComposer>();
 }
