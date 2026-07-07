@@ -197,7 +197,7 @@ namespace ProjectAscension.Game
                 // The AI-composed description (a sentence, like a real game's skill text).
                 string desc = !string.IsNullOrWhiteSpace(d.Description)
                     ? d.Description
-                    : SkillSummary.Describe(d.Skill); // fallback if the model gave none
+                    : SkillSummary.Describe(d); // fallback if the model gave none (graph-derived)
                 GUILayout.Label($"     {desc}");
                 any = true;
             }
@@ -219,8 +219,13 @@ namespace ProjectAscension.Game
             {
                 if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
                 anySellable = true;
-                int price = KnowledgeValuation.LicensePrice(discovered.Skill, KnowledgeGoldPerPoint);
-                int rep = KnowledgeValuation.LicenseReputation(discovered.Skill, KnowledgePointsPerRep);
+                // Value from the effect graph when present (ADR 0007), else the primitives.
+                int price = discovered.Graph != null
+                    ? KnowledgeValuation.LicensePrice(discovered.Graph, KnowledgeGoldPerPoint)
+                    : KnowledgeValuation.LicensePrice(discovered.Skill, KnowledgeGoldPerPoint);
+                int rep = discovered.Graph != null
+                    ? KnowledgeValuation.LicenseReputation(discovered.Graph, KnowledgePointsPerRep)
+                    : KnowledgeValuation.LicenseReputation(discovered.Skill, KnowledgePointsPerRep);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
                 if (GUILayout.Button($"Sell +{price}g +{rep}rep", GUILayout.Width(150)))

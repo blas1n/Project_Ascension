@@ -51,7 +51,7 @@ namespace ProjectAscension.Game
                 string lockTxt = !CommandGate.Invocable(cmd, current)
                     ? $"  [LOCKED: {string.Join("/", CommandGate.RequiredEquipment(cmd))}]"
                     : "";
-                sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] {cmd.Name} — {SkillSummary.Describe(cmd.Skill)}{lockTxt}");
+                sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] {cmd.Name} — {SkillSummary.Describe(cmd)}{lockTxt}");
             }
 
             if (set.Passives.Count > 0)

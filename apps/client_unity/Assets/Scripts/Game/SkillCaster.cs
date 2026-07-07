@@ -156,8 +156,10 @@ namespace ProjectAscension.Game
             // DB-driven combat balance (fetched at startup; Default offline).
             var tuning = CombatTuningCatalog.Current;
 
-            // Skills cost focus (combat-framework 집중력); refuse the cast when short.
-            if (_focus != null && !_focus.TrySpend(FocusCost.Of(skill, tuning)))
+            // Skills cost focus (combat-framework 집중력); refuse the cast when short. Cost from
+            // the effect graph when present (ADR 0007), else the primitives.
+            float focusCost = graph != null ? FocusCost.Of(graph, tuning) : FocusCost.Of(skill, tuning);
+            if (_focus != null && !_focus.TrySpend(focusCost))
             {
                 Debug.Log($"[SkillCaster] Not enough focus to cast \"{skill.Name}\".");
                 return;
@@ -219,7 +221,10 @@ namespace ProjectAscension.Game
             var points = new List<Vector3>(targets.Count);
             foreach (var t in targets)
                 if (t is Component c) points.Add(c.transform.position);
-            SkillVfx.PlayImpactModifiers(skill, point, points, transform.position, _intensity);
+            if (graph != null)
+                SkillVfx.PlayImpactModifiers(graph, skill.Name, point, points, transform.position, _intensity);
+            else
+                SkillVfx.PlayImpactModifiers(skill, point, points, transform.position, _intensity);
         }
 
         private static bool HasPrimitive(Skill skill, SkillPrimitiveKind kind)
