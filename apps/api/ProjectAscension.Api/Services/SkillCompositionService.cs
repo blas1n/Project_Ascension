@@ -19,7 +19,6 @@ public class SkillCompositionService : ISkillCompositionService
     private readonly IKnowledgeRepository _knowledge;
     private readonly IDiscoveryLineageRepository _lineage;
     private readonly IDiscoveryTuningProvider _tuning;
-    private readonly ISkillComposer _composer;
     private readonly IEffectGraphComposer _graphComposer;
     private readonly CompositionMetrics _metrics;
     private readonly ILogger<SkillCompositionService> _logger;
@@ -30,7 +29,6 @@ public class SkillCompositionService : ISkillCompositionService
         IKnowledgeRepository knowledge,
         IDiscoveryLineageRepository lineage,
         IDiscoveryTuningProvider tuning,
-        ISkillComposer composer,
         IEffectGraphComposer graphComposer,
         CompositionMetrics metrics,
         ILogger<SkillCompositionService> logger)
@@ -40,7 +38,6 @@ public class SkillCompositionService : ISkillCompositionService
         _knowledge = knowledge;
         _lineage = lineage;
         _tuning = tuning;
-        _composer = composer;
         _graphComposer = graphComposer;
         _metrics = metrics;
         _logger = logger;
@@ -258,17 +255,23 @@ public class SkillCompositionService : ISkillCompositionService
         return true;
     }
 
-    // The primitive-KIND signature of an already-composed skill, matching
-    // CompositionPipeline.KindSignature, so the actor-wide Avoid set forbids its effect.
-    private static string? KindSignatureOf(string? primitivesJson)
+    // The delivery SHAPE ("projectile"/"beam"/"burst"/"nova") of a composed graph — its first
+    // Emit. Null when the skill emits nothing (movement/ward), so the DTO falls back to a heuristic.
+    private static string? FirstDelivery(EffectNode node)
     {
-        if (string.IsNullOrWhiteSpace(primitivesJson)) return null;
-        try
+        switch (node)
         {
-            var prims = JsonSerializer.Deserialize<List<ComposedPrimitive>>(primitivesJson);
-            return prims is { Count: > 0 } ? CompositionPipeline.KindSignature(prims) : null;
+            case Emit e: return e.Delivery.ToString().ToLowerInvariant();
+            case Trigger t: return FirstDelivery(t.Child);
+            case Sequence s:
+                foreach (var step in s.Steps)
+                {
+                    var d = FirstDelivery(step);
+                    if (d is not null) return d;
+                }
+                return null;
+            default: return null;
         }
-        catch (JsonException) { return null; }
     }
 
     private static IReadOnlyDictionary<string, int> ToBehaviorCounts(IReadOnlyList<BehaviorCount> behaviors)
@@ -310,12 +313,12 @@ public class SkillCompositionService : ISkillCompositionService
         // different names, which reads as a duplicate. Seed from all Ready skills and grow the
         // set as we compose this batch (so same-pass siblings also stay distinct). Slice = one
         // actor; in the MMO this should be scoped per-discoverer (first-discoverer is personal).
+        // Actor-wide dedup on the GRAPH signature (its canonical serialization) — every new skill
+        // must be structurally distinct from every one already composed. Seeded from the Ready
+        // skills' graphs and grown as this batch composes (so same-pass siblings stay distinct too).
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in await _skills.GetReadyAsync(ct))
-        {
-            var sig = KindSignatureOf(s.PrimitivesJson);
-            if (sig is not null) taken.Add(sig);
-        }
+            if (!string.IsNullOrEmpty(s.EffectGraphJson)) taken.Add(s.EffectGraphJson!);
 
         // Command combos must be PREFIX-FREE across the actor so the client fires the instant a
         // combo completes. Reconcile the existing commands' combos and seed the set for new ones.
@@ -331,62 +334,45 @@ public class SkillCompositionService : ISkillCompositionService
                 continue;
             }
 
-            // RAG: retrieve the composed lineage so the AI extends prior discoveries
-            // (discovery.md 발견 그래프 — the graph is used, not just recorded). Avoid = the
-            // actor-wide taken set so the retry steers away from every existing effect.
-            request = request with
-            {
-                Lineage = await RetrieveLineageAsync(skill.DiscoveryId, ct),
-                Avoid = taken.ToList(),
-            };
+            List<BehaviorCount> fought;
+            try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
+            catch (JsonException) { fought = new(); }
 
+            // ADR 0007 Phase 4c: the AI composes the whole skill — name, description, and effect
+            // GRAPH — in ONE call. The graph is the sole composed artifact (no primitive pass);
+            // Avoid carries the actor-wide taken structures so the new skill stays distinct.
+            var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
             var startedAt = Stopwatch.GetTimestamp();
-            var outcome = await CompositionPipeline.ForgeAsync(request, _composer, MaxComposeAttempts, ct);
+            var comp = await _graphComposer.ComposeAsync(
+                new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed, taken.ToList()), ct);
             var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
-            skill.Attempts += outcome.Attempts;
+            skill.Attempts++;
 
-            if (outcome.Forged && outcome.Skill is not null)
+            if (comp is not null)
             {
-                skill.Name = outcome.Skill.Name;
-                skill.Description = outcome.Skill.Description;
-                // The AI composes the delivery (guided by the prompt's behavior->delivery
-                // rules); the behavior-derived heuristic is only a fallback for when it omits
-                // one. The variety simulation measures whether the prompt keeps it varied.
-                List<BehaviorCount> fought;
-                try { fought = JsonSerializer.Deserialize<List<BehaviorCount>>(skill.BehaviorProfileJson) ?? new(); }
-                catch (JsonException) { fought = new(); }
-                skill.Delivery = string.IsNullOrEmpty(outcome.Skill.Delivery)
-                    ? DeliveryHeuristics.ForBehavior(fought)
-                    : outcome.Skill.Delivery;
-                skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
-                taken.Add(CompositionPipeline.KindSignature(outcome.Skill.Primitives)); // keep same-batch siblings distinct
-                skill.PowerCost = outcome.LastValidation.TotalCost;
+                skill.Name = comp.Name;
+                skill.Description = comp.Description;
+                skill.EffectGraphJson = EffectGraphJson.Serialize(comp.Graph);
+                skill.PowerCost = EffectGraph.Cost(comp.Graph);
+                // Delivery SHAPE from the graph's first Emit (the client also derives this); a
+                // graphless/movement skill has no emit → the behavior heuristic covers the DTO.
+                var delivery = FirstDelivery(comp.Graph);
+                skill.Delivery = delivery ?? DeliveryHeuristics.ForBehavior(fought);
+                skill.PrimitivesJson = null; // graph is the artifact now (legacy rows keep theirs)
 
-                // Compose the effect GRAPH (ADR 0007) — the structure the runtime interpreter
-                // executes. Additive during migration: if the AI produces nothing valid, the
-                // skill still ships via its primitives (graph stays null, no defer).
-                var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
-                var graph = await _graphComposer.ComposeAsync(
-                    new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed), ct);
-                skill.EffectGraphJson = graph is null ? null : EffectGraphJson.Serialize(graph);
-                if (graph is null)
-                    _logger.LogWarning("No effect graph composed for discovery {DiscoveryId}; skill ships primitive-only.", skill.DiscoveryId);
+                // The canonical graph serialization is the structural signature — dedup against it
+                // so no two discovered skills share a shape (the "duplicate skill" guard, now on the
+                // graph instead of the primitive-kind set).
+                taken.Add(skill.EffectGraphJson);
 
-                // Deterministic, server-authoritative: an offensive skill becomes a WEAPON only
-                // when magic-synthesized-from-magic (arcane/spell context, ADR 0005); a non-magic
-                // offensive discovery is a cast hotkey COMMAND. Mobility → passive, etc. Prefer the
-                // GRAPH's structure (ADR 0007) so the taxonomy follows what the AI composed; fall
-                // back to the primitive classifier when there is no graph.
+                // Manifestation follows the graph's structure (ADR 0007) — always available now.
                 bool magicContext = SkillManifest.IsMagicContext(DeserializeTags(skill.ContextTagsJson));
-                var manifestation = ManifestationFromGraph.Classify(graph, magicContext)
-                    ?? SkillManifest.Classify(outcome.Skill, magicContext);
+                var manifestation = ManifestationFromGraph.Classify(comp.Graph, magicContext) ?? ManifestationKind.Command;
                 skill.Manifestation = manifestation.ToString();
 
-                // A command is invoked by a button combo the rule engine assigns
-                // deterministically (decoupled from the discovery behaviors — even a
-                // single-behavior discovery like double jump gets one). It is made PREFIX-FREE
-                // against the actor's other commands so the client can fire the instant the
-                // combo completes (no disambiguation delay). Weapons fire on the attack input.
+                // A command is invoked by a button combo the rule engine assigns deterministically,
+                // made PREFIX-FREE against the actor's other commands so the client fires the instant
+                // the combo completes. Weapons fire on the attack input.
                 if (manifestation == ManifestationKind.Command)
                 {
                     var combo = ComboAssigner.Assign(DeserializeTags(skill.BehaviorsJson), skill.DiscoveryId.ToString());
@@ -402,18 +388,17 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
 
-                _metrics.Completed(outcome.Attempts, elapsedMs);
+                _metrics.Completed(1, elapsedMs);
                 _logger.LogInformation(
-                    "Composed \"{Name}\" for discovery {DiscoveryId} in {Attempts} attempt(s), {ElapsedMs:F0}ms (cost {Cost}/{Budget}).",
-                    skill.Name, skill.DiscoveryId, outcome.Attempts, elapsedMs, skill.PowerCost, skill.PowerBudget);
+                    "Composed \"{Name}\" for discovery {DiscoveryId} in {ElapsedMs:F0}ms (cost {Cost}/{Budget}).",
+                    skill.Name, skill.DiscoveryId, elapsedMs, skill.PowerCost, skill.PowerBudget);
             }
             else
             {
-                // Leave Pending — retried on a later pass (defer, no fallback).
-                _metrics.Deferred(outcome.Attempts, elapsedMs);
+                // Leave Pending — retried on a later pass (defer, no fallback: ADR 0002).
+                _metrics.Deferred(1, elapsedMs);
                 _logger.LogWarning(
-                    "Deferred composition for discovery {DiscoveryId} after {Attempts} attempt(s): {Error}.",
-                    skill.DiscoveryId, outcome.Attempts, outcome.LastValidation.Error);
+                    "Deferred composition for discovery {DiscoveryId} — no valid skill graph.", skill.DiscoveryId);
             }
 
             await _skills.UpdateAsync(skill, ct);
@@ -475,30 +460,6 @@ public class SkillCompositionService : ISkillCompositionService
         return true;
     }
 
-    private async Task<IReadOnlyList<PriorArt>> RetrieveLineageAsync(Guid discoveryId, CancellationToken ct)
-    {
-        // Pull the immediate composed ancestors — the strongest, bounded context for
-        // the composer to build on (RAG over the discovery graph).
-        var edges = await _lineage.GetByChildAsync(discoveryId, ct);
-        if (edges.Count == 0) return Array.Empty<PriorArt>();
-
-        var parents = await _skills.GetByDiscoveryIdsAsync(edges.Select(e => e.ParentDiscoveryId), ct);
-
-        var priorArt = new List<PriorArt>();
-        foreach (var s in parents)
-        {
-            // Only Ready ancestors carry composed content to build on.
-            if (s.Status != DiscoveryContentStatus.Ready || s.Name is null || s.PrimitivesJson is null) continue;
-
-            List<ComposedPrimitive>? prims;
-            try { prims = JsonSerializer.Deserialize<List<ComposedPrimitive>>(s.PrimitivesJson); }
-            catch (JsonException) { continue; }
-
-            priorArt.Add(new PriorArt(s.Name, s.Description ?? string.Empty, prims ?? new List<ComposedPrimitive>()));
-            if (priorArt.Count >= MaxLineageContext) break;
-        }
-        return priorArt;
-    }
 
     private static IReadOnlyList<string> DescribePrimitives(string json)
     {

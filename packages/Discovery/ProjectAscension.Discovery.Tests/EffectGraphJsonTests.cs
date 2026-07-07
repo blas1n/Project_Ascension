@@ -48,6 +48,23 @@ public class EffectGraphJsonTests
     }
 
     [Fact]
+    public void ParseComposition_ReadsNameDescriptionAndGraph()
+    {
+        var comp = EffectGraphJson.ParseComposition(
+            "{\"name\":\"Ember Lance\",\"description\":\"A dart of living flame.\"," +
+            "\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Projectile\",\"tier\":2}}");
+        Assert.NotNull(comp);
+        Assert.Equal("Ember Lance", comp!.Name);
+        Assert.Equal("A dart of living flame.", comp.Description);
+        Assert.IsType<Trigger>(comp.Graph);
+    }
+
+    [Fact]
+    public void ParseComposition_NullWhenGraphInvalid()
+        // name/description alone aren't a skill — a bad graph means no composition.
+        => Assert.Null(EffectGraphJson.ParseComposition("{\"name\":\"X\",\"description\":\"y\",\"trigger\":\"Bogus\"}"));
+
+    [Fact]
     public void Parse_Malformed_ReturnsNull()
     {
         Assert.Null(EffectGraphJson.Parse("not json"));

@@ -28,9 +28,9 @@ public sealed class LlmEffectGraphComposer : IEffectGraphComposer
         _logger = logger;
     }
 
-    public async Task<EffectNode?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
+    public async Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
     {
-        var prompt = EffectGraphPrompt.Build(request.Theme, request.Profile, request.Budget);
+        var prompt = SkillGraphPrompt.Build(request.Theme, request.Profile, request.Budget, request.Avoid);
 
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
@@ -46,11 +46,11 @@ public sealed class LlmEffectGraphComposer : IEffectGraphComposer
                 };
                 var response = await _chat.GetResponseAsync(prompt, options, cts.Token);
 
-                var graph = EffectGraphJson.Parse(response.Text);
-                if (graph is not null && EffectGraphValidator.Validate(graph, request.Budget).IsValid)
-                    return graph;
+                var comp = EffectGraphJson.ParseComposition(response.Text);
+                if (comp is not null && EffectGraphValidator.Validate(comp.Graph, request.Budget).IsValid)
+                    return comp;
 
-                _logger.LogDebug("LLM effect graph unparseable/invalid (attempt {Attempt}); retrying.", attempt + 1);
+                _logger.LogDebug("LLM skill composition unparseable/invalid (attempt {Attempt}); retrying.", attempt + 1);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -66,6 +66,6 @@ public sealed class LlmEffectGraphComposer : IEffectGraphComposer
             }
         }
 
-        return null; // additive — the primitive skill still ships (ADR 0007 Phase 2)
+        return null; // graph is the sole artifact — a null defers the discovery (ADR 0002)
     }
 }

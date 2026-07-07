@@ -97,12 +97,14 @@ public class SkillCompositionServiceTests
             => Task.FromResult<IReadOnlyList<DiscoveryLineage>>(Edges.Where(e => e.ChildDiscoveryId == childDiscoveryId).ToList());
     }
 
-    private sealed class CapturingComposer : ISkillComposer
+    // Captures the request the graph composer receives (to assert the Avoid dedup set), delegating
+    // to the deterministic stub for the actual composition.
+    private sealed class CapturingGraphComposer : IEffectGraphComposer
     {
-        private readonly StubSkillComposer _inner = new();
-        public CompositionRequest? Last { get; private set; }
+        private readonly StubEffectGraphComposer _inner = new();
+        public EffectGraphRequest? Last { get; private set; }
 
-        public Task<SkillComposition> ComposeAsync(CompositionRequest request, CancellationToken ct = default)
+        public Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
         {
             Last = request;
             return _inner.ComposeAsync(request, ct);
@@ -111,9 +113,9 @@ public class SkillCompositionServiceTests
 
     private static SkillCompositionService Service(
         FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics,
-        FakeLineageRepo? lineage = null, ISkillComposer? composer = null)
+        FakeLineageRepo? lineage = null, IEffectGraphComposer? graphComposer = null)
         => new(discoveries, skills, knowledge, lineage ?? new FakeLineageRepo(), new FakeTuningProvider(),
-            composer ?? new StubSkillComposer(), new StubEffectGraphComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+            graphComposer ?? new StubEffectGraphComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -159,11 +161,12 @@ public class SkillCompositionServiceTests
     }
 
     [Fact]
-    public async Task ComposePending_SeedsAvoidWithExistingReadySkillEffects()
+    public async Task ComposePending_SeedsAvoidWithExistingReadySkillGraphs()
     {
-        // Actor-wide dedup: a new composition must be told to avoid the primitive-KIND set of
-        // an already-composed skill — even one on a different line — so it can't reproduce the
-        // same effect under a different name (the recurring "two identical skills" bug).
+        // Actor-wide dedup (ADR 0007 Phase 4c): a new composition must be told to avoid the GRAPH
+        // signature of an already-composed skill — even one on a different line — so it can't
+        // reproduce the same structure under a different name (the "two identical skills" bug).
+        const string existingGraph = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Beam\",\"tier\":1}}";
         var skills = new FakeSkillRepo();
         skills.Skills.Add(new DiscoverySkill
         {
@@ -171,19 +174,18 @@ public class SkillCompositionServiceTests
             DiscoveryId = Guid.NewGuid(),
             Status = DiscoveryContentStatus.Ready,
             Name = "Existing",
-            // Kind 0 = Projectile, Kind 4 = DamageOverTime → signature "DamageOverTime,Projectile".
-            PrimitivesJson = "[{\"Kind\":0,\"Magnitude\":1},{\"Kind\":4,\"Magnitude\":1}]",
+            EffectGraphJson = existingGraph,
             CreatedAt = DateTime.UtcNow,
         });
         skills.Skills.Add(Pending());
 
-        var composer = new CapturingComposer();
+        var composer = new CapturingGraphComposer();
         using var metrics = new CompositionMetrics();
-        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, composer: composer)
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, graphComposer: composer)
             .ComposePendingAsync(10);
 
         Assert.NotNull(composer.Last);
-        Assert.Contains("DamageOverTime,Projectile", composer.Last!.Avoid ?? new List<string>());
+        Assert.Contains(existingGraph, composer.Last!.Avoid ?? new List<string>());
     }
 
     [Fact]
@@ -397,50 +399,33 @@ public class SkillCompositionServiceTests
         Assert.Equal(first.DiscoveryId, ancestor.DiscoveryId);
     }
 
-    [Fact]
-    public async Task ComposePending_InjectsLineageFromGraph()
+    // The graph is the sole artifact now (ADR 0007 Phase 4c): a composition with no valid graph
+    // defers the discovery (Pending), with no primitive fallback (ADR 0002).
+    private sealed class NullGraphComposer : IEffectGraphComposer
     {
-        var skills = new FakeSkillRepo();
-        var lineage = new FakeLineageRepo();
-        using var metrics = new CompositionMetrics();
-        var composer = new CapturingComposer();
+        public Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
+            => Task.FromResult<SkillGraphComposition?>(null);
+    }
 
-        var parentId = Guid.NewGuid();
-        var childId = Guid.NewGuid();
+    [Fact]
+    public async Task ComposePending_IsGraphOnly_AndDefersWhenNoGraph()
+    {
+        // Success path: graph set, primitives cleared, name from the composer.
+        var ready = new FakeSkillRepo();
+        ready.Skills.Add(Pending());
+        using var m1 = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), ready, new FakeKnowledgeRepo(), m1).ComposePendingAsync(10);
+        Assert.Equal(DiscoveryContentStatus.Ready, ready.Skills[0].Status);
+        Assert.False(string.IsNullOrEmpty(ready.Skills[0].EffectGraphJson));
+        Assert.Null(ready.Skills[0].PrimitivesJson); // no primitive artifact
 
-        // A composed (Ready) ancestor and a pending child that builds on it.
-        skills.Skills.Add(new DiscoverySkill
-        {
-            Id = Guid.NewGuid(),
-            DiscoveryId = parentId,
-            Status = DiscoveryContentStatus.Ready,
-            Name = "Flame Bullet",
-            Description = "A small fiery dart.",
-            PrimitivesJson = JsonSerializer.Serialize(new[] { new ComposedPrimitive(PrimitiveKind.Projectile, 2) }),
-            Theme = "fire",
-            ContextTagsJson = "[\"fire\"]",
-            PrimaryBehavior = "Projectile",
-            PowerBudget = 30,
-            CreatedAt = DateTime.UtcNow,
-        });
-        skills.Skills.Add(new DiscoverySkill
-        {
-            Id = Guid.NewGuid(),
-            DiscoveryId = childId,
-            Status = DiscoveryContentStatus.Pending,
-            Theme = "compressed fire",
-            ContextTagsJson = "[\"fire\"]",
-            PrimaryBehavior = "Projectile",
-            PowerBudget = 30,
-            CreatedAt = DateTime.UtcNow,
-        });
-        lineage.Edges.Add(new DiscoveryLineage { ChildDiscoveryId = childId, ParentDiscoveryId = parentId });
-
-        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, lineage, composer)
+        // No-graph path: stays Pending (deferred), attempt counted.
+        var deferred = new FakeSkillRepo();
+        deferred.Skills.Add(Pending());
+        using var m2 = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), deferred, new FakeKnowledgeRepo(), m2, graphComposer: new NullGraphComposer())
             .ComposePendingAsync(10);
-
-        Assert.NotNull(composer.Last);
-        var prior = Assert.Single(composer.Last!.Lineage!);
-        Assert.Equal("Flame Bullet", prior.Name);
+        Assert.Equal(DiscoveryContentStatus.Pending, deferred.Skills[0].Status);
+        Assert.True(deferred.Skills[0].Attempts > 0);
     }
 }

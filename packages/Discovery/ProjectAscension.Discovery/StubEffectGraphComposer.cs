@@ -15,7 +15,7 @@ namespace ProjectAscension.SkillForge;
 /// </summary>
 public sealed class StubEffectGraphComposer : IEffectGraphComposer
 {
-    public Task<EffectNode?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
+    public Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
     {
         var profile = request.Profile ?? new List<BehaviorWeight>();
         int attacks = profile.Where(b => b.Behavior is "RangedAttack" or "MeleeAttack" or "ChargedAttack").Sum(b => b.Count);
@@ -47,6 +47,10 @@ public sealed class StubEffectGraphComposer : IEffectGraphComposer
         if (!EffectGraphValidator.Validate(graph, request.Budget).IsValid)
             graph = new Trigger(TriggerKind.OnCast, new Damage(0));
 
-        return Task.FromResult<EffectNode?>(graph);
+        // Deterministic name/description from the theme (offline/CI has no LLM for flavor).
+        string theme = string.IsNullOrWhiteSpace(request.Theme) ? "Discovery" : request.Theme.Trim();
+        string name = char.ToUpperInvariant(theme[0]) + (theme.Length > 1 ? theme.Substring(1) : "");
+        var comp = new SkillGraphComposition(name, $"A discovered technique: {theme}.", graph);
+        return Task.FromResult<SkillGraphComposition?>(comp);
     }
 }
