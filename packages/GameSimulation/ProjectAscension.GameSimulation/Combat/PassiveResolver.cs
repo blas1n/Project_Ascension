@@ -16,7 +16,8 @@ namespace ProjectAscension.GameSimulation.Combat
             var t = tuning ?? CombatTuning.Default;
             float reduction = 0f;
             float lifesteal = 0f;
-            int extraJumps = 0;
+            // Only defensive primitives contribute here. Mobility (Dash/Blink) no longer maps to
+            // air jumps — movement comes from the effect graph now (ADR 0007, MovementCapability).
             foreach (var p in skill.Primitives)
             {
                 switch (p.Kind)
@@ -24,16 +25,12 @@ namespace ProjectAscension.GameSimulation.Combat
                     case SkillPrimitiveKind.Shield: reduction += p.Magnitude * t.PassiveShieldReduction; break;
                     case SkillPrimitiveKind.Barrier: reduction += p.Magnitude * t.PassiveBarrierReduction; break;
                     case SkillPrimitiveKind.Leech: lifesteal += p.Magnitude * t.PassiveLeech; break;
-                    // Mobility → an extra air jump each (double jump); capped in the aggregate.
-                    case SkillPrimitiveKind.Dash: extraJumps += 1; break;
-                    case SkillPrimitiveKind.Blink: extraJumps += 1; break;
                 }
             }
 
             return new PassiveEffect(
                 Math.Min(PassiveEffect.MaxDamageReduction, reduction),
-                Math.Min(PassiveEffect.MaxLifesteal, lifesteal),
-                Math.Min(PassiveEffect.MaxExtraJumps, extraJumps));
+                Math.Min(PassiveEffect.MaxLifesteal, lifesteal));
         }
     }
 }

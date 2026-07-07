@@ -44,11 +44,14 @@ namespace ProjectAscension.Game
             var effect = set != null ? set.AggregatePassive() : PassiveEffect.None;
             if (_self != null) _self.DamageReduction = effect.DamageReduction;
             Lifesteal = effect.Lifesteal;
-            MovementCapabilityCatalog.Set(effect.ExtraJumps); // e.g. double jump from a mobility passive
-            if (effect.ExtraJumps != _lastExtraJumps)
+
+            // Movement (double jump, wall-climb) is graph-driven now (ADR 0007), not a passive field.
+            var movement = set != null ? set.AggregateMovement() : MovementCapability.None;
+            MovementCapabilityCatalog.Set(movement);
+            if (movement.ExtraJumps != _lastExtraJumps)
             {
-                _lastExtraJumps = effect.ExtraJumps;
-                Debug.Log($"[Passive] extraJumps={effect.ExtraJumps} (passives={(set != null ? set.Passives.Count : 0)})");
+                _lastExtraJumps = movement.ExtraJumps;
+                Debug.Log($"[Passive] extraJumps={movement.ExtraJumps} wallClimb={movement.WallClimb} (passives={(set != null ? set.Passives.Count : 0)})");
             }
         }
     }

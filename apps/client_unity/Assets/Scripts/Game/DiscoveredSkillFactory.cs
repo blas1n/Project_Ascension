@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Effects;
 using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
@@ -27,7 +28,11 @@ namespace ProjectAscension.Game
                 ? InputCombo.Parse(dto.invocationCombo ?? Array.Empty<string>())
                 : Array.Empty<InputToken>();
 
-            var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo, dto.contextTags, dto.description);
+            // ADR 0007: the runtime interprets the AI-composed effect graph (movement now). Null
+            // when the skill has no composed graph (older/graphless skills fall back to primitives).
+            var graph = string.IsNullOrEmpty(dto.effectGraph) ? null : EffectGraphReader.Parse(dto.effectGraph);
+
+            var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo, dto.contextTags, dto.description, graph);
             weapon = manifestation == ManifestationKind.Weapon
                 ? WeaponData.CreateDiscovered(skill.Name, skill, "spell:" + Slug(skill.Name))
                 : null;

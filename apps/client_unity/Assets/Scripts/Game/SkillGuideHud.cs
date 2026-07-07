@@ -58,7 +58,7 @@ namespace ProjectAscension.Game
             {
                 sb.AppendLine("\nPassives (always on):");
                 foreach (var p in set.Passives)
-                    sb.AppendLine($"  {p.Name} — {SkillSummary.DescribePassive(p.Skill)}");
+                    sb.AppendLine($"  {p.Name} — {SkillSummary.DescribePassive(p)}");
             }
 
             sb.AppendLine($"\nWeapons: {set.Weapons.Count} discovered (equip in city)");

@@ -1,4 +1,6 @@
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Effects;
+using ProjectAscension.GameSimulation.Player;
 using Xunit;
 
 namespace ProjectAscension.GameSimulation.Tests.Combat
@@ -7,6 +9,11 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
     {
         private static DiscoveredSkill Passive(string name, params SkillPrimitive[] primitives)
             => new(name, ManifestationKind.Passive, new Skill(name, primitives));
+
+        // A mobility passive carrying a double-jump graph (ADR 0007).
+        private static DiscoveredSkill Mover(string name, EffectNode graph)
+            => new(name, ManifestationKind.Passive, new Skill(name, new[] { new SkillPrimitive(SkillPrimitiveKind.Dash, 1) }),
+                   Graph: graph);
 
         [Fact]
         public void Resolve_MapsDefensivePrimitives()
@@ -19,22 +26,42 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
-        public void Resolve_MobilityGrantsExtraJumps()
+        public void AggregateMovement_DoubleJumpFromGraph()
         {
-            // A mobility passive (Dash/Blink) grants extra air jumps — double jump.
-            var effect = PassiveResolver.Resolve(new Skill("Leap",
-                new[] { new SkillPrimitive(SkillPrimitiveKind.Blink, 1) }));
-            Assert.Equal(1, effect.ExtraJumps);
+            // A mobility skill's graph — on an in-air jump, an upward impulse — grants an extra
+            // air jump. No ExtraJumps field: the capability is read off the graph (ADR 0007).
+            var set = new DiscoveredSkillSet();
+            set.Add(Mover("Leap", new Trigger(TriggerKind.OnJumpInAir, new Impulse(ImpulseDirection.Up, 1))));
+
+            Assert.Equal(1, set.AggregateMovement().ExtraJumps);
         }
 
         [Fact]
-        public void AggregateExtraJumps_IsCapped()
+        public void AggregateMovement_WallClimbFromGraph()
+        {
+            var set = new DiscoveredSkillSet();
+            set.Add(Mover("Wall Run", new Trigger(TriggerKind.OnWallContact, new Impulse(ImpulseDirection.Up, 2))));
+
+            Assert.True(set.AggregateMovement().WallClimb);
+        }
+
+        [Fact]
+        public void AggregateMovement_ExtraJumpsIsCapped()
         {
             var set = new DiscoveredSkillSet();
             for (int i = 0; i < 5; i++)
-                set.Add(Passive($"leap-{i}", new SkillPrimitive(SkillPrimitiveKind.Dash, 1)));
+                set.Add(Mover($"leap-{i}", new Trigger(TriggerKind.OnJumpInAir, new Impulse(ImpulseDirection.Up, 1))));
 
-            Assert.Equal(PassiveEffect.MaxExtraJumps, set.AggregatePassive().ExtraJumps);
+            Assert.Equal(MovementCapability.MaxExtraJumps, set.AggregateMovement().ExtraJumps);
+        }
+
+        [Fact]
+        public void Resolve_MobilityPrimitives_NoLongerGrantMovementViaPassiveEffect()
+        {
+            // Movement moved out of PassiveEffect entirely — Dash/Blink no longer affect it.
+            var effect = PassiveResolver.Resolve(new Skill("Leap",
+                new[] { new SkillPrimitive(SkillPrimitiveKind.Blink, 1) }));
+            Assert.Equal(PassiveEffect.None, effect);
         }
 
         [Fact]
