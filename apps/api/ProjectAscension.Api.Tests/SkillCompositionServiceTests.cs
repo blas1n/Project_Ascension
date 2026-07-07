@@ -113,7 +113,7 @@ public class SkillCompositionServiceTests
         FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics,
         FakeLineageRepo? lineage = null, ISkillComposer? composer = null)
         => new(discoveries, skills, knowledge, lineage ?? new FakeLineageRepo(), new FakeTuningProvider(),
-            composer ?? new StubSkillComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
+            composer ?? new StubSkillComposer(), new StubEffectGraphComposer(), metrics, NullLogger<SkillCompositionService>.Instance);
 
     private static DiscoverySkill Pending() => new()
     {
@@ -149,6 +149,13 @@ public class SkillCompositionServiceTests
         Assert.Equal(DiscoveryContentStatus.Ready, skills.Skills[0].Status);
         Assert.False(string.IsNullOrEmpty(skills.Skills[0].Name));
         Assert.Equal(1, completed);
+
+        // ADR 0007: a composed skill also carries a valid effect graph (the runtime structure).
+        var graphJson = skills.Skills[0].EffectGraphJson;
+        Assert.False(string.IsNullOrEmpty(graphJson));
+        var graph = EffectGraphJson.Parse(graphJson!);
+        Assert.NotNull(graph);
+        Assert.True(EffectGraphValidator.Validate(graph!, new PowerBudget(skills.Skills[0].PowerBudget)).IsValid);
     }
 
     [Fact]

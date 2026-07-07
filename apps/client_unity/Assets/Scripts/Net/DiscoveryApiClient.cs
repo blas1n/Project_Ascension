@@ -61,6 +61,7 @@ namespace ProjectAscension.Net
         public string[] behaviors;       // behaviors that discovered it (recorded)
         public string[] invocationCombo; // a command's assigned button combo, e.g. ["Jump","RightClick"]
         public string delivery;          // AI-composed manifestation style: "projectile"|"beam"|"burst" ("" → derive)
+        public string effectGraph;       // ADR 0007 effect-graph JSON the runtime interprets (null until composed)
     }
 
     /// <summary>
