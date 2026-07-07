@@ -4,6 +4,7 @@ using UnityEngine;
 using ProjectAscension.Combat;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Effects;
 using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
@@ -33,6 +34,7 @@ namespace ProjectAscension.Game
         private PassiveModifiers _passives;
         private FocusPool _focus;
         private Skill _skill;
+        private EffectNode _graph;          // the held weapon skill's effect graph (ADR 0007), null if graphless
         private string _deliveryStyle = ""; // AI-composed delivery style for the held weapon skill
         private float _intensity = 1f;      // VFX grandeur, from the skill's power (common..legendary)
 
@@ -95,7 +97,11 @@ namespace ProjectAscension.Game
         {
             var discovered = DiscoveredSkillFactory.Build(dto, out var weapon);
             _skill = discovered.Skill;
-            _deliveryStyle = dto.delivery ?? string.Empty; // AI-composed manifestation ("" → derive)
+            _graph = discovered.Graph;
+            // Delivery SHAPE prefers the graph's Emit (ADR 0007), falling back to the composed
+            // delivery string then to primitive inference.
+            var graphStyle = _graph != null ? EffectGraphQuery.DeliveryStyle(_graph) : string.Empty;
+            _deliveryStyle = !string.IsNullOrEmpty(graphStyle) ? graphStyle : (dto.delivery ?? string.Empty);
             _intensity = SkillVfx.Intensity(dto.powerCost); // grander VFX for rarer/stronger skills
             _manifestation = discovered.Manifestation;
 
@@ -135,8 +141,15 @@ namespace ProjectAscension.Game
 
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
         /// by weapon fire (<see cref="Cast"/>) and hotkey-cast commands
-        /// (<see cref="AbilitySlots"/>).</summary>
+        /// (<see cref="AbilitySlots"/>). This <see cref="Skill"/>-only overload backs the cast
+        /// EVENT (Action&lt;Skill&gt;); the held weapon supplies its own graph.</summary>
         public void ExecuteSkill(Skill skill)
+            => ExecuteSkill(skill, ReferenceEquals(skill, _skill) ? _graph : null);
+
+        /// <summary>As above, driven by the skill's effect GRAPH (ADR 0007) when it has one — the
+        /// graph resolves combat via <see cref="GraphSkillResolver"/> and picks the delivery/homing;
+        /// a graphless skill falls back to the primitive <see cref="SkillResolver"/> path.</summary>
+        public void ExecuteSkill(Skill skill, EffectNode graph)
         {
             if (skill == null) return;
 
@@ -150,11 +163,12 @@ namespace ProjectAscension.Game
                 return;
             }
 
-            // Manifestation comes from the AI-composed delivery style (how the skill was
-            // composed to manifest); when absent it's derived from the primitives. Either
-            // way a projectile flies, a beam hitscans, a burst lands — each discovered skill
-            // delivers differently. The effect numbers stay with SkillResolver (ResolveAt).
-            var spec = DeliveryStyles.ForStyle(_deliveryStyle, tuning) ?? DeliveryInference.From(skill, tuning);
+            // Delivery SHAPE: from the skill's graph Emit (ADR 0007) when it has one, else the
+            // held weapon's composed style, else derived from primitives. Either way a projectile
+            // flies, a beam hitscans, a burst lands. Numbers are resolved in ResolveAt.
+            var graphStyle = graph != null ? EffectGraphQuery.DeliveryStyle(graph) : string.Empty;
+            var style = !string.IsNullOrEmpty(graphStyle) ? graphStyle : _deliveryStyle;
+            var spec = DeliveryStyles.ForStyle(style, tuning) ?? DeliveryInference.From(skill, tuning);
             var origin = aimSource != null ? aimSource.position : transform.position;
             var dir = aimSource != null ? aimSource.forward : transform.forward;
 
@@ -164,11 +178,11 @@ namespace ProjectAscension.Game
 
             if (spec.Motion == DeliveryMotion.Projectile)
             {
-                bool homing = HasPrimitive(skill, SkillPrimitiveKind.Homing);
+                bool homing = graph != null ? EffectGraphQuery.HasHoming(graph) : HasPrimitive(skill, SkillPrimitiveKind.Homing);
                 SpawnProjectile(origin, dir, spec, color, homing, point =>
                 {
                     SkillVfx.Burst(point, color, _intensity);
-                    ResolveAt(skill, point, spec);
+                    ResolveAt(skill, graph, point, spec);
                 });
                 return;
             }
@@ -184,16 +198,19 @@ namespace ProjectAscension.Game
                 SkillVfx.Beam(origin, resolvePoint, color, _intensity);
             else
                 SkillVfx.Burst(resolvePoint, color, _intensity);
-            ResolveAt(skill, resolvePoint, spec);
+            ResolveAt(skill, graph, resolvePoint, spec);
         }
 
         // Resolve a skill's effects against everything within the delivery's footprint at a
-        // point. Shared by instant deliveries (now) and a projectile's impact (callback).
-        private void ResolveAt(Skill skill, Vector3 point, DeliverySpec spec)
+        // point. Shared by instant deliveries (now) and a projectile's impact (callback). The
+        // graph resolves via GraphSkillResolver (ADR 0007); a graphless skill via primitives.
+        private void ResolveAt(Skill skill, EffectNode graph, Vector3 point, DeliverySpec spec)
         {
             if (this == null) return; // caster gone (e.g. projectile outlived the scene)
             var targets = TargetsAround(point, spec.Radius);
-            var resolution = SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
+            var resolution = graph != null
+                ? GraphSkillResolver.Resolve(graph, targets.Count, CombatTuningCatalog.Current)
+                : SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
             Apply(resolution, targets);
 
             // Composed VFX: the skill's primitives add impact accents (chain arcs, fork

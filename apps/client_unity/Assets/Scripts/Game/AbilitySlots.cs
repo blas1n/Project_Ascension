@@ -53,7 +53,7 @@ namespace ProjectAscension.Game
                 Debug.Log($"[AbilitySlots] \"{command.Name}\" needs {string.Join("/", CommandGate.RequiredEquipment(command))} equipped.");
                 return;
             }
-            _caster?.ExecuteSkill(command.Skill);
+            _caster?.ExecuteSkill(command.Skill, command.Graph); // graph-driven when composed (ADR 0007)
         }
 
         private HashSet<string> CurrentEquipment()
