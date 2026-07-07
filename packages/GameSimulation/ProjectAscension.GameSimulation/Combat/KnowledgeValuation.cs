@@ -27,9 +27,15 @@ namespace ProjectAscension.GameSimulation.Combat
         public static int LicensePrice(Skill skill, int goldPerPoint)
             => PowerPoints(skill) * goldPerPoint;
 
+        public static int LicensePrice(EffectNode graph, int goldPerPoint)
+            => PowerPoints(graph) * goldPerPoint;
+
         /// <summary>Standing (명성) gained from selling notable knowledge — one point per
         /// <paramref name="pointsPerReputation"/> of power (0 disables).</summary>
         public static int LicenseReputation(Skill skill, int pointsPerReputation)
             => pointsPerReputation <= 0 ? 0 : PowerPoints(skill) / pointsPerReputation;
+
+        public static int LicenseReputation(EffectNode graph, int pointsPerReputation)
+            => pointsPerReputation <= 0 ? 0 : PowerPoints(graph) / pointsPerReputation;
     }
 }

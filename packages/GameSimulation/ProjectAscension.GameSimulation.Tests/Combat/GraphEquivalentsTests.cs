@@ -63,6 +63,21 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
+        public void AggregatePassive_UsesTheGraph_WhenTheSkillHasOne()
+        {
+            // A passive whose graph wards but whose primitives are empty must still reduce damage —
+            // proving AggregatePassive resolves from the graph, not the (empty) primitives.
+            var wardGraph = new Trigger(TriggerKind.Continuous, new Ward(WardEffect.Barrier, 1)); // mag 2 × 0.08
+            var passive = new DiscoveredSkill("Aegis", ManifestationKind.Passive,
+                new Skill("Aegis", System.Array.Empty<SkillPrimitive>()), Graph: wardGraph);
+
+            var set = new DiscoveredSkillSet();
+            set.Add(passive);
+
+            Assert.Equal(0.16f, set.AggregatePassive().DamageReduction, precision: 3);
+        }
+
+        [Fact]
         public void AccentFlags_ReflectTheGraph()
         {
             var graph = Cast(new Emit(EmitDelivery.Projectile, 1), new EffectSpread(1),

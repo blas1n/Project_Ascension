@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Effects;
 
 namespace ProjectAscension.Game
 {
@@ -142,6 +143,19 @@ namespace ProjectAscension.Game
             if (fork) Fork(impact, color, intensity);
             if (chain && targets != null) ChainThrough(impact, targets, color, intensity);
             if (leech) Beam(impact, casterPos, color, intensity * 0.5f); // a faint tether draining back
+        }
+
+        /// <summary>Impact accents from the skill's effect GRAPH (ADR 0007) — the graph analogue of
+        /// the primitive overload. Spread plays the chain accent (the graph collapses chain/fork).</summary>
+        public static void PlayImpactModifiers(EffectNode graph, string skillName, Vector3 impact, IReadOnlyList<Vector3> targets, Vector3 casterPos, float intensity)
+        {
+            if (graph == null) return;
+            var color = ElementColor(skillName);
+
+            if (EffectGraphQuery.HasKnockback(graph)) Shockwave(impact, color, intensity);
+            if (EffectGraphQuery.HasDot(graph)) Lingering(impact, color, 1.3f * intensity, intensity, 1.6f + EffectGraphQuery.MaxDotDuration(graph) * 0.8f);
+            if (EffectGraphQuery.HasSpread(graph) && targets != null) ChainThrough(impact, targets, color, intensity);
+            if (EffectGraphQuery.HasLeech(graph)) Beam(impact, casterPos, color, intensity * 0.5f);
         }
 
         /// <summary>A flat expanding ring on the ground — a knockback's shockwave.</summary>

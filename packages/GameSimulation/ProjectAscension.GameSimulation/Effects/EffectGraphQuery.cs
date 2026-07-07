@@ -50,6 +50,7 @@ namespace ProjectAscension.GameSimulation.Effects
         public static bool HasSpread(EffectNode graph) => Any(graph, n => n is Spread);
         public static bool HasKnockback(EffectNode graph) => Any(graph, n => n is Control c && c.Effect == ControlEffect.Knockback);
         public static bool HasLeech(EffectNode graph) => Any(graph, n => n is Ward w && w.Effect == WardEffect.Leech);
+        public static bool HasDot(EffectNode graph) => Any(graph, n => n is Dot);
 
         /// <summary>The longest DoT duration in the graph (0 = no burn) — for a lingering VFX pool.</summary>
         public static int MaxDotDuration(EffectNode node)
