@@ -20,6 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProjectAscension.Api\ProjectAscension.Api.csproj" />
+    <!-- Runtime simulation (ADR 0007 mode C): run AI-composed graphs through the client's
+         GraphSkillResolver / CombatSimulator to bridge generation → execution. -->
+    <ProjectReference Include="..\..\..\packages\GameSimulation\ProjectAscension.GameSimulation\ProjectAscension.GameSimulation.csproj" />
   </ItemGroup>
 
 </Project>
