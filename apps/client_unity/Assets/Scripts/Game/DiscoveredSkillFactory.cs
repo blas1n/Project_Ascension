@@ -28,9 +28,13 @@ namespace ProjectAscension.Game
                 ? InputCombo.Parse(dto.invocationCombo ?? Array.Empty<string>())
                 : Array.Empty<InputToken>();
 
-            // ADR 0007: the runtime interprets the AI-composed effect graph (movement now). Null
-            // when the skill has no composed graph (older/graphless skills fall back to primitives).
-            var graph = string.IsNullOrEmpty(dto.effectGraph) ? null : EffectGraphReader.Parse(dto.effectGraph);
+            // ADR 0007: the runtime interprets the AI-composed effect graph. A legacy skill with no
+            // composed graph is translated deterministically from its primitives (Phase 4c-4), so
+            // every discovered skill runs on the graph path — never a graphless fallback.
+            var graph = string.IsNullOrEmpty(dto.effectGraph)
+                ? PrimitiveGraphTranslator.Translate(skill)
+                : EffectGraphReader.Parse(dto.effectGraph);
+            if (graph == null) graph = PrimitiveGraphTranslator.Translate(skill); // unparseable graph → translate
 
             var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo, dto.contextTags, dto.description, graph);
             weapon = manifestation == ManifestationKind.Weapon
