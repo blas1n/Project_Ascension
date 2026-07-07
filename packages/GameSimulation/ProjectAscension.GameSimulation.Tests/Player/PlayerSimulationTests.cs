@@ -61,6 +61,47 @@ namespace ProjectAscension.GameSimulation.Tests.Player
         }
 
         [Fact]
+        public void ApplyInput_WallClimb_AscendsWhenAgainstWallAndGranted()
+        {
+            var settings = MovementSettings.Default with { WallClimb = true, WallClimbSpeed = 4f };
+            // Airborne, falling, pressed against a wall, holding jump — a discovered wall-climb.
+            var falling = new PlayerState(new Vector3(0, 5, 0), new Vector3(0, -3, 0),
+                IsGrounded: false, InputSequence: 0, JumpsUsed: 1);
+            var climb = new PlayerInput(0, 0, Jump: true, Dodge: false, Attack: false, Sequence: 1, TouchingWall: true);
+
+            var next = _sim.ApplyInput(falling, climb, deltaTime: 0.016f, settings);
+
+            Assert.Equal(4f, next.Velocity.Y, precision: 3); // ascends at the climb speed, not falling
+            Assert.Equal(0, next.JumpsUsed);                 // clinging refreshes the jump (wall-jump)
+        }
+
+        [Fact]
+        public void ApplyInput_WallClimb_FallsWhenNotTouchingWall()
+        {
+            var settings = MovementSettings.Default with { WallClimb = true };
+            var falling = new PlayerState(new Vector3(0, 5, 0), new Vector3(0, -3, 0),
+                IsGrounded: false, InputSequence: 0, JumpsUsed: 1);
+            var jump = new PlayerInput(0, 0, Jump: true, Dodge: false, Attack: false, Sequence: 1, TouchingWall: false);
+
+            var next = _sim.ApplyInput(falling, jump, deltaTime: 0.016f, settings);
+
+            Assert.True(next.Velocity.Y < 0f); // no wall → gravity, still falling
+        }
+
+        [Fact]
+        public void ApplyInput_WallClimb_DeniedWithoutTheCapability()
+        {
+            // Touching a wall but no discovered wall-climb — the flag does nothing.
+            var falling = new PlayerState(new Vector3(0, 5, 0), new Vector3(0, -3, 0),
+                IsGrounded: false, InputSequence: 0, JumpsUsed: 1);
+            var climb = new PlayerInput(0, 0, Jump: true, Dodge: false, Attack: false, Sequence: 1, TouchingWall: true);
+
+            var next = _sim.ApplyInput(falling, climb, deltaTime: 0.016f); // default WallClimb = false
+
+            Assert.True(next.Velocity.Y < 0f); // still falling
+        }
+
+        [Fact]
         public void ApplyInput_JumpWhenAirborne_NoAdditionalVelocity()
         {
             var airState = new PlayerState(new Vector3(0, 2, 0), new Vector3(0, 3, 0), IsGrounded: false, InputSequence: 0);

@@ -43,11 +43,17 @@ namespace ProjectAscension.GameSimulation.Player
                 velocity = new Vector3(input.MoveX * settings.MoveSpeed, velocity.Y, input.MoveZ * settings.MoveSpeed);
             }
 
+            // Wall-climb (ADR 0007): a discovered OnWallContact skill lets the player scale a wall.
+            // While airborne against a wall and holding jump, ascend instead of falling; clinging
+            // also refreshes the jump so a wall-jump is available. Overrides the normal jump +
+            // gravity for the tick — no bespoke mechanic, just the graph's trigger acting.
+            bool wallClimbing = settings.WallClimb && !state.IsGrounded && input.TouchingWall && input.Jump;
+
             // Jump: from the ground, or an EXTRA air jump (double jump) — but only after a
-            // ground jump (JumpsUsed >= 1) and within the mobility-passive allowance. Walking
+            // ground jump (JumpsUsed >= 1) and within the discovered-skill allowance. Walking
             // off a ledge (JumpsUsed 0, airborne) does not grant a free air jump.
             int jumpsUsed = state.JumpsUsed;
-            bool canJump = input.Jump &&
+            bool canJump = !wallClimbing && input.Jump &&
                 (state.IsGrounded || (jumpsUsed >= 1 && jumpsUsed < 1 + settings.ExtraJumps));
             if (canJump)
             {
@@ -55,9 +61,16 @@ namespace ProjectAscension.GameSimulation.Player
                 jumpsUsed = state.IsGrounded ? 1 : jumpsUsed + 1;
             }
 
-            // Gravity (only when airborne)
-            if (!state.IsGrounded)
+            if (wallClimbing)
+            {
+                velocity = new Vector3(velocity.X, settings.WallClimbSpeed, velocity.Z);
+                jumpsUsed = 0; // clinging refreshes the jump (wall-jump)
+            }
+            // Gravity (only when airborne and not clinging to a wall)
+            else if (!state.IsGrounded)
+            {
                 velocity = new Vector3(velocity.X, velocity.Y - settings.Gravity * deltaTime, velocity.Z);
+            }
 
             // Position update
             var position = state.Position + velocity * deltaTime;

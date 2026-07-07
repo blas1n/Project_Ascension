@@ -21,6 +21,7 @@ namespace ProjectAscension.Player
         private PlayerState _state;
         private bool _jumpQueued;
         private bool _dodgeQueued;
+        private bool _touchingWall; // set from the controller's side collisions last tick (wall-climb)
 
         public PlayerMovement(PlayerSimulation simulation, PlayerData data)
         {
@@ -78,7 +79,8 @@ namespace ProjectAscension.Player
                 Jump: _jumpQueued,
                 Dodge: _dodgeQueued,
                 Attack: false,
-                Sequence: _state.InputSequence + 1);
+                Sequence: _state.InputSequence + 1,
+                TouchingWall: _touchingWall);
 
             // Detect actual execution against the pre-tick state, mirroring the
             // simulation's gates, so behavior events fire on real jumps/dodges —
@@ -97,7 +99,11 @@ namespace ProjectAscension.Player
             // sim only knows the ground plane, so it ignores obstacles; the controller's
             // sweep does collide with them.
             var target = new Vector3(_state.Position.X, _state.Position.Y, _state.Position.Z);
-            _controller.Move(target - _body.position);
+            var flags = _controller.Move(target - _body.position);
+
+            // The controller's sweep reports side contact — feed it to next tick's input so a
+            // discovered wall-climb skill can act against real level geometry (ADR 0007 Phase 2c).
+            _touchingWall = (flags & CollisionFlags.Sides) != 0;
 
             // Adopt the collision-resolved HORIZONTAL position back into the sim, so a wall
             // that stopped the controller also stops the sim — otherwise the obstacle-unaware
