@@ -30,6 +30,44 @@ public class EffectGraphRuntimeSimulation
     public EffectGraphRuntimeSimulation(ITestOutputHelper output) => _out = output;
 
     [Fact]
+    public async Task UnifiedComposition_ProducesNameDescriptionAndGraph()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            _out.WriteLine("SKIPPED: set OLLAMA_ENDPOINT to run the unified-composition check.");
+            return;
+        }
+        var model = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "qwen3-coder:30b";
+        IChatClient chat = new OllamaApiClient(new Uri(endpoint), model);
+        var budget = new SF.PowerBudget(60);
+
+        var cases = new (string Name, string Theme, (string, int)[] Play)[]
+        {
+            ("fire", "a searing fire bolt", new[] { ("RangedAttack", 60) }),
+            ("frost", "a chilling frost nova", new[] { ("ChargedAttack", 55) }),
+            ("leap", "a nimble aerial hop", new[] { ("Jump", 55), ("Dodge", 15) }),
+        };
+        int ok = 0, seed = 7500;
+        foreach (var c in cases)
+        {
+            var profile = c.Play.Select(p => new SF.BehaviorWeight(p.Item1, p.Item2)).ToList();
+            var prompt = SF.SkillGraphPrompt.Build(c.Theme, profile, budget);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            var response = await chat.GetResponseAsync(prompt,
+                new ChatOptions { ResponseFormat = ChatResponseFormat.Json, Seed = seed++, Temperature = 0.7f }, cts.Token);
+
+            var comp = SF.EffectGraphJson.ParseComposition(response.Text);
+            bool good = comp is not null && !string.IsNullOrWhiteSpace(comp.Name)
+                && !string.IsNullOrWhiteSpace(comp.Description)
+                && SF.EffectGraphValidator.Validate(comp.Graph, budget).IsValid;
+            if (good) ok++;
+            _out.WriteLine($"{c.Name,-6} | {(good ? "ok" : "BAD"),-4} | name={comp?.Name} | {(comp is not null ? SF.EffectGraphJson.Serialize(comp.Graph) : response.Text)}");
+        }
+        Assert.True(ok >= cases.Length - 1, $"unified composition failed to yield name+description+graph ({ok}/{cases.Length}).");
+    }
+
+    [Fact]
     public async Task AiGraphs_ExecuteCleanly_AndOffensiveOnesFight()
     {
         var endpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");

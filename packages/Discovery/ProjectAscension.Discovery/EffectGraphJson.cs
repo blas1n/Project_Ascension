@@ -82,6 +82,29 @@ public static class EffectGraphJson
         }
     }
 
+    /// <summary>Parses a full skill composition — name + description + graph — from the unified
+    /// wire shape <c>{"name":…,"description":…,"trigger":…,"effect":…}</c> the composer produces
+    /// (ADR 0007 Phase 4c). Total: returns null if the graph doesn't parse (name/description alone
+    /// aren't a skill). The graph part reuses <see cref="Parse"/>.</summary>
+    public static SkillGraphComposition? ParseComposition(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        var graph = Parse(json);
+        if (graph is null) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            string name = root.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() ?? "" : "";
+            string desc = root.TryGetProperty("description", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() ?? "" : "";
+            return new SkillGraphComposition(name, desc, graph);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public static EffectNode? Parse(string json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
