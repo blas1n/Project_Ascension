@@ -402,7 +402,7 @@ namespace ProjectAscension.Game
         private static string UseHint(DiscoveredSkill d) => d.Manifestation switch
         {
             ManifestationKind.Weapon => "weapon: equip & fire",
-            ManifestationKind.Passive => $"passive: {SkillSummary.DescribePassive(d.Skill)}",
+            ManifestationKind.Passive => $"passive: {SkillSummary.DescribePassive(d)}",
             _ => "command",
         };
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Player;
 
 namespace ProjectAscension.Game
 {
@@ -21,16 +22,21 @@ namespace ProjectAscension.Game
             return string.Join(" + ", parts);
         }
 
-        /// <summary>A passive's continuous effect spelled out (double jump, damage reduction,
-        /// lifesteal) — falls back to the generic summary.</summary>
-        public static string DescribePassive(Skill skill)
+        /// <summary>A passive's continuous effect spelled out (double jump, wall-climb, damage
+        /// reduction, lifesteal) — movement from the effect graph (ADR 0007), defensive from the
+        /// primitives; falls back to the generic summary.</summary>
+        public static string DescribePassive(DiscoveredSkill d)
         {
-            var e = PassiveResolver.Resolve(skill);
             var parts = new List<string>();
-            if (e.ExtraJumps > 0) parts.Add(e.ExtraJumps > 1 ? $"+{e.ExtraJumps} air jumps" : "double jump");
+
+            var move = MovementCapability.From(new[] { d.Graph });
+            if (move.ExtraJumps > 0) parts.Add(move.ExtraJumps > 1 ? $"+{move.ExtraJumps} air jumps" : "double jump");
+            if (move.WallClimb) parts.Add("wall-climb");
+
+            var e = PassiveResolver.Resolve(d.Skill);
             if (e.DamageReduction > 0f) parts.Add($"{e.DamageReduction * 100f:F0}% dmg reduction");
             if (e.Lifesteal > 0f) parts.Add($"{e.Lifesteal * 100f:F0}% lifesteal");
-            return parts.Count > 0 ? string.Join(", ", parts) : Describe(skill);
+            return parts.Count > 0 ? string.Join(", ", parts) : Describe(d.Skill);
         }
 
         private static string Phrase(SkillPrimitiveKind k) => k switch

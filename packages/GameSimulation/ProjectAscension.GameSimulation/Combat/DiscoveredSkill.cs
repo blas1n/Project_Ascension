@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using ProjectAscension.GameSimulation.Effects;
 
 namespace ProjectAscension.GameSimulation.Combat
 {
@@ -26,5 +27,8 @@ namespace ProjectAscension.GameSimulation.Combat
         // combo uses a weapon click is gated by its equipment tags — ADR 0005 (재개정).
         IReadOnlyList<string>? ContextTags = null,
         // The AI-composed flavor description (a sentence, like a real game's skill text).
-        string? Description = null);
+        string? Description = null,
+        // The AI-composed effect graph (ADR 0007) the runtime interprets — movement capability
+        // now, offense later. Null when the skill has no composed graph (graphless → primitives).
+        EffectNode? Graph = null);
 }

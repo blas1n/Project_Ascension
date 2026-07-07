@@ -148,12 +148,12 @@ namespace ProjectAscension.Game
                 if (weapon != null) PlayerState.AddWeapon(weapon); // discovered weapon back in inventory
             }
 
-            // Push the restored passives' movement capability (double jump) so it's active from
-            // session start — not only after a frontier PassiveModifiers runs. GameSession
-            // persists, so this survives the City<->Frontier loop.
-            var passive = DiscoveredSkills.AggregatePassive();
-            GameSimulation.Player.MovementCapabilityCatalog.Set(passive.ExtraJumps);
-            Debug.Log($"[Restore] {DiscoveredSkills.Weapons.Count}W/{DiscoveredSkills.Commands.Count}C/{DiscoveredSkills.Passives.Count}P restored; extraJumps={passive.ExtraJumps}");
+            // Push the restored skills' movement capability (double jump, wall-climb) so it's
+            // active from session start — not only after a frontier PassiveModifiers runs.
+            // Graph-driven (ADR 0007). GameSession persists, so this survives the City<->Frontier loop.
+            var movement = DiscoveredSkills.AggregateMovement();
+            GameSimulation.Player.MovementCapabilityCatalog.Set(movement);
+            Debug.Log($"[Restore] {DiscoveredSkills.Weapons.Count}W/{DiscoveredSkills.Commands.Count}C/{DiscoveredSkills.Passives.Count}P restored; extraJumps={movement.ExtraJumps} wallClimb={movement.WallClimb}");
         }
 
         /// <summary>Persist the player's progress (currency, standing, materials, sold

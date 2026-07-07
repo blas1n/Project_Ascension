@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using ProjectAscension.GameSimulation.Player;
 
 namespace ProjectAscension.GameSimulation.Combat
 {
@@ -48,6 +50,12 @@ namespace ProjectAscension.GameSimulation.Combat
                 total += PassiveResolver.Resolve(passive.Skill);
             return total;
         }
+
+        /// <summary>The combined movement capability read off every discovered skill's effect
+        /// graph (ADR 0007) — extra air jumps, wall-climb. Graph-driven, not a bespoke field: a
+        /// new movement mechanic is a new trigger, no engine change.</summary>
+        public MovementCapability AggregateMovement()
+            => MovementCapability.From(All.Select(s => s.Graph));
 
         /// <summary>Execute a discovered skill against the targets in range
         /// (index 0 = primary). A weapon (equipped + fired) or a command (combo-invoked)
