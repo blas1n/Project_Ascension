@@ -167,3 +167,49 @@ VFX(`SkillVfx`)는 이미 `delivery`(형태) + name(색) + powerCost(강도)로 
 - **4b-2**: `GraphSkillResolver`(파리티 인터프리터) + 프리미티브 경로와의 수치 파리티 테스트.
 - **4b-3**: `SkillCaster` 스위치(그래프 우선) + 그래프 기반 VFX(Emit/Homing).
 - **4b-4**: 프롬프트 어휘 + 오펜시브 다양성 시뮬. **플레이테스트 게이트** 후 프리미티브 폴백 축소.
+
+4b-1~4b-4 완료(#121~#124). 런타임 실행은 헤드리스 시뮬(모드 A/B/C, #125~#127) + 스트레스 감사(#128)로
+검증됨 — tier 단조·dead-skill 0·이동 누수 0.
+
+## Phase 4c — 프리미티브 축소 (설계)
+
+### 동기
+
+프리미티브는 여전히 **(1) discovery마다 두 번째 LLM 호출**(`LlmSkillComposer`)로 그래프와 별도로
+생성되고, **(2) ~7개 서브시스템**이 소비한다. 프리미티브 *생성*을 멈추면 **LLM 비용 절반 + "두 표현
+발산" 버그류 제거**(반복된 중복-스킬 이슈의 뿌리 — 이름/프리미티브/그래프가 각자 놀던 문제). 단,
+모든 소비처에 그래프 경로가 생기기 전엔 못 뺀다.
+
+### 소비처 → 그래프 등가물 (전부 저난이도, 노드에 동일 로직 미러링)
+
+| 소비처 | 프리미티브 로직 | 그래프 등가물 | 상태 |
+|---|---|---|---|
+| 전투 | `SkillResolver` | `GraphSkillResolver` | ✅ 4b |
+| 발현 | `SkillManifest` | `ManifestationFromGraph` | ✅ 4a |
+| 이동 | (제거됨) | `MovementCapability` | ✅ 2b |
+| 패시브 방어 | `PassiveResolver`(Shield/Barrier/Leech) | **`GraphPassiveResolver`**(Ward 노드) | 신규 |
+| 포커스 비용 | `FocusCost`(Σ mag+range+dur) | **그래프 Cost**(skill.PowerCost) | 신규 |
+| 지식 가치 | `KnowledgeValuation` | **그래프 Cost** | 신규 |
+| VFX 액센트 | `SkillVfx.PlayImpactModifiers` | **`EffectGraphQuery` 플래그**(spread/control/leech/dot) | 신규 |
+| 스킬 요약 | `SkillSummary` | 그래프 요약 또는 이미 있는 AI `Description` | 신규 |
+| 중복 제거(dedup) | `CompositionPipeline.KindSignature`(프리미티브) | **그래프 정규 직렬화 서명** | 신규 |
+
+### 하위 단계 (각 PR 가산·무회귀)
+
+- **4c-1**: 그래프 등가물 신설 — `GraphPassiveResolver`, 그래프 포커스/가치, `EffectGraphQuery` 액센트
+  플래그, 그래프 요약. 그래프 없으면 프리미티브로 폴백(동작 변화 없음).
+- **4c-2**: 각 소비처를 그래프 우선으로 스위치(전투/발현처럼). 그래프 스킬은 런타임에서 프리미티브
+  **완전 미사용**.
+- **4c-3**: 프리미티브 *생성* 중단 — 컴포지션에서 `LlmSkillComposer` 호출 제거, **그래프가 유일한
+  작곡 산출물**. 이때 그래프는 *필수*가 되어 무효 시 defer(결정론 폴백 없음, ADR 0002). dedup은
+  그래프 서명으로 이관. `PrimitivesJson`은 레거시 행 위해 nullable 유지. 프리미티브 리졸버는
+  **graphless-레거시 폴백으로만** 잔존.
+- **4c-4** (슬라이스 이후): 레거시 프리미티브-전용 행을 그래프로 마이그레이션(또는 잔존 허용) 후
+  프리미티브 시스템 전면 삭제.
+
+### 핵심 결정 (확인 필요)
+
+**4c-3에서 그래프를 필수화하고 프리미티브 생성을 멈춘다** — 새 스킬은 그래프-전용, 프리미티브는
+레거시 폴백으로만 축소. 근거: 시뮬이 그래프 생성 신뢰도를 입증(생성 5/5·6/6 valid, 실행 무회귀).
+리스크: 그래프 생성이 실패하면 discovery가 defer(프리미티브 폴백 없음) — 단 이는 프리미티브도
+이미 그랬던 defer 정책과 동일(ADR 0002). 슬라이스에선 4c-4(레거시 삭제)까지는 가지 않는다.

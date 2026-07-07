@@ -1,11 +1,12 @@
+using ProjectAscension.GameSimulation.Effects;
+
 namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
     /// Values a discovered skill's knowledge for sale ("간단한 거래" — knowledge becomes a
-    /// tradeable asset). The worth derives from the skill's power (the magnitude/reach/
-    /// persistence the discovery engine froze), so a stronger discovery sells for more.
-    /// Selling a license is income; the discoverer keeps the discovery (the first-discoverer
-    /// record is permanent — ADR 0002).
+    /// tradeable asset). The worth derives from the skill's power (the size the discovery engine
+    /// froze), so a stronger discovery sells for more. Selling a license is income; the discoverer
+    /// keeps the discovery (the first-discoverer record is permanent — ADR 0002).
     /// </summary>
     public static class KnowledgeValuation
     {
@@ -17,6 +18,10 @@ namespace ProjectAscension.GameSimulation.Combat
                 points += p.Magnitude + p.Range + p.Duration;
             return points;
         }
+
+        /// <summary>The skill's power from its effect graph (ADR 0007 Phase 4c) — the graph
+        /// analogue used when the discovery carries a graph.</summary>
+        public static int PowerPoints(EffectNode graph) => EffectGraphQuery.PowerPoints(graph);
 
         /// <summary>Gold a knowledge license sells for, at the given rate per power point.</summary>
         public static int LicensePrice(Skill skill, int goldPerPoint)
