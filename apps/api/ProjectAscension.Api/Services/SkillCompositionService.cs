@@ -361,11 +361,25 @@ public class SkillCompositionService : ISkillCompositionService
                 skill.PrimitivesJson = JsonSerializer.Serialize(outcome.Skill.Primitives);
                 taken.Add(CompositionPipeline.KindSignature(outcome.Skill.Primitives)); // keep same-batch siblings distinct
                 skill.PowerCost = outcome.LastValidation.TotalCost;
+
+                // Compose the effect GRAPH (ADR 0007) — the structure the runtime interpreter
+                // executes. Additive during migration: if the AI produces nothing valid, the
+                // skill still ships via its primitives (graph stays null, no defer).
+                var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
+                var graph = await _graphComposer.ComposeAsync(
+                    new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed), ct);
+                skill.EffectGraphJson = graph is null ? null : EffectGraphJson.Serialize(graph);
+                if (graph is null)
+                    _logger.LogWarning("No effect graph composed for discovery {DiscoveryId}; skill ships primitive-only.", skill.DiscoveryId);
+
                 // Deterministic, server-authoritative: an offensive skill becomes a WEAPON only
                 // when magic-synthesized-from-magic (arcane/spell context, ADR 0005); a non-magic
-                // offensive discovery is a cast hotkey COMMAND. Mobility → passive, etc.
-                var manifestation = SkillManifest.Classify(
-                    outcome.Skill, SkillManifest.IsMagicContext(DeserializeTags(skill.ContextTagsJson)));
+                // offensive discovery is a cast hotkey COMMAND. Mobility → passive, etc. Prefer the
+                // GRAPH's structure (ADR 0007) so the taxonomy follows what the AI composed; fall
+                // back to the primitive classifier when there is no graph.
+                bool magicContext = SkillManifest.IsMagicContext(DeserializeTags(skill.ContextTagsJson));
+                var manifestation = ManifestationFromGraph.Classify(graph, magicContext)
+                    ?? SkillManifest.Classify(outcome.Skill, magicContext);
                 skill.Manifestation = manifestation.ToString();
 
                 // A command is invoked by a button combo the rule engine assigns
@@ -384,16 +398,6 @@ public class SkillCompositionService : ISkillCompositionService
                 {
                     skill.InvocationComboJson = "[]";
                 }
-
-                // Compose the effect GRAPH (ADR 0007) — the structure the runtime interpreter
-                // executes. Additive during migration: if the AI produces nothing valid, the
-                // skill still ships via its primitives (graph stays null, no defer).
-                var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
-                var graph = await _graphComposer.ComposeAsync(
-                    new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed), ct);
-                skill.EffectGraphJson = graph is null ? null : EffectGraphJson.Serialize(graph);
-                if (graph is null)
-                    _logger.LogWarning("No effect graph composed for discovery {DiscoveryId}; skill ships primitive-only.", skill.DiscoveryId);
 
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
