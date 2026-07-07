@@ -13,10 +13,16 @@ namespace ProjectAscension.SkillForge;
 /// </summary>
 public static class SkillGraphPrompt
 {
-    public static string Build(string theme, IReadOnlyList<BehaviorWeight> profile, PowerBudget budget, IReadOnlyList<string>? avoid = null)
+    public static string Build(string theme, IReadOnlyList<BehaviorWeight> profile, PowerBudget budget,
+        IReadOnlyList<string>? avoid = null, IReadOnlyList<SkillLineage>? lineage = null)
     {
         // The graph rules + steer come from EffectGraphPrompt so the two stay in lockstep.
         string graphSpec = EffectGraphPrompt.Build(theme, profile, budget);
+
+        string lineageLine = lineage is { Count: > 0 }
+            ? "\nThis discovery EVOLVES from prior ones — build on their theme/flavor (a next step, not a copy):\n  "
+              + string.Join("\n  ", lineage.Take(4).Select(l => $"\"{l.Name}\": {l.Description}"))
+            : string.Empty;
 
         string avoidLine = avoid is { Count: > 0 }
             ? $"\nAVOID reproducing these existing skills' structures (make yours mechanically distinct):\n  {string.Join("\n  ", avoid.Take(12))}"
@@ -24,7 +30,7 @@ public static class SkillGraphPrompt
 
         return
 $@"You are naming and composing a brand-new discovered skill.
-{avoidLine}
+{lineageLine}{avoidLine}
 
 First invent a short evocative NAME and a one-sentence DESCRIPTION (flavor/lore, like a real
 game's skill text — no numbers). Then compose the skill as the effect graph described below.

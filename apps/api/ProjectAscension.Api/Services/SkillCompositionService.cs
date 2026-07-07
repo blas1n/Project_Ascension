@@ -255,6 +255,24 @@ public class SkillCompositionService : ISkillCompositionService
         return true;
     }
 
+    // The composed ancestors a discovery builds on — Ready skills with a graph, nearest first
+    // (RAG over the discovery graph, ADR 0007). The graph composer evolves their theme/structure.
+    private async Task<IReadOnlyList<SkillLineage>> RetrieveGraphLineageAsync(Guid discoveryId, CancellationToken ct)
+    {
+        var edges = await _lineage.GetByChildAsync(discoveryId, ct);
+        if (edges.Count == 0) return Array.Empty<SkillLineage>();
+
+        var parents = await _skills.GetByDiscoveryIdsAsync(edges.Select(e => e.ParentDiscoveryId), ct);
+        var lineage = new List<SkillLineage>();
+        foreach (var s in parents)
+        {
+            if (s.Status != DiscoveryContentStatus.Ready || s.Name is null || string.IsNullOrEmpty(s.EffectGraphJson)) continue;
+            lineage.Add(new SkillLineage(s.Name, s.Description ?? string.Empty, s.EffectGraphJson));
+            if (lineage.Count >= MaxLineageContext) break;
+        }
+        return lineage;
+    }
+
     // The delivery SHAPE ("projectile"/"beam"/"burst"/"nova") of a composed graph — its first
     // Emit. Null when the skill emits nothing (movement/ward), so the DTO falls back to a heuristic.
     private static string? FirstDelivery(EffectNode node)
@@ -342,9 +360,10 @@ public class SkillCompositionService : ISkillCompositionService
             // GRAPH — in ONE call. The graph is the sole composed artifact (no primitive pass);
             // Avoid carries the actor-wide taken structures so the new skill stays distinct.
             var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
+            var lineage = await RetrieveGraphLineageAsync(skill.DiscoveryId, ct); // RAG: evolve prior discoveries
             var startedAt = Stopwatch.GetTimestamp();
             var comp = await _graphComposer.ComposeAsync(
-                new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed, taken.ToList()), ct);
+                new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed, taken.ToList(), lineage), ct);
             var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
             skill.Attempts++;
 
