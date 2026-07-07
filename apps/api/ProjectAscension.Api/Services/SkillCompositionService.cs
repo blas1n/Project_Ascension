@@ -20,6 +20,7 @@ public class SkillCompositionService : ISkillCompositionService
     private readonly IDiscoveryLineageRepository _lineage;
     private readonly IDiscoveryTuningProvider _tuning;
     private readonly ISkillComposer _composer;
+    private readonly IEffectGraphComposer _graphComposer;
     private readonly CompositionMetrics _metrics;
     private readonly ILogger<SkillCompositionService> _logger;
 
@@ -30,6 +31,7 @@ public class SkillCompositionService : ISkillCompositionService
         IDiscoveryLineageRepository lineage,
         IDiscoveryTuningProvider tuning,
         ISkillComposer composer,
+        IEffectGraphComposer graphComposer,
         CompositionMetrics metrics,
         ILogger<SkillCompositionService> logger)
     {
@@ -39,6 +41,7 @@ public class SkillCompositionService : ISkillCompositionService
         _lineage = lineage;
         _tuning = tuning;
         _composer = composer;
+        _graphComposer = graphComposer;
         _metrics = metrics;
         _logger = logger;
     }
@@ -382,6 +385,16 @@ public class SkillCompositionService : ISkillCompositionService
                     skill.InvocationComboJson = "[]";
                 }
 
+                // Compose the effect GRAPH (ADR 0007) — the structure the runtime interpreter
+                // executes. Additive during migration: if the AI produces nothing valid, the
+                // skill still ships via its primitives (graph stays null, no defer).
+                var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
+                var graph = await _graphComposer.ComposeAsync(
+                    new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed), ct);
+                skill.EffectGraphJson = graph is null ? null : EffectGraphJson.Serialize(graph);
+                if (graph is null)
+                    _logger.LogWarning("No effect graph composed for discovery {DiscoveryId}; skill ships primitive-only.", skill.DiscoveryId);
+
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
 
@@ -418,7 +431,7 @@ public class SkillCompositionService : ISkillCompositionService
 
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost, primitives,
-            skill.Manifestation, contextTags, behaviors, invocationCombo, skill.Delivery);
+            skill.Manifestation, contextTags, behaviors, invocationCombo, skill.Delivery, skill.EffectGraphJson);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)

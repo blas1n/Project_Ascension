@@ -50,6 +50,11 @@ namespace ProjectAscension.Domain.Entities
         public string Delivery { get; set; } = string.Empty;
         public int? PowerCost { get; set; }
 
+        /// <summary>The skill's effect GRAPH as JSON (ADR 0007) — the AI-composed structure the
+        /// runtime interpreter executes (trigger + effects). Null when no graph was composed yet;
+        /// the skill still works via its primitives (the graph is additive during migration).</summary>
+        public string? EffectGraphJson { get; set; }
+
         /// <summary>How the skill is wielded — "Weapon" (a synthesized-magic weapon) or
         /// "Command" (an invoked technique). Classified deterministically at compose
         /// time. Stored as a string so the Domain stays free of the SkillForge package.</summary>
