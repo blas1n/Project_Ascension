@@ -43,14 +43,12 @@ namespace ProjectAscension.GameSimulation.Combat
         }
 
         /// <summary>The combined always-on bonuses from every discovered passive — resolved from
-        /// each skill's effect graph (ADR 0007) when it has one, else its primitives.</summary>
+        /// each skill's effect graph (ADR 0007; EffectiveGraph is always present).</summary>
         public PassiveEffect AggregatePassive()
         {
             var total = PassiveEffect.None;
             foreach (var passive in _passives)
-                total += passive.Graph != null
-                    ? GraphPassiveResolver.Resolve(passive.Graph)
-                    : PassiveResolver.Resolve(passive.Skill);
+                total += GraphPassiveResolver.Resolve(passive.EffectiveGraph);
             return total;
         }
 

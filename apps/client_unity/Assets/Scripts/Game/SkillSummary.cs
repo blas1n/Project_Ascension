@@ -11,10 +11,10 @@ namespace ProjectAscension.Game
     /// </summary>
     public static class SkillSummary
     {
-        /// <summary>Effect summary for a discovered skill — from its effect GRAPH (ADR 0007) when
-        /// it has one, else its primitives.</summary>
+        /// <summary>Effect summary for a discovered skill — from its effect GRAPH (ADR 0007;
+        /// EffectiveGraph is always present, composed or translated).</summary>
         public static string Describe(DiscoveredSkill d)
-            => d.Graph != null ? DescribeGraph(d.Graph) : Describe(d.Skill);
+            => DescribeGraph(d.EffectiveGraph);
 
         /// <summary>A short summary of a skill's effect graph: delivery shape + accents.</summary>
         public static string DescribeGraph(EffectNode graph)
@@ -44,20 +44,21 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>A passive's continuous effect spelled out (double jump, wall-climb, damage
-        /// reduction, lifesteal) — movement from the effect graph (ADR 0007), defensive from the
-        /// primitives; falls back to the generic summary.</summary>
+        /// reduction, lifesteal) — all from the effect graph (ADR 0007; EffectiveGraph always
+        /// present); falls back to the generic summary.</summary>
         public static string DescribePassive(DiscoveredSkill d)
         {
             var parts = new List<string>();
+            var graph = d.EffectiveGraph;
 
-            var move = MovementCapability.From(new[] { d.Graph });
+            var move = MovementCapability.From(new[] { graph });
             if (move.ExtraJumps > 0) parts.Add(move.ExtraJumps > 1 ? $"+{move.ExtraJumps} air jumps" : "double jump");
             if (move.WallClimb) parts.Add("wall-climb");
 
-            var e = PassiveResolver.Resolve(d.Skill);
+            var e = GraphPassiveResolver.Resolve(graph);
             if (e.DamageReduction > 0f) parts.Add($"{e.DamageReduction * 100f:F0}% dmg reduction");
             if (e.Lifesteal > 0f) parts.Add($"{e.Lifesteal * 100f:F0}% lifesteal");
-            return parts.Count > 0 ? string.Join(", ", parts) : Describe(d.Skill);
+            return parts.Count > 0 ? string.Join(", ", parts) : Describe(d);
         }
 
         private static string Phrase(SkillPrimitiveKind k) => k switch
