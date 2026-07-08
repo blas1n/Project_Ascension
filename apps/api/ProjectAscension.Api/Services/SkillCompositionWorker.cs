@@ -21,6 +21,18 @@ public class SkillCompositionWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // One-time backfill (ADR 0007 Phase 4c-4): translate any legacy graphless discovery to a
+        // graph so the runtime is single-path and PrimitivesJson can eventually retire. Idempotent
+        // (only touches rows with no graph), so it's safe to run every startup.
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<ISkillCompositionService>();
+            await service.BackfillGraphsAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
+        catch (Exception ex) { _logger.LogError(ex, "Effect-graph backfill failed."); }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

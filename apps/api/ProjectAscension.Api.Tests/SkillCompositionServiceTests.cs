@@ -430,6 +430,40 @@ public class SkillCompositionServiceTests
     }
 
     [Fact]
+    public async Task BackfillGraphs_TranslatesGraphlessLegacyRows()
+    {
+        var skills = new FakeSkillRepo();
+        // A legacy Ready skill with primitives but NO graph (composed before the graph pipeline).
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Old Bolt",
+            PrimitivesJson = "[{\"Kind\":0,\"Magnitude\":3},{\"Kind\":4,\"Magnitude\":1,\"Duration\":2}]", // Projectile + DoT
+            CreatedAt = DateTime.UtcNow,
+        });
+        // A skill that already has a graph must be left untouched.
+        const string existing = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Beam\",\"tier\":1}}";
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "New Beam",
+            EffectGraphJson = existing,
+            CreatedAt = DateTime.UtcNow,
+        });
+
+        using var metrics = new CompositionMetrics();
+        var n = await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics).BackfillGraphsAsync();
+
+        Assert.Equal(1, n);
+        Assert.False(string.IsNullOrEmpty(skills.Skills[0].EffectGraphJson)); // legacy row backfilled
+        Assert.Equal(existing, skills.Skills[1].EffectGraphJson);             // graphed row untouched
+    }
+
+    [Fact]
     public async Task ComposePending_InjectsGraphLineage()
     {
         // RAG (ADR 0007): a pending child is composed with its Ready ancestors' name/description/
