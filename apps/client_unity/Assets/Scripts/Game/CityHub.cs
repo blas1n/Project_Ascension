@@ -219,13 +219,9 @@ namespace ProjectAscension.Game
             {
                 if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
                 anySellable = true;
-                // Value from the effect graph when present (ADR 0007), else the primitives.
-                int price = discovered.Graph != null
-                    ? KnowledgeValuation.LicensePrice(discovered.Graph, KnowledgeGoldPerPoint)
-                    : KnowledgeValuation.LicensePrice(discovered.Skill, KnowledgeGoldPerPoint);
-                int rep = discovered.Graph != null
-                    ? KnowledgeValuation.LicenseReputation(discovered.Graph, KnowledgePointsPerRep)
-                    : KnowledgeValuation.LicenseReputation(discovered.Skill, KnowledgePointsPerRep);
+                // Value from the effect graph (ADR 0007; EffectiveGraph is always present).
+                int price = KnowledgeValuation.LicensePrice(discovered.EffectiveGraph, KnowledgeGoldPerPoint);
+                int rep = KnowledgeValuation.LicenseReputation(discovered.EffectiveGraph, KnowledgePointsPerRep);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
                 if (GUILayout.Button($"Sell +{price}g +{rep}rep", GUILayout.Width(150)))

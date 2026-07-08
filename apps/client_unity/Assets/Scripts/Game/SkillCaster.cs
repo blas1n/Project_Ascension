@@ -11,10 +11,9 @@ namespace ProjectAscension.Game
 {
     /// <summary>
     /// Executes a discovered skill in combat: fetches the frozen skill from the server
-    /// (GET /api/discoveries/{id}/skill), parses its primitives into an executable
-    /// <see cref="Skill"/>, and on cast resolves it with the deterministic
-    /// <see cref="SkillResolver"/> and applies the per-target effects. This is the
-    /// final link — an AI-composed discovery actually acting in combat.
+    /// (GET /api/discoveries/{id}/skill), reads its effect graph, and on cast resolves it with the
+    /// deterministic <see cref="GraphSkillResolver"/> (ADR 0007) and applies the per-target
+    /// effects. This is the final link — an AI-composed discovery actually acting in combat.
     ///
     /// Damage, damage-over-time, and the Leech self-heal are applied for real; control,
     /// shield, and dash need assets/animation, so they route to stubs for now
@@ -142,13 +141,16 @@ namespace ProjectAscension.Game
         /// <summary>Resolve a skill against nearby targets and apply its effects. Shared
         /// by weapon fire (<see cref="Cast"/>) and hotkey-cast commands
         /// (<see cref="AbilitySlots"/>). This <see cref="Skill"/>-only overload backs the cast
-        /// EVENT (Action&lt;Skill&gt;); the held weapon supplies its own graph.</summary>
+        /// EVENT (Action&lt;Skill&gt;); it supplies a graph (the held weapon's, or a translation of
+        /// this skill's primitives) so the runtime is always graph-driven (ADR 0007 Phase 4c-4).</summary>
         public void ExecuteSkill(Skill skill)
-            => ExecuteSkill(skill, ReferenceEquals(skill, _skill) ? _graph : null);
+            => ExecuteSkill(skill, ReferenceEquals(skill, _skill) && _graph != null
+                ? _graph
+                : PrimitiveGraphTranslator.Translate(skill));
 
-        /// <summary>As above, driven by the skill's effect GRAPH (ADR 0007) when it has one — the
-        /// graph resolves combat via <see cref="GraphSkillResolver"/> and picks the delivery/homing;
-        /// a graphless skill falls back to the primitive <see cref="SkillResolver"/> path.</summary>
+        /// <summary>As above, driven entirely by the skill's effect GRAPH (ADR 0007) — combat via
+        /// <see cref="GraphSkillResolver"/>, delivery/homing/VFX from the graph. The graph is always
+        /// present (composed or translated), so there is no primitive fallback path.</summary>
         public void ExecuteSkill(Skill skill, EffectNode graph)
         {
             if (skill == null) return;
@@ -156,19 +158,17 @@ namespace ProjectAscension.Game
             // DB-driven combat balance (fetched at startup; Default offline).
             var tuning = CombatTuningCatalog.Current;
 
-            // Skills cost focus (combat-framework 집중력); refuse the cast when short. Cost from
-            // the effect graph when present (ADR 0007), else the primitives.
-            float focusCost = graph != null ? FocusCost.Of(graph, tuning) : FocusCost.Of(skill, tuning);
-            if (_focus != null && !_focus.TrySpend(focusCost))
+            // Skills cost focus (combat-framework 집중력); refuse the cast when short — from the graph.
+            if (_focus != null && !_focus.TrySpend(FocusCost.Of(graph, tuning)))
             {
                 Debug.Log($"[SkillCaster] Not enough focus to cast \"{skill.Name}\".");
                 return;
             }
 
-            // Delivery SHAPE: from the skill's graph Emit (ADR 0007) when it has one, else the
-            // held weapon's composed style, else derived from primitives. Either way a projectile
-            // flies, a beam hitscans, a burst lands. Numbers are resolved in ResolveAt.
-            var graphStyle = graph != null ? EffectGraphQuery.DeliveryStyle(graph) : string.Empty;
+            // Delivery SHAPE from the graph's Emit (ADR 0007); the held weapon's composed style is
+            // the fallback when the graph emits nothing (movement/ward). A projectile flies, a beam
+            // hitscans, a burst lands. Numbers are resolved in ResolveAt.
+            var graphStyle = EffectGraphQuery.DeliveryStyle(graph);
             var style = !string.IsNullOrEmpty(graphStyle) ? graphStyle : _deliveryStyle;
             var spec = DeliveryStyles.ForStyle(style, tuning) ?? DeliveryInference.From(skill, tuning);
             var origin = aimSource != null ? aimSource.position : transform.position;
@@ -180,7 +180,7 @@ namespace ProjectAscension.Game
 
             if (spec.Motion == DeliveryMotion.Projectile)
             {
-                bool homing = graph != null ? EffectGraphQuery.HasHoming(graph) : HasPrimitive(skill, SkillPrimitiveKind.Homing);
+                bool homing = EffectGraphQuery.HasHoming(graph);
                 SpawnProjectile(origin, dir, spec, color, homing, point =>
                 {
                     SkillVfx.Burst(point, color, _intensity);
@@ -203,16 +203,14 @@ namespace ProjectAscension.Game
             ResolveAt(skill, graph, resolvePoint, spec);
         }
 
-        // Resolve a skill's effects against everything within the delivery's footprint at a
-        // point. Shared by instant deliveries (now) and a projectile's impact (callback). The
-        // graph resolves via GraphSkillResolver (ADR 0007); a graphless skill via primitives.
+        // Resolve a skill's effects against everything within the delivery's footprint at a point.
+        // Shared by instant deliveries (now) and a projectile's impact (callback). Always via the
+        // graph (ADR 0007 Phase 4c-4 — every skill has one, composed or translated).
         private void ResolveAt(Skill skill, EffectNode graph, Vector3 point, DeliverySpec spec)
         {
             if (this == null) return; // caster gone (e.g. projectile outlived the scene)
             var targets = TargetsAround(point, spec.Radius);
-            var resolution = graph != null
-                ? GraphSkillResolver.Resolve(graph, targets.Count, CombatTuningCatalog.Current)
-                : SkillResolver.Resolve(skill, targets.Count, CombatTuningCatalog.Current);
+            var resolution = GraphSkillResolver.Resolve(graph, targets.Count, CombatTuningCatalog.Current);
             Apply(resolution, targets);
 
             // Composed VFX: the skill's primitives add impact accents (chain arcs, fork
@@ -221,18 +219,9 @@ namespace ProjectAscension.Game
             var points = new List<Vector3>(targets.Count);
             foreach (var t in targets)
                 if (t is Component c) points.Add(c.transform.position);
-            if (graph != null)
-                SkillVfx.PlayImpactModifiers(graph, skill.Name, point, points, transform.position, _intensity);
-            else
-                SkillVfx.PlayImpactModifiers(skill, point, points, transform.position, _intensity);
+            SkillVfx.PlayImpactModifiers(graph, skill.Name, point, points, transform.position, _intensity);
         }
 
-        private static bool HasPrimitive(Skill skill, SkillPrimitiveKind kind)
-        {
-            foreach (var p in skill.Primitives)
-                if (p.Kind == kind) return true;
-            return false;
-        }
 
         private List<IDamageable> TargetsAround(Vector3 point, float radius)
         {

@@ -28,7 +28,13 @@ namespace ProjectAscension.GameSimulation.Combat
         IReadOnlyList<string>? ContextTags = null,
         // The AI-composed flavor description (a sentence, like a real game's skill text).
         string? Description = null,
-        // The AI-composed effect graph (ADR 0007) the runtime interprets — movement capability
-        // now, offense later. Null when the skill has no composed graph (graphless → primitives).
-        EffectNode? Graph = null);
+        // The AI-composed effect graph (ADR 0007) the runtime interprets. Null only for a legacy
+        // graphless DTO before translation; prefer EffectiveGraph, which is never null.
+        EffectNode? Graph = null)
+    {
+        /// <summary>The skill's effect graph, always present (ADR 0007 Phase 4c-4) — the composed
+        /// graph, or a deterministic translation of the primitives for a legacy graphless skill.
+        /// Consumers use this so the runtime is single-path (no primitive fallback).</summary>
+        public EffectNode EffectiveGraph => Graph ?? PrimitiveGraphTranslator.Translate(Skill);
+    }
 }
