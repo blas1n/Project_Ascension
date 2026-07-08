@@ -423,6 +423,36 @@ public class SkillCompositionService : ISkillCompositionService
         }
     }
 
+    /// <summary>Backfill a graph onto every Ready discovery that lacks one (ADR 0007 Phase 4c-4) —
+    /// translate its frozen primitives into an equivalent graph deterministically (identity
+    /// preserved, no AI). Run once so no graphless rows remain; then the primitive fallbacks +
+    /// PrimitivesJson can be retired. Returns how many rows were backfilled.</summary>
+    public async Task<int> BackfillGraphsAsync(CancellationToken ct = default)
+    {
+        int backfilled = 0;
+        foreach (var skill in await _skills.GetReadyAsync(ct))
+        {
+            if (!string.IsNullOrEmpty(skill.EffectGraphJson) || string.IsNullOrWhiteSpace(skill.PrimitivesJson)) continue;
+
+            List<ComposedPrimitive>? prims;
+            try { prims = JsonSerializer.Deserialize<List<ComposedPrimitive>>(skill.PrimitivesJson); }
+            catch (JsonException) { continue; }
+            if (prims is null || prims.Count == 0) continue;
+
+            var graph = PrimitiveGraphTranslator.Translate(prims);
+            skill.EffectGraphJson = EffectGraphJson.Serialize(graph);
+            skill.PowerCost = EffectGraph.Cost(graph);
+            if (string.IsNullOrEmpty(skill.Delivery))
+                skill.Delivery = FirstDelivery(graph) ?? string.Empty;
+            // Keep the frozen name/description/manifestation — the translation preserves identity.
+            await _skills.UpdateAsync(skill, ct);
+            backfilled++;
+        }
+        if (backfilled > 0)
+            _logger.LogInformation("Backfilled effect graphs onto {Count} legacy discovery(ies).", backfilled);
+        return backfilled;
+    }
+
     public async Task<DiscoverySkillResponse?> GetByDiscoveryAsync(Guid discoveryId, CancellationToken ct = default)
     {
         var skill = await _skills.GetByDiscoveryIdAsync(discoveryId, ct);
