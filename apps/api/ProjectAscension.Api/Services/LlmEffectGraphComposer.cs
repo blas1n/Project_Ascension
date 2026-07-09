@@ -47,8 +47,14 @@ public sealed class LlmEffectGraphComposer : IEffectGraphComposer
                 var response = await _chat.GetResponseAsync(prompt, options, cts.Token);
 
                 var comp = EffectGraphJson.ParseComposition(response.Text);
-                if (comp is not null && EffectGraphValidator.Validate(comp.Graph, request.Budget).IsValid)
-                    return comp;
+                if (comp is not null)
+                {
+                    // The model owns structure; the engine owns numbers (ADR 0002) — clamp an
+                    // overshooting graph down to the budget rather than deferring forever.
+                    var packed = comp with { Graph = EffectGraphBudgetPacker.Pack(comp.Graph, request.Budget) };
+                    if (EffectGraphValidator.Validate(packed.Graph, request.Budget).IsValid)
+                        return packed;
+                }
 
                 _logger.LogDebug("LLM skill composition unparseable/invalid (attempt {Attempt}); retrying.", attempt + 1);
             }
