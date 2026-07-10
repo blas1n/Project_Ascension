@@ -16,30 +16,20 @@ namespace ProjectAscension.Game
     /// </summary>
     public static class DiscoveredSkillFactory
     {
-        /// <summary>Convert a Ready skill DTO into a discovered skill; <paramref name="weapon"/>
-        /// is the minted equippable for a weapon manifestation, else null.</summary>
+        /// <summary>Convert a Ready skill DTO into a discovered skill (null if not Ready);
+        /// <paramref name="weapon"/> is the minted equippable for a weapon manifestation, else null.
+        /// Acceptance + core build live in the headless <see cref="SkillRestore"/> (contract-tested);
+        /// only the WeaponData minting is Unity-side.</summary>
         public static DiscoveredSkill Build(SkillResponseDto dto, out WeaponData weapon)
         {
-            var skill = SkillParser.Parse(string.IsNullOrEmpty(dto.name) ? "Discovery" : dto.name, dto.primitives);
-            var manifestation = Enum.TryParse<ManifestationKind>(dto.manifestation, ignoreCase: true, out var kind)
-                ? kind
-                : ManifestationKind.Command;
-            IReadOnlyList<InputToken> combo = manifestation == ManifestationKind.Command
-                ? InputCombo.Parse(dto.invocationCombo ?? Array.Empty<string>())
-                : Array.Empty<InputToken>();
+            weapon = null;
+            var discovered = SkillRestore.FromResponse(
+                dto.status, dto.name, dto.manifestation, dto.primitives, dto.invocationCombo,
+                dto.contextTags, dto.description, dto.effectGraph);
+            if (discovered == null) return null;
 
-            // ADR 0007: the runtime interprets the AI-composed effect graph. A legacy skill with no
-            // composed graph is translated deterministically from its primitives (Phase 4c-4), so
-            // every discovered skill runs on the graph path — never a graphless fallback.
-            var graph = string.IsNullOrEmpty(dto.effectGraph)
-                ? PrimitiveGraphTranslator.Translate(skill)
-                : EffectGraphReader.Parse(dto.effectGraph);
-            if (graph == null) graph = PrimitiveGraphTranslator.Translate(skill); // unparseable graph → translate
-
-            var discovered = new DiscoveredSkill(skill.Name, manifestation, skill, combo, dto.contextTags, dto.description, graph);
-            weapon = manifestation == ManifestationKind.Weapon
-                ? WeaponData.CreateDiscovered(skill.Name, skill, "spell:" + Slug(skill.Name))
-                : null;
+            if (discovered.Manifestation == ManifestationKind.Weapon)
+                weapon = WeaponData.CreateDiscovered(discovered.Skill.Name, discovered.Skill, "spell:" + Slug(discovered.Skill.Name));
             return discovered;
         }
 
