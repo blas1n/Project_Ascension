@@ -62,21 +62,28 @@ public static class EffectGraphValidator
     // Mirrors the interpreters: MovementCapability grants a jump only from an Impulse under a
     // movement trigger; GraphPassiveResolver reads only Ward under Continuous; GraphSkillResolver
     // needs a damaging/control node to hit. A shape that none of them act on is a dead skill.
-    private static bool Coherent(Trigger t) => t.Kind switch
+    // Does the graph produce a real runtime effect for the manifestation it resolves to? Mirrors
+    // the interpreters, so a validated skill is never dead:
+    //   - Weapon/Command (offensive/control) → GraphSkillResolver needs a damaging/control node
+    //     (Emit/Damage/Dot/Control) or a Ward(Leech) to do anything.
+    //   - Passive → GraphPassiveResolver grants reduction/leech from an always-on Ward (not Heal),
+    //     OR a movement trigger + an Impulse grants movement (MovementCapability). Otherwise dead.
+    // OnHit has no interpreter yet (reserved) — reject until it does.
+    private static bool Coherent(Trigger t)
     {
-        // Movement triggers manifest as a movement Passive — they must carry an Impulse.
-        TriggerKind.OnJumpInAir => Has(t.Child, n => n is Impulse),
-        TriggerKind.OnWallContact => Has(t.Child, n => n is Impulse),
-        // A dodge is either a movement tech (Impulse) or a dodge-attack (offense/control).
-        TriggerKind.OnDodge => Has(t.Child, n => n is Impulse or Emit or Damage or Dot or Control),
-        // A Continuous passive is resolved only through always-on Ward nodes (Shield/Barrier reduce
-        // damage, Leech sustains). Heal is an on-cast burst — dead under Continuous.
-        TriggerKind.Continuous => Has(t.Child, n => n is Ward w && w.Effect != WardEffect.Heal),
-        // A cast must land a real effect (damage / control / ward) — not just Impulse/Homing/Spread.
-        TriggerKind.OnCast => Has(t.Child, n => n is Emit or Damage or Dot or Control or Ward),
-        // OnHit has no runtime interpreter yet (reserved for a later phase) — reject until it does.
-        _ => false,
-    };
+        if (t.Kind == TriggerKind.OnHit) return false;
+
+        var kind = ManifestationFromGraph.Classify(t, magicContext: false) ?? ManifestationKind.Command;
+        if (kind == ManifestationKind.Passive)
+        {
+            bool ward = Has(t.Child, n => n is Ward w && w.Effect != WardEffect.Heal);
+            bool moves = t.Kind is TriggerKind.OnJumpInAir or TriggerKind.OnDodge or TriggerKind.OnWallContact
+                         && Has(t.Child, n => n is Impulse);
+            return ward || moves;
+        }
+        // Weapon / Command — GraphSkillResolver must produce damage/control (Leech also acts on cast).
+        return Has(t.Child, n => n is Emit or Damage or Dot or Control || (n is Ward lw && lw.Effect == WardEffect.Leech));
+    }
 
     private static bool Has(EffectNode node, System.Func<EffectNode, bool> pred)
     {
