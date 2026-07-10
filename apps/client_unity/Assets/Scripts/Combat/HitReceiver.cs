@@ -40,9 +40,10 @@ namespace ProjectAscension.Combat
         {
             if (IsDead) return;
 
-            amount *= Mathf.Clamp01(1f - DamageReduction); // passive damage reduction
-            _health = CombatResolver.ApplyDamage(_health, amount);
-            Damaged?.Invoke(this, amount);
+            // Passive damage reduction is applied by the resolver (tested, server-authoritative).
+            float dealt = CombatResolver.Reduced(amount, DamageReduction);
+            _health = CombatResolver.ApplyDamage(_health, dealt);
+            Damaged?.Invoke(this, dealt);
             if (IsDead) Died?.Invoke(this);
         }
 

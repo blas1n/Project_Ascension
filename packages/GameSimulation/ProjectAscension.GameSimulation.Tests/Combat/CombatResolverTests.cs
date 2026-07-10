@@ -6,6 +6,23 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
     public class CombatResolverTests
     {
         [Fact]
+        public void Reduced_AppliesDefensiveReduction_Clamped()
+        {
+            Assert.Equal(50f, CombatResolver.Reduced(100f, 0.5f), precision: 3);  // 50% reduction
+            Assert.Equal(100f, CombatResolver.Reduced(100f, 0f), precision: 3);   // none
+            Assert.Equal(0f, CombatResolver.Reduced(100f, 1f), precision: 3);     // full block
+            Assert.Equal(100f, CombatResolver.Reduced(100f, -1f), precision: 3);  // clamped below 0
+            Assert.Equal(0f, CombatResolver.Reduced(100f, 2f), precision: 3);     // clamped above 1
+        }
+
+        [Fact]
+        public void ApplyDamage_WithReduction_IsAtomic()
+        {
+            var next = CombatResolver.ApplyDamage(Health.Full(100f), 40f, reduction: 0.25f); // 40 × 0.75 = 30
+            Assert.Equal(70f, next.Current, precision: 3);
+        }
+
+        [Fact]
         public void ApplyDamage_ReducesCurrentHealth()
         {
             var health = Health.Full(100f);
