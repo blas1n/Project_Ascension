@@ -14,17 +14,37 @@ public static class EffectGraphPrompt
     public static string Build(string theme, IReadOnlyList<BehaviorWeight> profile, PowerBudget budget)
     {
         int attacks = profile?.Where(b => b.Behavior is "RangedAttack" or "MeleeAttack" or "ChargedAttack").Sum(b => b.Count) ?? 0;
-        int mobility = profile?.Where(b => b.Behavior is "Jump" or "Dodge").Sum(b => b.Count) ?? 0;
+        int jumps = profile?.Where(b => b.Behavior == "Jump").Sum(b => b.Count) ?? 0;
+        int dodges = profile?.Where(b => b.Behavior == "Dodge").Sum(b => b.Count) ?? 0;
+        int mobility = jumps + dodges;
         string play = profile is null || profile.Count == 0
             ? "no clear pattern"
             : string.Join(", ", profile.OrderByDescending(b => b.Count).Select(b => $"{b.Behavior}:{b.Count}"));
 
-        string steer =
-            mobility * 2 > attacks * 3
-                ? "This play is MOVEMENT-dominated → root trigger OnJumpInAir or OnDodge (a movement capability, e.g. a double jump = OnJumpInAir + Impulse Up), or OnWallContact for a wall-climb; effects are Impulse only, no offense."
-                : attacks > 0
-                    ? "This play is OFFENSIVE → root trigger OnCast; build a Sequence: one Emit (its delivery is the shape — Projectile/Beam single-target, Burst/Nova area), then shape the attack with any of Damage (extra hit), Dot (a burn over time), Spread (hits extra targets — chain/pierce), Homing (the shot seeks), Control (Knockback/Slow/Stun). Mix these to make each attack distinct; don't just Emit+Damage every time."
-                    : "Defensive/ambient → root trigger Continuous; effects are Ward.";
+        string themeLower = (theme ?? string.Empty).ToLowerInvariant();
+        bool defensiveTheme = themeLower.Contains("ward") || themeLower.Contains("shield") || themeLower.Contains("guard")
+                              || themeLower.Contains("barrier") || themeLower.Contains("protect") || themeLower.Contains("aegis");
+        bool wallTheme = themeLower.Contains("wall") || themeLower.Contains("climb") || themeLower.Contains("scale")
+                         || themeLower.Contains("cliff");
+
+        // Pick ONE trigger prescriptively so different plays/themes yield different structures
+        // (the discovery variety promise), not the same movement trigger every time.
+        string steer;
+        if (defensiveTheme && attacks == 0)
+            steer = "This is a DEFENSIVE ward → root trigger Continuous; effect is a Ward (Shield/Barrier reduce incoming damage, Leech sustains). No offense, no movement.";
+        else if (mobility * 2 > attacks * 3)
+        {
+            string moveTrigger = wallTheme
+                ? "OnWallContact (a wall-climb — on touching a wall)"
+                : jumps >= dodges
+                    ? "OnJumpInAir (a double/air jump)"
+                    : "OnDodge (a dash/dodge move)";
+            steer = $"This play is MOVEMENT → root trigger {moveTrigger}; the effect is an Impulse (Up for a jump/climb, Forward for a dash). Match the trigger to the play/theme — a jump-heavy play is OnJumpInAir, a wall/climb theme is OnWallContact, a dodge is OnDodge. No offense.";
+        }
+        else if (attacks > 0)
+            steer = "This play is OFFENSIVE → root trigger OnCast; build a Sequence: one Emit (its delivery is the shape — Projectile/Beam single-target, Burst/Nova area), then shape the attack with any of Damage (extra hit), Dot (a burn over time), Spread (hits extra targets — chain/pierce), Homing (the shot seeks), Control (Knockback/Slow/Stun). Mix these to make each attack distinct; don't just Emit+Damage every time.";
+        else
+            steer = "Defensive/ambient → root trigger Continuous; effect is a Ward.";
 
         return
 $@"Compose a unique combat skill for a discovery as a deterministic EFFECT GRAPH.
