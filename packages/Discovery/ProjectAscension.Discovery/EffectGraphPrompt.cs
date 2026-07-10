@@ -37,7 +37,7 @@ Power budget: {budget.Total} (Emit/Damage/Dot cost (tier+1)*3, Impulse (tier+1)*
 Respond ONLY as JSON of this exact shape:
 {{ ""trigger"": <TRIGGER>, ""effect"": <NODE> }}
 
-TRIGGER is one of: OnCast, OnJumpInAir, OnDodge, OnHit, OnWallContact, Continuous.
+TRIGGER is one of: OnCast, OnJumpInAir, OnDodge, OnWallContact, Continuous.
 NODE is one of:
   {{""kind"":""Emit"",""delivery"":<Projectile|Beam|Burst|Nova>,""tier"":<0-3>}}
   {{""kind"":""Impulse"",""direction"":<Up|Forward|Aim>,""tier"":<0-3>}}
@@ -50,6 +50,9 @@ NODE is one of:
   {{""kind"":""Sequence"",""steps"":[<NODE>, ...]}}
 
 Rules: exactly one top-level trigger; no trigger inside effect; tiers 0-3; keep it small (<=8 nodes);
-match the trigger to the play above. Numbers/balance are the engine's — only choose structure and tiers.";
+match the trigger to the play above. COHERENCE (or the skill does nothing and is rejected):
+a movement trigger (OnJumpInAir/OnWallContact/OnDodge-as-movement) MUST include an Impulse;
+Continuous MUST include a Ward; OnCast MUST include a real effect (Emit/Damage/Dot/Control/Ward),
+not only Impulse/Homing/Spread. Numbers/balance are the engine's — only choose structure and tiers.";
     }
 }
