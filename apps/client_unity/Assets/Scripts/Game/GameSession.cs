@@ -141,7 +141,9 @@ namespace ProjectAscension.Game
                 if (string.IsNullOrEmpty(item.id)) continue;
                 SkillResponseDto dto = null;
                 yield return discoveryApi.GetSkill(item.id, r => dto = r);
-                if (dto == null || dto.status != "Ready" || dto.primitives == null) continue;
+                // A composed skill is graph-only now (ADR 0007 Phase 4c) — it has no primitives, so
+                // DON'T require them here (that legacy guard silently dropped every restored skill).
+                if (dto == null || dto.status != "Ready") continue;
 
                 var discovered = DiscoveredSkillFactory.Build(dto, out var weapon);
                 DiscoveredSkills.Add(discovered);

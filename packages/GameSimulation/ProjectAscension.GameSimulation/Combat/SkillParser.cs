@@ -14,9 +14,10 @@ namespace ProjectAscension.GameSimulation.Combat
         public static Skill Parse(string name, IEnumerable<string> primitiveDescriptions)
         {
             var primitives = new List<SkillPrimitive>();
-            foreach (var desc in primitiveDescriptions)
-                if (TryParsePrimitive(desc, out var p))
-                    primitives.Add(p);
+            if (primitiveDescriptions != null) // graph-only skills carry none (ADR 0007 Phase 4c)
+                foreach (var desc in primitiveDescriptions)
+                    if (TryParsePrimitive(desc, out var p))
+                        primitives.Add(p);
             return new Skill(name, primitives);
         }
 
