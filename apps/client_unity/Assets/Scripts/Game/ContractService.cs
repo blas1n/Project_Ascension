@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ProjectAscension.Combat;
 using ProjectAscension.Domain.Enums;
+using ProjectAscension.GameSimulation.Contracts;
 
 namespace ProjectAscension.Game
 {
@@ -76,8 +77,9 @@ namespace ProjectAscension.Game
         {
             for (int i = InProgress.Count - 1; i >= 0; i--)
             {
-                InProgress[i].Remaining -= dt;
-                if (InProgress[i].Remaining <= 0f)
+                var (remaining, elapsed) = ContractRules.TickTimer(InProgress[i].Remaining, dt);
+                InProgress[i].Remaining = remaining;
+                if (elapsed)
                 {
                     ContractorCompleted.Add(InProgress[i].Contract.Title);
                     InProgress.RemoveAt(i);
@@ -94,7 +96,7 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>Whether the player's standing meets the contract's requirement.</summary>
-        public static bool CanAccept(ContractInstance c, int reputation) => c != null && reputation >= c.MinReputation;
+        public static bool CanAccept(ContractInstance c, int reputation) => c != null && ContractRules.CanAccept(reputation, c.MinReputation);
 
         public void Accept(ContractInstance template) => Active = template.Fresh();
 
@@ -119,7 +121,7 @@ namespace ProjectAscension.Game
         private void Advance(ContractPurpose purpose, int amount)
         {
             if (Active == null || Active.Purpose != purpose || Active.IsComplete) return;
-            Active.Progress = System.Math.Min(Active.TargetCount, Active.Progress + amount);
+            Active.Progress = ContractRules.ClampedProgress(Active.Progress, amount, Active.TargetCount);
         }
 
         /// <summary>Hand in a completed contract; returns the reward (0 if not completable).</summary>
@@ -139,9 +141,10 @@ namespace ProjectAscension.Game
         /// fails on timeout and just expired (the caller applies the penalty), else null.</summary>
         public ContractInstance TickActive(float dt)
         {
-            if (Active == null || !Active.FailOnTimeout || Active.IsComplete) return null;
-            Active.Remaining -= dt;
-            if (Active.Remaining > 0f) return null;
+            if (Active == null || !ContractRules.CanExpire(Active.FailOnTimeout, Active.IsComplete)) return null;
+            var (remaining, elapsed) = ContractRules.TickTimer(Active.Remaining, dt);
+            Active.Remaining = remaining;
+            if (!elapsed) return null;
             var failed = Active;
             Active = null;
             return failed;
@@ -152,7 +155,7 @@ namespace ProjectAscension.Game
         /// during a non-death-fail contract (e.g. the delegation tutorial) does NOT fail it.</summary>
         public ContractInstance FailActiveOnDeath()
         {
-            if (Active == null || !Active.FailOnDeath || Active.IsComplete) return null;
+            if (Active == null || !ContractRules.FailsOnDeath(Active.FailOnDeath, Active.IsComplete)) return null;
             var failed = Active;
             Active = null;
             return failed;
