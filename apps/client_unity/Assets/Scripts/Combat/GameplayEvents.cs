@@ -33,6 +33,11 @@ namespace ProjectAscension.Combat
         // teachable moment.
         public static event Action PlayerDied;
 
+        // A discovery finished composing on the server and its skill loaded — carries the
+        // AI-composed NAME. The single source of a discovery's identity: the client no longer
+        // names discoveries locally (the server is authoritative — ADR 0002/0004).
+        public static event Action<string> SkillDiscovered;
+
         // World facts (argument is the subject GameObject).
         public static event Action<GameObject> MonsterKilled;
         public static event Action<GameObject> SampleCollected;
@@ -49,6 +54,8 @@ namespace ProjectAscension.Combat
         public static void RaiseSkillCastRequested(Skill skill) => SkillCastRequested?.Invoke(skill);
 
         public static void RaisePlayerDied() => PlayerDied?.Invoke();
+
+        public static void RaiseSkillDiscovered(string name) => SkillDiscovered?.Invoke(name);
 
         public static void RaiseMonsterKilled(GameObject monster) => MonsterKilled?.Invoke(monster);
         public static void RaiseSampleCollected(GameObject sample) => SampleCollected?.Invoke(sample);

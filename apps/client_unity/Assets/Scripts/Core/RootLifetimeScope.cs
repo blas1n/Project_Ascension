@@ -14,7 +14,6 @@ namespace ProjectAscension.Core
             // Registered in later phases (architecture hooks only for now):
             //   builder.Register<ApiClient>(Lifetime.Singleton);
             //   builder.Register<ContractService>(Lifetime.Singleton);
-            //   builder.Register<DiscoveryService>(Lifetime.Singleton);
             //   builder.Register<CharacterStateService>(Lifetime.Singleton);
         }
     }

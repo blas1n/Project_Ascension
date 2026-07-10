@@ -344,8 +344,8 @@ namespace ProjectAscension.Editor
             // Contract HUD (objective + progress).
             new GameObject("ContractHud").AddComponent<ContractHud>();
 
-            // Discovery: track behaviors -> discoveries, and toast on unlock.
-            new GameObject("BehaviorTracker").AddComponent<BehaviorTracker>();
+            // Discovery is server-authoritative: DiscoveryReporter posts behavior, the composed
+            // skill loads, and DiscoveryNotification toasts its server-composed name.
             new GameObject("DiscoveryNotification").AddComponent<DiscoveryNotification>();
 
             // Server discovery reporter + the binder that mints a fired discovery's skill.

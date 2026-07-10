@@ -29,7 +29,6 @@ namespace ProjectAscension.Game
 
         public ContractService Contracts { get; private set; }
         public PlayerStateService PlayerState { get; private set; }
-        public DiscoveryService Discovery { get; private set; }
 
         /// <summary>Skills the player has discovered, split into weapons (synthesized
         /// magic) and commands (techniques). Populated as discoveries are fetched.</summary>
@@ -113,7 +112,6 @@ namespace ProjectAscension.Game
 
             Contracts = new ContractService();
             PlayerState = new PlayerStateService(ownedWeapons ?? new WeaponData[0]);
-            Discovery = new DiscoveryService();
             DiscoveredSkills = new DiscoveredSkillSet();
 
             Combat.GameplayEvents.PlayerDied += OnPlayerDied;
