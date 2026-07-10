@@ -82,7 +82,9 @@ namespace ProjectAscension.Game
             {
                 SkillResponseDto fetched = null;
                 yield return _api.GetSkill(discoveryId, dto => fetched = dto);
-                if (fetched != null && fetched.status == "Ready" && fetched.primitives != null)
+                // A composed skill is graph-only now (ADR 0007 Phase 4c) — don't require primitives
+                // (the same legacy guard that dropped the session-start restore).
+                if (fetched != null && fetched.status == "Ready")
                 {
                     OnSkillReady(fetched);
                     yield break;
