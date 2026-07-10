@@ -97,6 +97,7 @@ namespace ProjectAscension.Game
         private void OnSkillReady(SkillResponseDto dto)
         {
             var discovered = DiscoveredSkillFactory.Build(dto, out var weapon);
+            if (discovered == null) return; // not Ready (shouldn't reach here; defensive)
             _skill = discovered.Skill;
             _graph = discovered.Graph;
             // Delivery SHAPE prefers the graph's Emit (ADR 0007), falling back to the composed
