@@ -225,15 +225,16 @@ namespace ProjectAscension.Net
         {
             yield return GetJson(
                 $"{_baseUrl}/api/weapons",
-                // JsonUtility can't parse a top-level array — wrap it in an object first.
-                json => onResult?.Invoke(JsonUtility.FromJson<WeaponDefinitionListDto>("{\"items\":" + json + "}").items));
+                // JsonUtility can't parse a top-level array — wrap it in an object first. It also
+                // returns null on a malformed/empty body, so coalesce (never deref .items on null).
+                json => onResult?.Invoke(JsonUtility.FromJson<WeaponDefinitionListDto>("{\"items\":" + json + "}")?.items ?? Array.Empty<WeaponDefinitionDto>()));
         }
 
         public IEnumerator GetMonsters(Action<MonsterDefinitionDto[]> onResult)
         {
             yield return GetJson(
                 $"{_baseUrl}/api/monsters",
-                json => onResult?.Invoke(JsonUtility.FromJson<MonsterDefinitionListDto>("{\"items\":" + json + "}").items));
+                json => onResult?.Invoke(JsonUtility.FromJson<MonsterDefinitionListDto>("{\"items\":" + json + "}")?.items ?? Array.Empty<MonsterDefinitionDto>()));
         }
 
         public IEnumerator GetPlayer(Action<PlayerDefinitionDto> onResult)
@@ -260,7 +261,7 @@ namespace ProjectAscension.Net
         {
             yield return GetJson(
                 $"{_baseUrl}/api/npcs",
-                json => onResult?.Invoke(JsonUtility.FromJson<NpcListDto>("{\"items\":" + json + "}").items));
+                json => onResult?.Invoke(JsonUtility.FromJson<NpcListDto>("{\"items\":" + json + "}")?.items ?? Array.Empty<NpcDto>()));
         }
 
         public IEnumerator GetSettlement(Action<SettlementDto> onResult)
@@ -280,14 +281,14 @@ namespace ProjectAscension.Net
         {
             yield return GetJson(
                 $"{_baseUrl}/api/shop",
-                json => onResult?.Invoke(JsonUtility.FromJson<ItemDefinitionListDto>("{\"items\":" + json + "}").items));
+                json => onResult?.Invoke(JsonUtility.FromJson<ItemDefinitionListDto>("{\"items\":" + json + "}")?.items ?? Array.Empty<ItemDefinitionDto>()));
         }
 
         public IEnumerator GetContracts(string regionId, Action<ContractDto[]> onResult)
         {
             yield return GetJson(
                 $"{_baseUrl}/api/contracts?regionId={regionId}",
-                json => onResult?.Invoke(JsonUtility.FromJson<ContractListDto>("{\"items\":" + json + "}").items));
+                json => onResult?.Invoke(JsonUtility.FromJson<ContractListDto>("{\"items\":" + json + "}")?.items ?? Array.Empty<ContractDto>()));
         }
 
         public IEnumerator GetContractQuote(string purpose, string target, int count, Action<ContractQuoteDto> onResult)

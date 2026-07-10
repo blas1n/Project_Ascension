@@ -56,7 +56,7 @@ namespace ProjectAscension.GameSimulation.Combat
         /// graph (ADR 0007) — extra air jumps, wall-climb. Graph-driven, not a bespoke field: a
         /// new movement mechanic is a new trigger, no engine change.</summary>
         public MovementCapability AggregateMovement()
-            => MovementCapability.From(All.Select(s => s.Graph));
+            => MovementCapability.From(All.Select(s => s.EffectiveGraph)); // never null (translates legacy)
 
         /// <summary>Execute a discovered skill against the targets in range
         /// (index 0 = primary). A weapon (equipped + fired) or a command (combo-invoked)
