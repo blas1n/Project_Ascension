@@ -13,8 +13,6 @@ namespace ProjectAscension.Monsters
     [RequireComponent(typeof(HitReceiver))]
     public abstract class MonsterBase : MonoBehaviour, IStatusReceiver, IMonsterInfo
     {
-        private enum State { Idle, Chase, Attack, Dead }
-
         private float _moveSpeed = 3f;
         private float _aggroRange = 20f;
         private float _attackRange = 2f;
@@ -22,9 +20,9 @@ namespace ProjectAscension.Monsters
         protected float Damage = 8f;
         protected float ProjectileSpeed = 0f;
 
-        private const float KnockbackDecay = 30f; // how fast this monster recovers from a push
-
-        private State _state = State.Idle;
+        // The AI decision lives in GameSimulation (MonsterAi, headless-tested); this MonoBehaviour
+        // only reads its result to move/attack/render. Knockback decay is a GameSimulation constant.
+        private MonsterState _state = MonsterState.Idle;
         private Transform _target;
         private IDamageable _targetDamageable;
         private HitReceiver _health;
@@ -71,37 +69,22 @@ namespace ProjectAscension.Monsters
 
         private void Update()
         {
-            if (_state == State.Dead) return;
+            if (_state == MonsterState.Dead) return;
 
             _status = StatusRules.Tick(_status, Time.deltaTime);
             ApplyKnockback();
 
-            // Stunned (or no target): no chasing or attacking — but knockback still pushes.
-            if (_target == null || _status.IsStunned) return;
+            float dist = _target != null ? Vector3.Distance(transform.position, _target.position) : float.MaxValue;
+            var settings = new MonsterAiSettings(_moveSpeed, _aggroRange, _attackRange, _attackCooldown);
 
-            float dist = Vector3.Distance(transform.position, _target.position);
-            switch (_state)
-            {
-                case State.Idle:
-                    if (dist <= _aggroRange) _state = State.Chase;
-                    break;
+            // The decision is GameSimulation's (headless-tested); this shell only enacts the result.
+            var step = MonsterAi.Step(_state, settings, dist, _target != null, _status.IsStunned, Time.time, _nextAttackTime);
+            _state = step.State;
+            _nextAttackTime = step.NextAttackTime;
 
-                case State.Chase:
-                    if (dist <= _attackRange) _state = State.Attack;
-                    else MoveTowardTarget();
-                    break;
-
-                case State.Attack:
-                    FaceTarget();
-                    if (dist > _attackRange) { _state = State.Chase; break; }
-                    if (Time.time >= _nextAttackTime)
-                    {
-                        _nextAttackTime = Time.time + _attackCooldown;
-                        if (_targetDamageable == null || !_targetDamageable.IsDead)
-                            PerformAttack();
-                    }
-                    break;
-            }
+            if (_state != MonsterState.Idle) FaceTarget();
+            if (step.Move) MoveTowardTarget();
+            if (step.Attack && (_targetDamageable == null || !_targetDamageable.IsDead)) PerformAttack();
         }
 
         private void MoveTowardTarget()
@@ -117,14 +100,14 @@ namespace ProjectAscension.Monsters
         {
             if (_knockback.sqrMagnitude < 0.01f) return;
             transform.position += _knockback * Time.deltaTime;
-            _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, KnockbackDecay * Time.deltaTime);
+            _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, MonsterAiSettings.KnockbackDecay * Time.deltaTime);
         }
 
         /// <summary>Receive a control status from a skill. The strength (slow fraction /
         /// knockback impulse) is defined by the skill, not fixed here.</summary>
         public void ApplyControl(ControlKind kind, float duration, float strength, Vector3 sourcePosition)
         {
-            if (_state == State.Dead) return;
+            if (_state == MonsterState.Dead) return;
             if (kind == ControlKind.Knockback)
             {
                 var away = transform.position - sourcePosition;
@@ -147,7 +130,7 @@ namespace ProjectAscension.Monsters
 
         private void OnDied(HitReceiver _)
         {
-            _state = State.Dead;
+            _state = MonsterState.Dead;
             GameplayEvents.RaiseMonsterKilled(gameObject);
             Destroy(gameObject, 0.1f);
         }
