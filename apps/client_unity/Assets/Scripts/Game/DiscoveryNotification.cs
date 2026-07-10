@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
-using ProjectAscension.GameSimulation.Discovery;
+using ProjectAscension.Combat;
 
 namespace ProjectAscension.Game
 {
-    /// <summary>Frontier toast shown when a discovery is unlocked.</summary>
+    /// <summary>Frontier toast shown when a discovery finishes composing — with the SERVER-composed
+    /// name (GameplayEvents.SkillDiscovered). The client no longer names discoveries locally; the
+    /// server is the sole authority (ADR 0002/0004), so the toast and the city skill list always
+    /// agree.</summary>
     public sealed class DiscoveryNotification : MonoBehaviour
     {
         private struct Toast
@@ -15,21 +18,12 @@ namespace ProjectAscension.Game
 
         private readonly List<Toast> _toasts = new();
 
-        private void OnEnable()
-        {
-            if (GameSession.Instance != null)
-                GameSession.Instance.Discovery.Unlocked += OnUnlocked;
-        }
+        private void OnEnable() => GameplayEvents.SkillDiscovered += OnDiscovered;
+        private void OnDisable() => GameplayEvents.SkillDiscovered -= OnDiscovered;
 
-        private void OnDisable()
+        private void OnDiscovered(string name)
         {
-            if (GameSession.Instance != null)
-                GameSession.Instance.Discovery.Unlocked -= OnUnlocked;
-        }
-
-        private void OnUnlocked(DiscoveryCandidate candidate)
-        {
-            _toasts.Add(new Toast { Text = $"Discovery! {candidate.Title}", Until = Time.time + 4.5f });
+            _toasts.Add(new Toast { Text = $"Discovery! {name}", Until = Time.time + 4.5f });
         }
 
         private void OnGUI()

@@ -182,7 +182,9 @@ namespace ProjectAscension.Game
 
             // Discovery journal.
             GUILayout.BeginArea(new Rect(440, 20, 360, 360), GUI.skin.box);
-            GUILayout.Label($"DISCOVERIES ({session.Discovery.DiscoveredCount})");
+            int discoveredCount = session.DiscoveredSkills.Weapons.Count
+                + session.DiscoveredSkills.Commands.Count + session.DiscoveredSkills.Passives.Count;
+            GUILayout.Label($"DISCOVERIES ({discoveredCount})");
             GUILayout.Space(4);
             bool any = false;
             // Show each discovered skill WITH how to use it (weapon/command hotkey/passive) and
@@ -201,12 +203,6 @@ namespace ProjectAscension.Game
                 GUILayout.Label($"     {desc}");
                 any = true;
             }
-            if (!any) // fall back to the journal titles if the skill set isn't populated yet
-                foreach (var discovery in session.Discovery.DiscoveredCandidates())
-                {
-                    GUILayout.Label($"• {discovery.Title}");
-                    any = true;
-                }
             if (!any)
                 GUILayout.Label("None yet — fight and explore to discover.");
             GUILayout.EndScrollView();

@@ -115,6 +115,10 @@ namespace ProjectAscension.Game
             // a composed name yet differ mechanically.
             GameSession.Instance?.DiscoveredSkills?.Add(discovered);
 
+            // Announce the discovery with the SERVER-composed name (the frontier toast + any other
+            // observer). The client no longer names discoveries locally — server is authoritative.
+            GameplayEvents.RaiseSkillDiscovered(_skill.Name);
+
             if (_manifestation == ManifestationKind.Passive)
                 (GetComponent<PassiveModifiers>() ?? FindAnyObjectByType<PassiveModifiers>())?.Refresh();
             else if (_manifestation == ManifestationKind.Weapon && weapon != null)

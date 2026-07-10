@@ -41,7 +41,7 @@ namespace ProjectAscension.Game
         private void Start()
         {
             _loadout = FindAnyObjectByType<Loadout>();
-            if (string.IsNullOrWhiteSpace(serverUrl)) return; // offline: BehaviorTracker still drives the local catalog
+            if (string.IsNullOrWhiteSpace(serverUrl)) return; // offline: no discovery (server is authoritative)
             _api = new DiscoveryApiClient(serverUrl);
             StartCoroutine(FlushLoop());
         }
