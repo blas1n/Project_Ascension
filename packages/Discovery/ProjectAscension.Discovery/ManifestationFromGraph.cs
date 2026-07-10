@@ -38,6 +38,10 @@ public static class ManifestationFromGraph
                 return ManifestationKind.Passive; // always-on ward / on-hit rider
         }
 
+        // A graph with no weighted effect at all (shouldn't pass validation) is never a weapon.
+        if (offensive == 0 && control == 0 && mobility == 0 && defensive == 0)
+            return ManifestationKind.Passive;
+
         // OnCast (and any default): dominant category decides, mirroring SkillManifest.
         if (offensive >= control && offensive >= mobility && offensive >= defensive)
             return magicContext ? ManifestationKind.Weapon : ManifestationKind.Command;
@@ -61,6 +65,9 @@ public static class ManifestationFromGraph
                 return (off, ctrl, mob, def);
             case Emit e: return (e.Tier + 1, 0, 0, 0);
             case Damage dm: return (dm.Tier + 1, 0, 0, 0);
+            case Dot dot: return (dot.Tier + 1, 0, 0, 0);  // damage over time — offensive
+            case Spread sp: return (sp.Tier + 1, 0, 0, 0); // extra targets — an offensive rider
+            case Homing h: return (h.Tier + 1, 0, 0, 0);   // seeking — an offensive rider
             case Control c2: return (0, c2.Tier + 1, 0, 0);
             case Impulse i: return (0, 0, i.Tier + 1, 0);
             case Ward w: return (0, 0, 0, w.Tier + 1);

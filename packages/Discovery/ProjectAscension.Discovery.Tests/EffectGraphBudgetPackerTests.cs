@@ -15,8 +15,8 @@ public class EffectGraphBudgetPackerTests
     [Fact]
     public void OverBudget_IsClampedToFit_AndValidates()
     {
-        // The exact shape that deferred 25× in play: cost 30 against budget 19.
-        var graph = new Trigger(TriggerKind.OnJumpInAir, new Sequence(new EffectNode[]
+        // A coherent offensive graph at cost 30 against budget 19 (the tight-budget defer case).
+        var graph = new Trigger(TriggerKind.OnCast, new Sequence(new EffectNode[]
         {
             new Emit(EmitDelivery.Burst, 2), new Damage(2), new Dot(1, 2), new Spread(2),
         }));
@@ -26,7 +26,7 @@ public class EffectGraphBudgetPackerTests
 
         Assert.True(EffectGraph.Cost(packed) <= 19);
         Assert.True(EffectGraphValidator.Validate(packed, new PowerBudget(19)).IsValid);
-        Assert.Equal(TriggerKind.OnJumpInAir, Assert.IsType<Trigger>(packed).Kind); // trigger preserved
+        Assert.Equal(TriggerKind.OnCast, Assert.IsType<Trigger>(packed).Kind); // trigger preserved
     }
 
     [Fact]

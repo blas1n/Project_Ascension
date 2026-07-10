@@ -14,9 +14,15 @@ public static class EffectGraphValidator
     {
         if (root is null) return ValidationResult.Fail(CompositionError.EmptyComposition);
         // A skill fires on a trigger; the root must be one.
-        if (root is not Trigger) return ValidationResult.Fail(CompositionError.InvalidParameter);
+        if (root is not Trigger trigger) return ValidationResult.Fail(CompositionError.InvalidParameter);
         if (!StructureValid(root)) return ValidationResult.Fail(CompositionError.InvalidParameter);
         if (!TiersValid(root)) return ValidationResult.Fail(CompositionError.InvalidMagnitude);
+        // Coherence: the trigger's effects must actually DO something at runtime for the
+        // manifestation this trigger implies — else the skill validates but is dead (a movement
+        // trigger with no impulse, a Continuous with no ward, an OnCast with no real effect). The
+        // AI overshoots this too, so reject → it recomposes (the interpreters are the source of
+        // truth for what's dead; keep these rules in step with them).
+        if (!Coherent(trigger)) return ValidationResult.Fail(CompositionError.InvalidParameter);
         if (EffectGraph.NodeCount(root) > EffectGraph.MaxNodes) return ValidationResult.Fail(CompositionError.OverBudget);
 
         int cost = EffectGraph.Cost(root);
@@ -51,4 +57,36 @@ public static class EffectGraphValidator
     };
 
     private static bool InRange(int tier) => tier >= 0 && tier <= EffectGraph.MaxTier;
+
+    // Does the graph produce a real runtime effect for the manifestation its trigger implies?
+    // Mirrors the interpreters: MovementCapability grants a jump only from an Impulse under a
+    // movement trigger; GraphPassiveResolver reads only Ward under Continuous; GraphSkillResolver
+    // needs a damaging/control node to hit. A shape that none of them act on is a dead skill.
+    private static bool Coherent(Trigger t) => t.Kind switch
+    {
+        // Movement triggers manifest as a movement Passive — they must carry an Impulse.
+        TriggerKind.OnJumpInAir => Has(t.Child, n => n is Impulse),
+        TriggerKind.OnWallContact => Has(t.Child, n => n is Impulse),
+        // A dodge is either a movement tech (Impulse) or a dodge-attack (offense/control).
+        TriggerKind.OnDodge => Has(t.Child, n => n is Impulse or Emit or Damage or Dot or Control),
+        // A Continuous passive is resolved only through always-on Ward nodes (Shield/Barrier reduce
+        // damage, Leech sustains). Heal is an on-cast burst — dead under Continuous.
+        TriggerKind.Continuous => Has(t.Child, n => n is Ward w && w.Effect != WardEffect.Heal),
+        // A cast must land a real effect (damage / control / ward) — not just Impulse/Homing/Spread.
+        TriggerKind.OnCast => Has(t.Child, n => n is Emit or Damage or Dot or Control or Ward),
+        // OnHit has no runtime interpreter yet (reserved for a later phase) — reject until it does.
+        _ => false,
+    };
+
+    private static bool Has(EffectNode node, System.Func<EffectNode, bool> pred)
+    {
+        if (node is null) return false;
+        if (pred(node)) return true;
+        return node switch
+        {
+            Sequence s => s.Steps.Any(n => Has(n, pred)),
+            Trigger t => Has(t.Child, pred),
+            _ => false,
+        };
+    }
 }
