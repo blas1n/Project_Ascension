@@ -37,7 +37,9 @@ namespace ProjectAscension.Game
         private string _deliveryStyle = ""; // AI-composed delivery style for the held weapon skill
         private float _intensity = 1f;      // VFX grandeur, from the skill's power (common..legendary)
 
-        public bool HasSkill => _skill != null && _skill.Primitives.Count > 0;
+        // A loaded skill is castable via its effect graph (ADR 0007) — graph-only skills carry no
+        // primitives, so DON'T gate on them (that dropped weapon firing for composed skills).
+        public bool HasSkill => _skill != null;
         public string SkillName => _skill?.Name ?? "(none)";
 
         /// <summary>A synthesized-magic weapon (a new equippable, aim + fire) vs an
@@ -132,7 +134,7 @@ namespace ProjectAscension.Game
                 }
             }
 
-            Debug.Log($"[SkillCaster] Discovered \"{_skill.Name}\" as {_manifestation} ({_skill.Primitives.Count} primitives).");
+            Debug.Log($"[SkillCaster] Discovered \"{_skill.Name}\" as {_manifestation} (delivery={_deliveryStyle}).");
         }
 
         /// <summary>Execute the equipped weapon skill against nearby targets.</summary>
