@@ -5,6 +5,14 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
 {
     public class SkillParserTests
     {
+        [Fact]
+        public void Parse_NullOrEmptyPrimitives_YieldsAnEmptySkill()
+        {
+            // Graph-only skills (ADR 0007 Phase 4c) carry no primitives — parsing must not throw.
+            Assert.Empty(SkillParser.Parse("Graphed", null).Primitives);
+            Assert.Empty(SkillParser.Parse("Graphed", System.Array.Empty<string>()).Primitives);
+        }
+
         [Theory]
         [InlineData("Projectile x2 r1 d2", SkillPrimitiveKind.Projectile, 2, 1, 2)]
         [InlineData("DamageOverTime x1 d2", SkillPrimitiveKind.DamageOverTime, 1, 0, 2)]
