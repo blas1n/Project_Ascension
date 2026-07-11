@@ -7,7 +7,7 @@ namespace ProjectAscension.Game
     /// A discovered skill's projectile delivery (DeliveryMotion.Projectile): travels per the
     /// DeliverySpec and, on hitting something or expiring, resolves the skill at the impact
     /// point via the supplied callback. It only carries the skill — the caster owns the
-    /// effect (SkillResolver). Does its own linecast so it can't pass through walls/monsters.
+    /// effect (GraphSkillResolver). Does its own linecast so it can't pass through walls/monsters.
     /// </summary>
     public sealed class SkillProjectile : MonoBehaviour
     {

@@ -10,8 +10,9 @@ namespace ProjectAscension.GameSimulation.Combat
 
     /// <summary>
     /// An executable skill — a discovered <c>SkillComposition</c> brought into the
-    /// combat simulation. <see cref="SkillResolver"/> turns it into deterministic
-    /// combat effects, so an AI-composed discovery actually works in combat.
+    /// combat simulation. It is translated to an effect graph (<see cref="PrimitiveGraphTranslator"/>)
+    /// and resolved by <see cref="GraphSkillResolver"/> into deterministic combat effects,
+    /// so an AI-composed discovery actually works in combat.
     /// </summary>
     public sealed record Skill(string Name, IReadOnlyList<SkillPrimitive> Primitives);
 }

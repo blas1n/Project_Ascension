@@ -16,16 +16,6 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
                    Graph: graph);
 
         [Fact]
-        public void Resolve_MapsDefensivePrimitives()
-        {
-            var effect = PassiveResolver.Resolve(new Skill("Ward",
-                new[] { new SkillPrimitive(SkillPrimitiveKind.Barrier, 2), new SkillPrimitive(SkillPrimitiveKind.Leech, 3) }));
-
-            Assert.Equal(0.16f, effect.DamageReduction, precision: 3); // Barrier 2 × 0.08
-            Assert.Equal(0.15f, effect.Lifesteal, precision: 3);       // Leech 3 × 0.05
-        }
-
-        [Fact]
         public void AggregateMovement_DoubleJumpFromGraph()
         {
             // A mobility skill's graph — on an in-air jump, an upward impulse — grants an extra
@@ -53,15 +43,6 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
                 set.Add(Mover($"leap-{i}", new Trigger(TriggerKind.OnJumpInAir, new Impulse(ImpulseDirection.Up, 1))));
 
             Assert.Equal(MovementCapability.MaxExtraJumps, set.AggregateMovement().ExtraJumps);
-        }
-
-        [Fact]
-        public void Resolve_MobilityPrimitives_NoLongerGrantMovementViaPassiveEffect()
-        {
-            // Movement moved out of PassiveEffect entirely — Dash/Blink no longer affect it.
-            var effect = PassiveResolver.Resolve(new Skill("Leap",
-                new[] { new SkillPrimitive(SkillPrimitiveKind.Blink, 1) }));
-            Assert.Equal(PassiveEffect.None, effect);
         }
 
         [Fact]
