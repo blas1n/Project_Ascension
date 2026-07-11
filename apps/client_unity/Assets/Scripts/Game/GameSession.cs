@@ -65,8 +65,7 @@ namespace ProjectAscension.Game
             if (_slotDefaultsApplied) return;
             var commands = DiscoveredSkills?.Commands;
             if (commands == null || commands.Count == 0) return;
-            for (int i = 0; i < CommandSlots.Length && i < commands.Count; i++)
-                CommandSlots[i] = commands[i];
+            GameSimulation.Combat.CommandSlotDefaults.Seed(CommandSlots, commands);
             _slotDefaultsApplied = true;
         }
 
