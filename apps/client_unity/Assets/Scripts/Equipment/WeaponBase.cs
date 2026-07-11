@@ -58,15 +58,16 @@ namespace ProjectAscension.Equipment
         public bool PrimaryUp(AttackContext ctx)
         {
             if (_data == null || !_data.IsCharged || _chargeStart < 0f) return false;
-            float charge = Mathf.Clamp01((Time.time - _chargeStart) / Mathf.Max(0.01f, _data.ChargeTime));
+            float charge = WeaponFireRules.ChargeFraction(_chargeStart, Time.time, _data.ChargeTime);
             _chargeStart = -1f;
             return TryFire(ctx, charge);
         }
 
         private bool TryFire(AttackContext ctx, float charge)
         {
-            if (Time.time < _nextReadyTime) return false;
-            _nextReadyTime = Time.time + _data.Cooldown;
+            // Cooldown gating is a GameSimulation rule (headless-tested), not enforced here.
+            if (!WeaponFireRules.CanFire(Time.time, _nextReadyTime)) return false;
+            _nextReadyTime = WeaponFireRules.NextReady(Time.time, _data.Cooldown);
             LastCharge = charge;
             if (_data.HasSpread) _spread = SpreadRules.Bloom(_spread, _data.SpreadPerShot); // bloom on each shot
             OnPrimary(ctx, charge);
