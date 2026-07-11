@@ -16,5 +16,4 @@ public interface ISkillCompositionService
     Task<DiscoverySkillResponse?> GetByDiscoveryAsync(Guid discoveryId, CancellationToken ct = default);
     Task<DiscoveryLineageResponse> GetLineageAsync(Guid discoveryId, CancellationToken ct = default);
     Task ComposePendingAsync(int batchSize, CancellationToken ct = default);
-    Task<int> BackfillGraphsAsync(CancellationToken ct = default);
 }

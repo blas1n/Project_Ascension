@@ -410,14 +410,13 @@ public class SkillCompositionServiceTests
     [Fact]
     public async Task ComposePending_IsGraphOnly_AndDefersWhenNoGraph()
     {
-        // Success path: graph set, primitives cleared, name from the composer.
+        // Success path: graph set (the sole artifact), name from the composer.
         var ready = new FakeSkillRepo();
         ready.Skills.Add(Pending());
         using var m1 = new CompositionMetrics();
         await Service(new FakeDiscoveryRepo(), ready, new FakeKnowledgeRepo(), m1).ComposePendingAsync(10);
         Assert.Equal(DiscoveryContentStatus.Ready, ready.Skills[0].Status);
         Assert.False(string.IsNullOrEmpty(ready.Skills[0].EffectGraphJson));
-        Assert.Null(ready.Skills[0].PrimitivesJson); // no primitive artifact
 
         // No-graph path: stays Pending (deferred), attempt counted.
         var deferred = new FakeSkillRepo();
@@ -427,40 +426,6 @@ public class SkillCompositionServiceTests
             .ComposePendingAsync(10);
         Assert.Equal(DiscoveryContentStatus.Pending, deferred.Skills[0].Status);
         Assert.True(deferred.Skills[0].Attempts > 0);
-    }
-
-    [Fact]
-    public async Task BackfillGraphs_TranslatesGraphlessLegacyRows()
-    {
-        var skills = new FakeSkillRepo();
-        // A legacy Ready skill with primitives but NO graph (composed before the graph pipeline).
-        skills.Skills.Add(new DiscoverySkill
-        {
-            Id = Guid.NewGuid(),
-            DiscoveryId = Guid.NewGuid(),
-            Status = DiscoveryContentStatus.Ready,
-            Name = "Old Bolt",
-            PrimitivesJson = "[{\"Kind\":0,\"Magnitude\":3},{\"Kind\":4,\"Magnitude\":1,\"Duration\":2}]", // Projectile + DoT
-            CreatedAt = DateTime.UtcNow,
-        });
-        // A skill that already has a graph must be left untouched.
-        const string existing = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Beam\",\"tier\":1}}";
-        skills.Skills.Add(new DiscoverySkill
-        {
-            Id = Guid.NewGuid(),
-            DiscoveryId = Guid.NewGuid(),
-            Status = DiscoveryContentStatus.Ready,
-            Name = "New Beam",
-            EffectGraphJson = existing,
-            CreatedAt = DateTime.UtcNow,
-        });
-
-        using var metrics = new CompositionMetrics();
-        var n = await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics).BackfillGraphsAsync();
-
-        Assert.Equal(1, n);
-        Assert.False(string.IsNullOrEmpty(skills.Skills[0].EffectGraphJson)); // legacy row backfilled
-        Assert.Equal(existing, skills.Skills[1].EffectGraphJson);             // graphed row untouched
     }
 
     [Fact]

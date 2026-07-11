@@ -4,17 +4,9 @@ namespace ProjectAscension.SkillForge;
 /// Derived by the rule engine (flat for now; from rarity/context later).</summary>
 public sealed record PowerBudget(int Total);
 
-/// <summary>
-/// One primitive chosen for a skill, with its scaling parameters:
-/// <see cref="Magnitude"/> is potency (1..MaxMagnitude); <see cref="Range"/> is
-/// reach/area and <see cref="Duration"/> is persistence (0..MaxParameterTier tiers,
-/// 0 = base). Cost = base cost × magnitude + (range + duration) × tier cost.
-/// </summary>
-public sealed record ComposedPrimitive(PrimitiveKind Kind, int Magnitude, int Range = 0, int Duration = 0);
-
-// (The flat primitive composition — SkillComposition / PriorArt — was retired with primitive
-// GENERATION in ADR 0007 Phase 4c; the effect graph is the sole composed artifact. ComposedPrimitive
-// and these request/budget types remain for legacy DTO rendering and the graph request.)
+// (The flat primitive composition — SkillComposition / PriorArt / ComposedPrimitive — was retired
+// with primitive GENERATION and STORAGE in ADR 0007 Phase 4c; the effect graph is the sole composed
+// artifact. These request/budget types remain for the graph composition request.)
 
 /// <summary>
 /// How the player actually fought, as weighted behavior counts — the signal that makes

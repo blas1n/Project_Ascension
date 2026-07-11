@@ -42,17 +42,16 @@ namespace ProjectAscension.Domain.Entities
         // Content (filled when Ready).
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public string? PrimitivesJson { get; set; }
 
         /// <summary>AI-composed delivery style (how the skill manifests — "projectile" /
         /// "beam" / "burst"; see DeliveryStyleCatalog). "" → the executor derives delivery
-        /// from the primitives (offline/stub/legacy fallback).</summary>
+        /// from the effect graph's first emit (movement/graphless fallback).</summary>
         public string Delivery { get; set; } = string.Empty;
         public int? PowerCost { get; set; }
 
         /// <summary>The skill's effect GRAPH as JSON (ADR 0007) — the AI-composed structure the
-        /// runtime interpreter executes (trigger + effects). Null when no graph was composed yet;
-        /// the skill still works via its primitives (the graph is additive during migration).</summary>
+        /// runtime interpreter executes (trigger + effects). The sole composed artifact: every
+        /// Ready skill has one (primitive generation + storage were retired in Phase 4c).</summary>
         public string? EffectGraphJson { get; set; }
 
         /// <summary>How the skill is wielded — "Weapon" (a synthesized-magic weapon) or
