@@ -1,10 +1,11 @@
 using ProjectAscension.Domain.Enums;
 
-namespace ProjectAscension.Game
+namespace ProjectAscension.GameSimulation.Contracts
 {
     /// <summary>
-    /// Runtime contract the player can accept and complete. Mirrors the persistent
-    /// Domain.Contract but with typed objective fields (no JSON) for the slice.
+    /// Runtime contract the player can accept and complete (ADR: Unity is a shell — domain data
+    /// lives in GameSimulation, not Assets). Mirrors the persistent Domain.Contract but with typed
+    /// objective fields (no JSON) for the slice. Its rules live in <see cref="ContractRules"/>.
     /// </summary>
     public sealed class ContractInstance
     {
@@ -30,7 +31,7 @@ namespace ProjectAscension.Game
         /// clearing it themselves — the delegation tutorial uses this.</summary>
         public bool DelegationAllowed;
 
-        public bool IsComplete => Progress >= TargetCount;
+        public bool IsComplete => ContractRules.IsComplete(Progress, TargetCount);
 
         public ContractInstance Fresh() => new()
         {

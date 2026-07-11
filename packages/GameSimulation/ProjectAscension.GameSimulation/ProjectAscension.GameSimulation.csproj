@@ -11,4 +11,9 @@
     <PackageReference Include="BepuPhysics" Version="2.4.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Domain enums (e.g. ContractPurpose) — a clean, dependency-free base package. -->
+    <ProjectReference Include="..\..\Domain\ProjectAscension.Domain\ProjectAscension.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

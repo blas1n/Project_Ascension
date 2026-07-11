@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Contracts;
 using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
@@ -283,22 +284,10 @@ namespace ProjectAscension.Game
                 if (defs == null) return;
                 var board = new List<ContractInstance>(defs.Length);
                 foreach (var d in defs)
-                    board.Add(new ContractInstance
-                    {
-                        Purpose = System.Enum.TryParse<Domain.Enums.ContractPurpose>(d.purpose, out var p) ? p : Domain.Enums.ContractPurpose.Hunt,
-                        Title = d.title,
-                        Description = d.description,
-                        TargetCount = Mathf.Max(1, d.targetCount),
-                        RewardCurrency = d.rewardCurrency,
-                        Target = d.target,
-                        Issuer = d.issuer ?? "",
-                        DelegationAllowed = d.delegationAllowed,
-                        RewardReputation = d.rewardReputation,
-                        MinReputation = d.minReputation,
-                        TimeLimitSeconds = d.timeLimitSeconds,
-                        FailOnTimeout = d.failOnTimeout,
-                        FailOnDeath = d.failOnDeath,
-                    });
+                    board.Add(GameSimulation.Contracts.ContractMapping.FromFields(
+                        d.purpose, d.title, d.description, d.targetCount, d.rewardCurrency, d.target,
+                        d.issuer, d.delegationAllowed, d.rewardReputation, d.minReputation,
+                        d.timeLimitSeconds, d.failOnTimeout, d.failOnDeath));
                 Contracts.SetAvailable(board);
             });
         }
