@@ -4,6 +4,7 @@ using UnityEngine;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.GameSimulation.Contracts;
 using ProjectAscension.Net;
 
 namespace ProjectAscension.Game
@@ -470,16 +471,12 @@ namespace ProjectAscension.Game
             yield return _api.IssueContract(request, dto =>
             {
                 if (dto == null) return;
-                var purpose = System.Enum.TryParse<ContractPurpose>(dto.purpose, out var p) ? p : ContractPurpose.Hunt;
-                session.Contracts.AddIssued(new ContractInstance
-                {
-                    Purpose = purpose,
-                    Title = dto.title,
-                    Description = dto.description,
-                    TargetCount = Mathf.Max(1, dto.targetCount),
-                    RewardCurrency = dto.rewardCurrency,
-                    Target = dto.target,
-                });
+                // Same mapping as the board (ContractMapping) — carries the full terms, not just a
+                // subset, so a player-issued contract keeps its reputation/deadline/fail conditions.
+                session.Contracts.AddIssued(ContractMapping.FromFields(
+                    dto.purpose, dto.title, dto.description, dto.targetCount, dto.rewardCurrency, dto.target,
+                    dto.issuer, dto.delegationAllowed, dto.rewardReputation, dto.minReputation,
+                    dto.timeLimitSeconds, dto.failOnTimeout, dto.failOnDeath));
                 ps.Currency = Mathf.Max(0, ps.Currency - dto.rewardCurrency); // escrow the reward
                 _quote = null;
             });

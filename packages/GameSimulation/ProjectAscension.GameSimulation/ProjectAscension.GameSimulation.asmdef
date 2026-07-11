@@ -1,7 +1,9 @@
 {
   "name": "ProjectAscension.GameSimulation",
   "rootNamespace": "ProjectAscension.GameSimulation",
-  "references": [],
+  "references": [
+    "ProjectAscension.Domain"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": true,
