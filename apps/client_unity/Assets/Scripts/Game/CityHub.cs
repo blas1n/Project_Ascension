@@ -417,7 +417,7 @@ namespace ProjectAscension.Game
         // NPCs react to the player's standing (the slice's "명성 — NPC 반응 변화").
         private static string NpcReaction(string role, int reputation)
         {
-            int tier = reputation >= 30 ? 2 : reputation >= 10 ? 1 : 0;
+            int tier = ProjectAscension.GameSimulation.Player.ReputationTier.Of(reputation);
             switch (role)
             {
                 case "Guard": return tier == 2 ? "An honor to have you, Warden." : tier == 1 ? "Stay sharp out there." : "State your business.";
