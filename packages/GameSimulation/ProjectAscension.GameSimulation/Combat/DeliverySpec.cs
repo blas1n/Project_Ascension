@@ -14,7 +14,7 @@ namespace ProjectAscension.GameSimulation.Combat
 
     /// <summary>
     /// HOW a skill manifests in the world — the delivery, kept separate from its EFFECT
-    /// (the numbers, owned by <see cref="SkillResolver"/>). This is a PARAMETRIC model: a
+    /// (the numbers, owned by <see cref="GraphSkillResolver"/>). This is a PARAMETRIC model: a
     /// manifestation is a point in the axis-space (origin × motion × trigger × shape +
     /// params), so new kinds — a turret, a lingering zone, a summon — are new axis
     /// COMBINATIONS (data), not new code. The developer grows the axes (few, orthogonal,

@@ -81,23 +81,18 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
-        public void ParityShape_WithPrimitiveResolver()
+        public void ProjectileThatChainsAndKnocksBack_HasTheExpectedShape()
         {
-            // A projectile that chains and knocks back — the graph interpreter should produce the
-            // same SHAPE (hit count, control kind) as the primitive resolver for the analogous skill.
+            // A projectile that chains once (Spread tier 0 → +1 target) and knocks back — primary
+            // plus one chained hit, the primary carrying the knockback control.
             var graph = GraphSkillResolver.Resolve(
                 Cast(new Emit(EmitDelivery.Projectile, 1), new EffectSpread(0), new Control(ControlEffect.Knockback, 1)),
                 availableTargets: 5);
-            var prims = SkillResolver.Resolve(new Skill("Bolt", new[]
-            {
-                new SkillPrimitive(SkillPrimitiveKind.Projectile, 2),
-                new SkillPrimitive(SkillPrimitiveKind.Chain, 1),
-                new SkillPrimitive(SkillPrimitiveKind.Knockback, 1),
-            }), availableTargets: 5);
 
-            Assert.Equal(prims.Hits.Count, graph.Hits.Count);
-            Assert.Equal(prims.Hits[0].Control, graph.Hits[0].Control);
+            Assert.Equal(2, graph.Hits.Count);                          // primary + 1 spread
+            Assert.Equal(ControlKind.Knockback, graph.Hits[0].Control);
             Assert.True(graph.Hits[0].Damage > 0f);
+            Assert.True(graph.Hits[1].Damage < graph.Hits[0].Damage);   // falloff on the chained target
         }
     }
 }

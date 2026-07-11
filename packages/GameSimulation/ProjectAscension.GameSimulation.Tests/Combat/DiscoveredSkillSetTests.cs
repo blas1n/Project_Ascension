@@ -23,17 +23,5 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             Assert.Equal("Flame Bolt", Assert.Single(set.Weapons).Name);
             Assert.Equal("Phase Step", Assert.Single(set.Commands).Name);
         }
-
-        [Fact]
-        public void Use_ResolvesThroughTheResolver()
-        {
-            var set = new DiscoveredSkillSet();
-            var weapon = Weapon();
-            set.Add(weapon);
-
-            var res = set.Use(weapon, availableTargets: 1);
-
-            Assert.Equal(30f, res.ImmediateDamage, precision: 3); // Projectile 3 × 10
-        }
     }
 }

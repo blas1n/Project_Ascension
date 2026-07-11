@@ -7,8 +7,9 @@ namespace ProjectAscension.GameSimulation.Combat
     /// <summary>
     /// The player's discovered skills, organized by how they are wielded: weapons
     /// (synthesized magic — equipped and fired) and commands (techniques — invoked).
-    /// Both execute through the same <see cref="SkillResolver"/>; the manifestation
-    /// only decides where the skill is slotted and how it is triggered.
+    /// Both execute through the same <see cref="GraphSkillResolver"/> (over each skill's
+    /// effect graph); the manifestation only decides where the skill is slotted and how
+    /// it is triggered.
     /// </summary>
     public sealed class DiscoveredSkillSet
     {
@@ -57,11 +58,5 @@ namespace ProjectAscension.GameSimulation.Combat
         /// new movement mechanic is a new trigger, no engine change.</summary>
         public MovementCapability AggregateMovement()
             => MovementCapability.From(All.Select(s => s.EffectiveGraph)); // never null (translates legacy)
-
-        /// <summary>Execute a discovered skill against the targets in range
-        /// (index 0 = primary). A weapon (equipped + fired) or a command (combo-invoked)
-        /// resolves identically — there is no equipment use-gate (ADR 0005).</summary>
-        public SkillResolution Use(DiscoveredSkill skill, int availableTargets)
-            => SkillResolver.Resolve(skill.Skill, availableTargets);
     }
 }
