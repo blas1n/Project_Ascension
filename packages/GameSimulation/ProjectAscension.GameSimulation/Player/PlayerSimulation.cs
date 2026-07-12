@@ -9,6 +9,19 @@ namespace ProjectAscension.GameSimulation.Player
     /// </summary>
     public class PlayerSimulation
     {
+        /// <summary>Whether a dodge is currently granting invulnerability (i-frames). The leading
+        /// <paramref name="iframeFraction"/> of the dodge window is invulnerable; the recovery tail
+        /// stays vulnerable, so a dodge is a read — not spam-immunity. Pure combat rule (ADR: Unity
+        /// is a shell) — identical on client + server, headless-tested. <paramref name="dodgeTimeRemaining"/>
+        /// counts down from <paramref name="dodgeDuration"/>, so i-frames hold while it is above the
+        /// recovery threshold.</summary>
+        public static bool IsInvulnerable(float dodgeTimeRemaining, float dodgeDuration, float iframeFraction)
+        {
+            if (dodgeTimeRemaining <= 0f || dodgeDuration <= 0f) return false;
+            float f = iframeFraction < 0f ? 0f : (iframeFraction > 1f ? 1f : iframeFraction);
+            return dodgeTimeRemaining > dodgeDuration * (1f - f);
+        }
+
         public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime)
             => ApplyInput(state, input, deltaTime, MovementSettings.Default);
 

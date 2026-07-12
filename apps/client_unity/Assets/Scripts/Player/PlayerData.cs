@@ -20,6 +20,8 @@ namespace ProjectAscension.Player
         [Header("Dodge")]
         [SerializeField] private float dodgeSpeed = 12f;
         [SerializeField] private float dodgeDuration = 0.2f;
+        [Range(0f, 1f)]
+        [SerializeField] private float dodgeIFrameFraction = 0.75f; // leading fraction of the dodge that is invulnerable
 
         [Header("Wall-climb (discovered)")]
         [SerializeField] private float wallClimbSpeed = 4f;
@@ -44,8 +46,8 @@ namespace ProjectAscension.Player
             int extraJumps = MovementCapabilityCatalog.ExtraJumps; // double jump
             bool wallClimb = MovementCapabilityCatalog.WallClimb;
             return s == null
-                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration, extraJumps, wallClimb, wallClimbSpeed)
-                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration, extraJumps, wallClimb, wallClimbSpeed);
+                ? new(moveSpeed, jumpVelocity, gravity, groundY, dodgeSpeed, dodgeDuration, extraJumps, wallClimb, wallClimbSpeed, dodgeIFrameFraction)
+                : new(s.MoveSpeed, s.JumpVelocity, s.Gravity, groundY, s.DodgeSpeed, s.DodgeDuration, extraJumps, wallClimb, wallClimbSpeed, dodgeIFrameFraction);
         }
     }
 }

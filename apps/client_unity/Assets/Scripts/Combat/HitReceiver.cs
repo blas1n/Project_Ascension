@@ -23,9 +23,17 @@ namespace ProjectAscension.Combat
         /// passive discoveries (Game.PassiveModifiers). 0 for monsters.</summary>
         public float DamageReduction { get; set; }
 
+        /// <summary>Optional check: when it returns true the next hit is fully negated (the player's
+        /// dodge i-frames). Null (monsters) = never invulnerable. The window itself is a headless
+        /// combat rule (PlayerSimulation.IsInvulnerable); this only gates damage on it.</summary>
+        public Func<bool> Invulnerable { get; set; }
+
         /// <summary>(receiver, amount)</summary>
         public event Action<HitReceiver, float> Damaged;
         public event Action<HitReceiver> Died;
+
+        /// <summary>A hit was fully negated by invulnerability (i-frames) — for the dodge shine.</summary>
+        public event Action<HitReceiver> DamageNegated;
 
         private void Awake() => _health = Health.Full(maxHealth);
 
@@ -39,6 +47,13 @@ namespace ProjectAscension.Combat
         public void TakeDamage(float amount, GameObject source)
         {
             if (IsDead) return;
+
+            // I-frames (a dodge) fully negate the hit — the reward for a well-timed dodge.
+            if (Invulnerable != null && Invulnerable())
+            {
+                DamageNegated?.Invoke(this);
+                return;
+            }
 
             // Passive damage reduction is applied by the resolver (tested, server-authoritative).
             float dealt = CombatResolver.Reduced(amount, DamageReduction);
