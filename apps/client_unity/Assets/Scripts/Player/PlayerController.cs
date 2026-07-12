@@ -55,6 +55,8 @@ namespace ProjectAscension.Player
                 // else the HitReceiver's authored value.
                 var stats = GameSimulation.Player.PlayerStatsCatalog.Current;
                 if (stats != null) _hitReceiver.SetMaxHealth(stats.MaxHealth);
+                // A dodge's i-frames negate incoming damage — the rule is the movement sim's.
+                _hitReceiver.Invulnerable = () => _movement.IsInvulnerable;
                 _hitReceiver.Died += OnDied;
             }
 

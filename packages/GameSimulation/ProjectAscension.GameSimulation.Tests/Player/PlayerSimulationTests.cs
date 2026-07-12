@@ -158,5 +158,34 @@ namespace ProjectAscension.GameSimulation.Tests.Player
 
             Assert.Equal(30f, next.Velocity.Z, precision: 3);
         }
+
+        // --- Dodge i-frames (a well-timed dodge negates the hit). ---
+
+        [Fact]
+        public void IsInvulnerable_HoldsForTheLeadingWindow_ThenTheRecoveryTailIsVulnerable()
+        {
+            // Duration 0.2, fraction 0.75 → invulnerable while remaining > 0.05 (the last 25% is exposed).
+            Assert.True(PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0.2f, dodgeDuration: 0.2f, iframeFraction: 0.75f));
+            Assert.True(PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0.06f, dodgeDuration: 0.2f, iframeFraction: 0.75f));
+            Assert.False(PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0.04f, dodgeDuration: 0.2f, iframeFraction: 0.75f)); // recovery tail
+        }
+
+        [Fact]
+        public void IsInvulnerable_FalseWhenNotDodging()
+        {
+            Assert.False(PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0f, dodgeDuration: 0.2f, iframeFraction: 0.75f));
+            Assert.False(PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: -1f, dodgeDuration: 0.2f, iframeFraction: 0.75f));
+        }
+
+        [Theory]
+        [InlineData(0f)]   // no i-frames → never invulnerable, even mid-dodge
+        [InlineData(1f)]   // full-window i-frames → invulnerable for the whole dodge
+        public void IsInvulnerable_RespectsTheFractionExtremes(float fraction)
+        {
+            bool atStart = PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0.2f, dodgeDuration: 0.2f, iframeFraction: fraction);
+            bool nearEnd = PlayerSimulation.IsInvulnerable(dodgeTimeRemaining: 0.01f, dodgeDuration: 0.2f, iframeFraction: fraction);
+            Assert.Equal(fraction > 0f, atStart);
+            Assert.Equal(fraction >= 1f, nearEnd);
+        }
     }
 }

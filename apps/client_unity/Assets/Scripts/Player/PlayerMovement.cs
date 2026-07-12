@@ -40,6 +40,19 @@ namespace ProjectAscension.Player
         public void QueueJump() => _jumpQueued = true;
         public void QueueDodge() => _dodgeQueued = true;
 
+        /// <summary>True while a dodge is granting i-frames — the combat rule lives in the shared
+        /// <see cref="PlayerSimulation"/> (headless-tested); this only feeds it the current dodge
+        /// state. The player's HitReceiver reads this to negate incoming damage.</summary>
+        public bool IsInvulnerable
+        {
+            get
+            {
+                if (_state == null) return false;
+                var s = _data.ToMovementSettings();
+                return PlayerSimulation.IsInvulnerable(_state.DodgeTimeRemaining, s.DodgeDuration, s.DodgeIFrameFraction);
+            }
+        }
+
         /// <summary>Hard-set position (respawn) and clear velocity in the simulation.</summary>
         public void Teleport(Vector3 position)
         {

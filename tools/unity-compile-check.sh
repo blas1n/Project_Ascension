@@ -27,7 +27,8 @@ BASE="/Applications/Unity/Hub/Editor/$VERSION"
 MIRROR="$HOME/.unity-ref/$VERSION"
 
 DEFAULT_PROJECTS=(ProjectAscension.Game ProjectAscension.Combat ProjectAscension.Monsters \
-                  ProjectAscension.Equipment ProjectAscension.Core ProjectAscension.Net)
+                  ProjectAscension.Equipment ProjectAscension.Core ProjectAscension.Net \
+                  ProjectAscension.Player)
 PROJECTS=("${@:-}")
 [ -z "${PROJECTS[0]:-}" ] && PROJECTS=("${DEFAULT_PROJECTS[@]}")
 
