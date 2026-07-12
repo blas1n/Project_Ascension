@@ -26,7 +26,7 @@ namespace ProjectAscension.Monsters
                 _ => go.AddComponent<MeleeMonster>(),
             };
             monster.Configure(stats.MoveSpeed, stats.AggroRange, stats.AttackRange,
-                stats.AttackCooldown, stats.Damage, stats.ProjectileSpeed);
+                stats.AttackCooldown, stats.AttackWindup, stats.Damage, stats.ProjectileSpeed);
 
             var renderer = go.GetComponent<Renderer>();
             if (renderer != null)
@@ -44,10 +44,10 @@ namespace ProjectAscension.Monsters
 
         private static MonsterStats Default(MonsterType type) => type switch
         {
-            //                        hp     spd   aggro  atkRng  cd    dmg  projSpd scale  drop
-            MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 6f, 18f, 1f, "feather", 2),
-            MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 14f, 24f, 1.6f, "core", 1),
-            _ => new(40f, 3.5f, 25f, 2f, 1f, 8f, 0f, 1f, "hide", 2), // Melee
+            //                        hp     spd   aggro  atkRng  cd   windup dmg  projSpd scale  drop
+            MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 0.5f, 6f, 18f, 1f, "feather", 2),
+            MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 0.65f, 14f, 24f, 1.6f, "core", 1),
+            _ => new(40f, 3.5f, 25f, 2f, 1f, 0.35f, 8f, 0f, 1f, "hide", 2), // Melee
         };
 
         private static Color ColorFor(MonsterType type) => type switch

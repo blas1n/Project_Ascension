@@ -12,6 +12,7 @@ namespace ProjectAscension.Combat
         public readonly float AggroRange;
         public readonly float AttackRange;
         public readonly float AttackCooldown;
+        public readonly float AttackWindup; // telegraph seconds before a strike (0 = instant)
         public readonly float Damage;
         public readonly float ProjectileSpeed; // 0 = melee
         public readonly float Scale;
@@ -19,7 +20,7 @@ namespace ProjectAscension.Combat
         public readonly int DropAmount;
 
         public MonsterStats(float maxHealth, float moveSpeed, float aggroRange, float attackRange,
-            float attackCooldown, float damage, float projectileSpeed, float scale,
+            float attackCooldown, float attackWindup, float damage, float projectileSpeed, float scale,
             string dropItemKey = "", int dropAmount = 0)
         {
             MaxHealth = maxHealth;
@@ -27,6 +28,7 @@ namespace ProjectAscension.Combat
             AggroRange = aggroRange;
             AttackRange = attackRange;
             AttackCooldown = attackCooldown;
+            AttackWindup = attackWindup;
             Damage = damage;
             ProjectileSpeed = projectileSpeed;
             Scale = scale;

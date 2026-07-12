@@ -21,6 +21,7 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 AggroRange = 25f,
                 AttackRange = 2f,
                 AttackCooldown = 1f,
+                AttackWindup = 0.35f, // quick tell — a fast, low-damage swing
                 Damage = 8f,
                 ProjectileSpeed = 0f,
                 Scale = 1f,
@@ -35,6 +36,7 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 AggroRange = 30f,
                 AttackRange = 14f,
                 AttackCooldown = 1.5f,
+                AttackWindup = 0.5f, // an aim/charge tell before the shot
                 Damage = 6f,
                 ProjectileSpeed = 18f,
                 Scale = 1f,
@@ -49,6 +51,7 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 AggroRange = 35f,
                 AttackRange = 18f,
                 AttackCooldown = 1.2f,
+                AttackWindup = 0.65f, // a heavy, well-signalled blow — most reactable
                 Damage = 14f,
                 ProjectileSpeed = 24f,
                 Scale = 1.6f,

@@ -16,6 +16,7 @@ namespace ProjectAscension.Domain.Entities
         public float AggroRange { get; set; }
         public float AttackRange { get; set; }
         public float AttackCooldown { get; set; }
+        public float AttackWindup { get; set; } // telegraph seconds before a strike lands; 0 = instant
         public float Damage { get; set; }
         public float ProjectileSpeed { get; set; } // 0 = melee
         public float Scale { get; set; } // visual/body scale (elite is larger)

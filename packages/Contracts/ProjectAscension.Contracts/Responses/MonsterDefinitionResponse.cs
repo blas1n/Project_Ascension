@@ -11,6 +11,7 @@ namespace ProjectAscension.Contracts.Responses
         float AggroRange,
         float AttackRange,
         float AttackCooldown,
+        float AttackWindup,
         float Damage,
         float ProjectileSpeed,
         float Scale,

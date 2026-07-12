@@ -73,6 +73,7 @@ namespace ProjectAscension.Net
         public float aggroRange;
         public float attackRange;
         public float attackCooldown;
+        public float attackWindup;
         public float damage;
         public float projectileSpeed;
         public float scale;

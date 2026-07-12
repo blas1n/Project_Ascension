@@ -21,6 +21,6 @@ public class MonstersController : ControllerBase
         var monsters = await _repo.GetAllAsync(ct);
         return Ok(monsters.Select(m => new MonsterDefinitionResponse(
             m.Key, m.MaxHealth, m.MoveSpeed, m.AggroRange, m.AttackRange,
-            m.AttackCooldown, m.Damage, m.ProjectileSpeed, m.Scale, m.DropItemKey, m.DropAmount)));
+            m.AttackCooldown, m.AttackWindup, m.Damage, m.ProjectileSpeed, m.Scale, m.DropItemKey, m.DropAmount)));
     }
 }
