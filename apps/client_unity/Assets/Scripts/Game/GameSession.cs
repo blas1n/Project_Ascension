@@ -256,7 +256,7 @@ namespace ProjectAscension.Game
                 foreach (var d in defs)
                     Combat.MonsterStatsCatalog.Set(d.key, new Combat.MonsterStats(
                         d.maxHealth, d.moveSpeed, d.aggroRange, d.attackRange,
-                        d.attackCooldown, d.damage, d.projectileSpeed, d.scale, d.dropItemKey, d.dropAmount));
+                        d.attackCooldown, d.attackWindup, d.damage, d.projectileSpeed, d.scale, d.dropItemKey, d.dropAmount));
             });
             yield return api.GetPlayer(d =>
             {
