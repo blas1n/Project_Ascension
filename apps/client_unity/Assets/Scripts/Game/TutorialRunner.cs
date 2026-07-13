@@ -38,11 +38,6 @@ namespace ProjectAscension.Game
         {
             Instance = this;
 
-            // TEMPORARY BRIDGE: character creation (step 0) is not built yet, so satisfy it up front and
-            // keep the rest of the sequence live. The character-creation PR replaces this with a real
-            // name/appearance choice raising NameChosen.
-            Signal(TutorialSignal.NameChosen);
-
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
