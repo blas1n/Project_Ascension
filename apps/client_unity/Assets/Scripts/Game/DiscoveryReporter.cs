@@ -24,9 +24,16 @@ namespace ProjectAscension.Game
     public sealed class DiscoveryReporter : MonoBehaviour
     {
         [SerializeField] private string serverUrl = ""; // empty → disabled (offline)
-        [SerializeField] private string actorId = "11111111-1111-1111-1111-111111111111";
+        // The slice's single frontier region — WORLD data (seeded server-side), same for every
+        // player, so it stays a fixed default here unlike the actor id below.
         [SerializeField] private string regionId = "22222222-2222-2222-2222-222222222222";
         [SerializeField] private float flushInterval = 5f;
+
+        // NOT serialized, NOT defaulted: the actor id is PLAYER identity, minted once by character
+        // creation and owned by GameSession (GameSession.ActorId) — a second hardcoded copy here is
+        // exactly how a fresh player's evaluate call used to 500 (it posted an actor id nothing ever
+        // created). Read live so a reporter that starts before creation finishes still catches up.
+        private static string ActorId => GameSession.Instance != null ? GameSession.Instance.ActorId : "";
 
         private const float MonsterContextWindow = 10f; // a recent kill flavors discovery for this long
 
@@ -113,6 +120,10 @@ namespace ProjectAscension.Game
                 yield break;
             }
 
+            // No identity yet (character creation hasn't returned) — nothing to post as. Keep the
+            // accumulated behavior for the next window instead of dropping it or posting a bogus id.
+            if (string.IsNullOrWhiteSpace(ActorId)) yield break;
+
             _persistence++;
             var request = BuildRequest();
             _accumulator.Reset();
@@ -140,7 +151,7 @@ namespace ProjectAscension.Game
             var tags = new List<string>(_accumulator.Tags);
             return new EvaluateRequestDto
             {
-                actorId = actorId,
+                actorId = ActorId,
                 regionId = regionId,
                 type = "Skill",
                 theme = "an expedition discovery",

@@ -18,9 +18,14 @@ MonoBehaviour:
   damage: 12
   range: 60
   projectileSpeed: 0
+  projectileGravity: 0
   cooldown: 0.25
+  chargeTime: 0
+  maxChargeMultiplier: 1
   spreadMin: 1
   spreadMax: 9
   spreadPerShot: 1.4
   spreadRecovery: 7
+  magazineSize: 12
+  reloadTime: 1.6
   discoveryWeight: 0

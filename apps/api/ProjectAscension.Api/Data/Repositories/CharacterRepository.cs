@@ -14,4 +14,14 @@ public class CharacterRepository : ICharacterRepository
 
     public Task<Actor?> GetActorByCharacterIdAsync(Guid characterId, CancellationToken ct = default)
         => _db.Actors.FirstOrDefaultAsync(a => a.CharacterId == characterId, ct);
+
+    public Task<bool> ActorExistsAsync(Guid actorId, CancellationToken ct = default)
+        => _db.Actors.AnyAsync(a => a.Id == actorId, ct);
+
+    public async Task CreateAsync(Character character, Actor actor, CancellationToken ct = default)
+    {
+        _db.Characters.Add(character);
+        _db.Actors.Add(actor);
+        await _db.SaveChangesAsync(ct); // one transaction — a character never exists without its actor
+    }
 }

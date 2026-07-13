@@ -7,12 +7,15 @@ using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.GameSimulation.Contracts;
 using ProjectAscension.Net;
+using ProjectAscension.Player;
 
 namespace ProjectAscension.Game
 {
     /// <summary>
     /// City hub UI (dev OnGUI): contract board, loadout selection, turn-in, depart, and a
-    /// contract-issuing panel. Cursor is unlocked here so the buttons are clickable.
+    /// contract-issuing panel. The cursor unlocks (and gameplay input disables — BUG 3, UiFocus)
+    /// while a panel is open, so the buttons are clickable and typing/clicking never also drives
+    /// the player.
     /// </summary>
     public sealed class CityHub : MonoBehaviour
     {
@@ -39,9 +42,11 @@ namespace ProjectAscension.Game
         private string _txMessage = "";
 
         // The board and the quartermaster open their own panels — both press-[F] actions, not
-        // proximity. Both still free the cursor the same way the old "_busyHere" did.
+        // proximity. Both still free the cursor (and gameplay input — UiFocus) the same way the
+        // old "_busyHere" did.
         private bool _boardOpen;
         private bool _quartermasterOpen;
+        private bool _focusHeld; // whether WE currently hold the UiFocus gate (Push/Pop exactly once)
 
         // The city is a place, so its business is a THING YOU DO — press [F] at the board or the
         // quartermaster — not a panel that opens the moment you happen to be standing nearby. F again
@@ -60,6 +65,12 @@ namespace ProjectAscension.Game
                 CityBlockout.BoardInteractable.Interacted -= OnBoardInteracted;
             if (CityNpc.QuartermasterInteractable != null)
                 CityNpc.QuartermasterInteractable.Interacted -= OnQuartermasterInteracted;
+
+            // "Depart to Frontier" is a button INSIDE the board panel (see OnGUI) — the scene
+            // unloads (destroying this) while _boardOpen is still true, never having gone through
+            // ApplyCursor's close path. An unmatched Push would leave gameplay input disabled for
+            // the entire Frontier scene, so release it here regardless of how we got destroyed.
+            if (_focusHeld) { UiFocus.Pop(); _focusHeld = false; }
         }
 
         private void OnBoardInteracted()
@@ -77,8 +88,8 @@ namespace ProjectAscension.Game
         private void ApplyCursor()
         {
             bool busy = _boardOpen || _quartermasterOpen;
-            Cursor.lockState = busy ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = busy;
+            if (busy && !_focusHeld) { UiFocus.Push(); _focusHeld = true; }
+            else if (!busy && _focusHeld) { UiFocus.Pop(); _focusHeld = false; }
         }
 
         private void Update()

@@ -78,7 +78,19 @@ namespace ProjectAscension.Player
             if (_reload.bindings.Count > 0)
                 ReloadKeyLabel = _reload.GetBindingDisplayString(0);
 
-            _playerMap.Enable();
+            // A keyboard-focused panel (character creation's name field, the city board, ...) is
+            // the single shared reason gameplay input goes quiet — see UiFocus. Start disabled if
+            // one happens to already be open (defensive; shouldn't occur mid-scope-creation, but a
+            // stuck-open gate must never let movement leak through instead).
+            UiFocus.Changed += OnUiFocusChanged;
+            if (UiFocus.IsFocused) _playerMap.Disable();
+            else _playerMap.Enable();
+        }
+
+        private void OnUiFocusChanged(bool focused)
+        {
+            if (focused) _playerMap.Disable();
+            else _playerMap.Enable();
         }
 
         private void OnMove(InputAction.CallbackContext ctx) => MoveInput?.Invoke(ctx.ReadValue<Vector2>());
@@ -92,6 +104,7 @@ namespace ProjectAscension.Player
 
         public void Dispose()
         {
+            UiFocus.Changed -= OnUiFocusChanged;
             _move.performed -= OnMove;
             _move.canceled -= OnMove;
             _jump.performed -= OnJump;

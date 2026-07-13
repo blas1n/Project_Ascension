@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProjectAscension.Api.Services;
 using ProjectAscension.Contracts.Requests;
 using ProjectAscension.Contracts.Responses;
+using ProjectAscension.Shared;
 
 namespace ProjectAscension.Api.Controllers;
 
@@ -9,15 +10,22 @@ namespace ProjectAscension.Api.Controllers;
 [Route("api/discoveries")]
 public class DiscoveriesController : ControllerBase
 {
+    private static readonly Error UnknownActor = new(
+        "UNKNOWN_ACTOR", "No character exists for this actor id. Create a character first.");
+
     private readonly IDiscoveryService _service;
     private readonly ISkillCompositionService _composition;
     private readonly IDiscoveryTuningProvider _tuning;
+    private readonly ICharacterService _characters;
 
-    public DiscoveriesController(IDiscoveryService service, ISkillCompositionService composition, IDiscoveryTuningProvider tuning)
+    public DiscoveriesController(
+        IDiscoveryService service, ISkillCompositionService composition, IDiscoveryTuningProvider tuning,
+        ICharacterService characters)
     {
         _service = service;
         _composition = composition;
         _tuning = tuning;
+        _characters = characters;
     }
 
     [HttpGet]
@@ -41,6 +49,10 @@ public class DiscoveriesController : ControllerBase
     [HttpPost("trigger")]
     public async Task<IActionResult> Trigger([FromBody] TriggerDiscoveryRequest request, CancellationToken ct)
     {
+        // A discovery FK's DiscovererActorId to Actors — an unknown actor is a client error
+        // (never created a character), not a server crash.
+        if (!await _characters.ActorExistsAsync(request.ActorId, ct)) return BadRequest(UnknownActor);
+
         var discoveryId = await _composition.TriggerAsync(request, ct);
         return AcceptedAtAction(nameof(GetSkill), new { discoveryId }, new { discoveryId, status = "Pending" });
     }
@@ -54,6 +66,11 @@ public class DiscoveriesController : ControllerBase
     [HttpPost("evaluate")]
     public async Task<IActionResult> Evaluate([FromBody] EvaluateTriggerRequest request, CancellationToken ct)
     {
+        // A fresh player has no Actor row yet (the client only ever gets one from character
+        // creation). Firing a discovery for an unknown actor would FK-violate on insert — catch
+        // it here as a clear 4xx instead of a 500 (a missing actor is a client error).
+        if (!await _characters.ActorExistsAsync(request.ActorId, ct)) return BadRequest(UnknownActor);
+
         var result = await _composition.EvaluateAndTriggerAsync(request, ct);
         return Ok(result);
     }
