@@ -70,33 +70,37 @@ public class SkillCompositionService : ISkillCompositionService
         var signature = new BehaviorSignature(
             ToBehaviorCounts(request.Behaviors), request.ContextTags, parents.Count, request.Persistence);
         var outcome = TriggerEvaluator.Evaluate(signature, tuning);
-        if (!outcome.Fires)
-            return new EvaluateTriggerResponse(false, outcome.Score, null);
-
-        // Budget scales with the score, so a stronger pattern yields a richer skill.
-        var budget = BudgetRules.FromScore(outcome.Score, tuning);
 
         // Claim key = play STYLE (the delivery it maps to) + RARITY. The style keeps the real variety
         // without fragmenting on a stray jump; the rarity makes "the same play, done better" a
         // PROGRESSION rather than a duplicate.
         //
-        // SCARCITY (ADR 0010). Within a lineage, a discovery only happens if it BEATS your best there.
+        // SCARCITY, and the trade between breadth and depth (ADR 0010).
         //
-        // The rungs used to be claimable in any order: reach Rare, and the Uncommon slot below you was
-        // still open — so a weaker session filled it in behind you. Every wobble in the score topped up
-        // another rung, and a style quietly accreted its full five skills. That is saturation, and it
-        // costs the thing the whole system exists to protect: a discovery has to be RARE, or it is not
-        // a discovery, it is a drop.
+        // You climb ONE RUNG AT A TIME, and a style you have never touched starts at Common — however
+        // brilliantly you played. That is the whole bargain, and it has to be enforced here or it isn't
+        // real: a player who spreads themselves across many styles ends up with MANY ORDINARY skills,
+        // and a player who stays with one ends up with FEW RARE ones. Neither is cheated. Breadth is
+        // paid in quantity; depth is paid in rarity, and rarity is the only thing that buys a strange,
+        // expressive skill (the budget comes from the RUNG, not the score).
         //
-        // So the ladder is one-way. You either surpass yourself in this style, or nothing happens.
+        // Without this, a strong session would land Epic on its very first discovery in a fresh style,
+        // and breadth would quietly dominate depth on both axes.
         var styleKey = RegionKey(request);
-        for (var held = outcome.Rarity; held <= Rarity.Legendary; held++)
-        {
-            if (await _skills.GetByIdempotencyKeyAsync($"{styleKey}:{held}", ct) is not null)
-                return new EvaluateTriggerResponse(false, outcome.Score, null); // already here, or above it
-        }
+        var best = await BestRungAsync(styleKey, ct);
 
-        var claimKey = $"{styleKey}:{outcome.Rarity}";
+        if (best == Rarity.Legendary)
+            return new EvaluateTriggerResponse(false, outcome.Score, null); // this style is finished
+
+        var next = best is null ? Rarity.Common : best.Value + 1;
+        if (outcome.Score < TriggerEvaluator.RungScore(next, tuning))
+            return new EvaluateTriggerResponse(false, outcome.Score, null); // not yet worth the next rung
+
+        // Rarity IS the reward, so rarity buys the expression: a Common skill does one plain thing; a
+        // Legendary one is strange. Numbers are not for sale either way (ADR 0010).
+        var budget = BudgetRules.FromRarity(next, tuning);
+
+        var claimKey = $"{styleKey}:{next}";
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
             request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, claimKey, ct);
@@ -105,6 +109,17 @@ public class SkillCompositionService : ISkillCompositionService
         // existing one — reporting fired=true there made the client re-process the same
         // discovery every flush window, minting duplicate skills.
         return new EvaluateTriggerResponse(isNew, outcome.Score, isNew ? discoveryId : (Guid?)null);
+    }
+
+    /// <summary>The highest rung this player has already reached in this style, or null if they have
+    /// never discovered here.</summary>
+    private async Task<Rarity?> BestRungAsync(string styleKey, CancellationToken ct)
+    {
+        for (var r = Rarity.Legendary; ; r--)
+        {
+            if (await _skills.GetByIdempotencyKeyAsync($"{styleKey}:{r}", ct) is not null) return r;
+            if (r == Rarity.Common) return null;
+        }
     }
 
     private async Task<(Guid Id, bool IsNew)> CreateDiscoveryAsync(
