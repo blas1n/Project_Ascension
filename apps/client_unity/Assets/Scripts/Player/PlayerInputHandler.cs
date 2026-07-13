@@ -17,6 +17,7 @@ namespace ProjectAscension.Player
         private readonly InputAction _jump;
         private readonly InputAction _attack;
         private readonly InputAction _attackLeft;
+        private readonly InputAction _interact;
 
         public event Action<Vector2> MoveInput;
         public event Action JumpPressed;
@@ -29,8 +30,18 @@ namespace ProjectAscension.Player
         public event Action AttackLeftPressed;
         public event Action AttackLeftReleased;
 
+        /// <summary>Press-to-interact — the sensor on the player fires whatever is currently its
+        /// target (InteractionSensor.Current), nothing here decides what that is.</summary>
+        public event Action InteractPressed;
+
         public Vector2 Move => _move.ReadValue<Vector2>();
         public Vector2 Look => _look.ReadValue<Vector2>();
+
+        /// <summary>Human-readable label for the Interact binding (e.g. "F"), read from the action's
+        /// actual binding rather than hardcoded so a rebind updates every prompt with it. Static
+        /// because the prompt HUD is plain IMGUI with no DI access to a handler instance, and the
+        /// slice only ever has one active binding scheme.</summary>
+        public static string InteractKeyLabel { get; private set; } = "F";
 
         public PlayerInputHandler(InputActionAsset asset)
         {
@@ -40,6 +51,7 @@ namespace ProjectAscension.Player
             _jump = _playerMap.FindAction("Jump", throwIfNotFound: true);
             _attack = _playerMap.FindAction("Attack", throwIfNotFound: true);
             _attackLeft = _playerMap.FindAction("AttackLeft", throwIfNotFound: true);
+            _interact = _playerMap.FindAction("Interact", throwIfNotFound: true);
 
             _move.performed += OnMove;
             _move.canceled += OnMove;
@@ -48,6 +60,10 @@ namespace ProjectAscension.Player
             _attack.canceled += OnAttackUp;
             _attackLeft.performed += OnAttackLeft;
             _attackLeft.canceled += OnAttackLeftUp;
+            _interact.performed += OnInteract;
+
+            if (_interact.bindings.Count > 0)
+                InteractKeyLabel = _interact.GetBindingDisplayString(0);
 
             _playerMap.Enable();
         }
@@ -58,6 +74,7 @@ namespace ProjectAscension.Player
         private void OnAttackUp(InputAction.CallbackContext ctx) => AttackReleased?.Invoke();
         private void OnAttackLeft(InputAction.CallbackContext ctx) => AttackLeftPressed?.Invoke();
         private void OnAttackLeftUp(InputAction.CallbackContext ctx) => AttackLeftReleased?.Invoke();
+        private void OnInteract(InputAction.CallbackContext ctx) => InteractPressed?.Invoke();
 
         public void Dispose()
         {
@@ -68,6 +85,7 @@ namespace ProjectAscension.Player
             _attack.canceled -= OnAttackUp;
             _attackLeft.performed -= OnAttackLeft;
             _attackLeft.canceled -= OnAttackLeftUp;
+            _interact.performed -= OnInteract;
             _playerMap.Disable();
         }
     }

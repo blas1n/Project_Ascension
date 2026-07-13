@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.GameSimulation.Tutorial;
+using ProjectAscension.World;
 
 namespace ProjectAscension.Game
 {
@@ -10,16 +11,18 @@ namespace ProjectAscension.Game
     /// the game's two most human ideas, delivered as a toolbar.
     ///
     /// So they come from a person now. What each NPC says depends on where the player is in the first
-    /// hour (the director decides that; this only reads it), and the issuing panel opens only when you
-    /// are actually standing with the quartermaster who suggests it.
+    /// hour (the director decides that; this only reads it). The speech bubble is ambient — flavour,
+    /// shown on mere proximity — but the quartermaster's issuing panel (발주) is an ACTION: it opens
+    /// only when you press [F] on him, not just by standing near.
     /// </summary>
     public sealed class CityNpc : MonoBehaviour
     {
         public const float TalkReach = 3.5f;
 
-        /// <summary>True while the player stands with the NPC who takes commissions — the issue panel
-        /// (발주) is his to offer, not a window that is simply always there.</summary>
-        public static bool NearIssuer { get; private set; }
+        /// <summary>The quartermaster's interactable, so CityHub can subscribe to it without polling
+        /// distance itself. Set once, when the city is built; there is exactly one quartermaster in
+        /// the slice.</summary>
+        public static Interactable QuartermasterInteractable { get; private set; }
 
         public enum Role { Quartermaster, Serjeant, Clerk }
 
@@ -32,11 +35,20 @@ namespace ProjectAscension.Game
         {
             _name = npcName;
             _role = role;
+
+            // Only the quartermaster has anything to press [F] on — talking to the serjeant or the
+            // clerk is flavour only (their lines come from the ambient bubble below).
+            if (_role == Role.Quartermaster)
+            {
+                var interactable = gameObject.AddComponent<Interactable>();
+                interactable.Label = "Quartermaster";
+                interactable.Reach = TalkReach;
+                QuartermasterInteractable = interactable;
+            }
         }
 
         private void OnDisable()
         {
-            if (_near && _role == Role.Quartermaster) NearIssuer = false;
             _near = false;
         }
 
@@ -52,10 +64,7 @@ namespace ProjectAscension.Game
             var p = _player.position;
             var me = transform.position;
             bool near = new Vector2(p.x - me.x, p.z - me.z).magnitude <= TalkReach;
-            if (near == _near) return;
-
-            _near = near;
-            if (_role == Role.Quartermaster) NearIssuer = near;
+            _near = near; // drives only the ambient speech bubble now — the issue panel opens on interact
         }
 
         private void OnGUI()

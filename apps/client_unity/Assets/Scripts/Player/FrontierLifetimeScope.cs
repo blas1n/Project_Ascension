@@ -35,6 +35,7 @@ namespace ProjectAscension.Player
 
             builder.RegisterComponentInHierarchy<PlayerController>();
             builder.RegisterComponentInHierarchy<PlayerCombat>();
+            builder.RegisterComponentInHierarchy<InteractionSensor>();
         }
     }
 }

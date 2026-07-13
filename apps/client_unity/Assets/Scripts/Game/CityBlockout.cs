@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.World;
 
 namespace ProjectAscension.Game
 {
@@ -30,6 +31,14 @@ namespace ProjectAscension.Game
         public static readonly Vector3 TrainingGround = new Vector3(-16f, 0f, 6f);
         /// <summary>The contract board (게시판).</summary>
         public static readonly Vector3 BoardSpot = new Vector3(0f, 0f, 4f);
+
+        /// <summary>How close to the board you must stand to press [F] and read it — a board is
+        /// legible from further away than a lootable, hence its own (larger) reach.</summary>
+        public const float BoardReach = 4.5f;
+
+        /// <summary>The board's interactable, so CityHub can subscribe to it without polling distance
+        /// itself. Set once, when the city is built; there is exactly one board in the slice.</summary>
+        public static Interactable BoardInteractable { get; private set; }
 
         private void Awake()
         {
@@ -116,13 +125,20 @@ namespace ProjectAscension.Game
             hub.AddComponent<Spin>();
         }
 
-        /// <summary>The 게시판 — where contracts are taken. A physical place, not a menu button.</summary>
+        /// <summary>The 게시판 — where contracts are taken. A physical place, not a menu button: you
+        /// walk up to it AND press [F] to read it (CityHub opens the panel on that interact, not on
+        /// proximity alone).</summary>
         private static void Board(Transform root)
         {
             Box(root, "Board_Post_L", BoardSpot + new Vector3(-1.6f, 1f, 0f), new Vector3(0.25f, 2f, 0.25f), Timber);
             Box(root, "Board_Post_R", BoardSpot + new Vector3(1.6f, 1f, 0f), new Vector3(0.25f, 2f, 0.25f), Timber);
-            Box(root, "Board_Face", BoardSpot + new Vector3(0f, 2.1f, 0f), new Vector3(3.6f, 2.2f, 0.2f), BoardWood);
+            var face = Box(root, "Board_Face", BoardSpot + new Vector3(0f, 2.1f, 0f), new Vector3(3.6f, 2.2f, 0.2f), BoardWood);
             Box(root, "Board_Trim", BoardSpot + new Vector3(0f, 3.3f, 0f), new Vector3(4f, 0.25f, 0.35f), Timber);
+
+            var interactable = face.AddComponent<Interactable>();
+            interactable.Label = "Contract Board";
+            interactable.Reach = BoardReach;
+            BoardInteractable = interactable;
         }
 
         /// <summary>The 훈련장: an arena with dummies to hit. Everything the first hour teaches — move,

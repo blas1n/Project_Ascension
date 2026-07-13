@@ -6,6 +6,7 @@
     "ProjectAscension.GameSimulation",
     "ProjectAscension.Equipment",
     "ProjectAscension.Combat",
+    "ProjectAscension.World",
     "Unity.InputSystem",
     "Unity.Cinemachine",
     "VContainer"

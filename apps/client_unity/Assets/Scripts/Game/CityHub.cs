@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
@@ -35,53 +36,70 @@ namespace ProjectAscension.Game
         private bool _busy;
         private CatalogApiClient _api;
 
-        /// <summary>How close to the board you must stand for it to be readable.</summary>
-        private const float BoardReach = 4.5f;
+        // The board and the quartermaster open their own panels — both press-[F] actions, not
+        // proximity. Both still free the cursor the same way the old "_busyHere" did.
+        private bool _boardOpen;
+        private bool _quartermasterOpen;
 
-        private Transform _player;
-        private bool _atBoard;
-        private bool _busyHere; // at the board, or standing with the quartermaster
-
-        // The city is a place now, so the hub is a THING YOU WALK UP TO — the board — not a panel that
-        // is simply always on screen. Standing at it frees the cursor to read it; stepping away locks
-        // the cursor back to the world so you can look around and move. (The NPC pass turns the rest of
-        // the panel — issuing, delegation — into conversations with the people who offer them.)
-        private void Update()
+        // The city is a place, so its business is a THING YOU DO — press [F] at the board or the
+        // quartermaster — not a panel that opens the moment you happen to be standing nearby. F again
+        // (or Esc) closes whatever is open, same as walking away used to.
+        private void Start()
         {
-            if (_player == null)
-            {
-                var go = GameObject.FindWithTag("Player");
-                if (go == null) return;
-                _player = go.transform;
-            }
+            if (CityBlockout.BoardInteractable != null)
+                CityBlockout.BoardInteractable.Interacted += OnBoardInteracted;
+            if (CityNpc.QuartermasterInteractable != null)
+                CityNpc.QuartermasterInteractable.Interacted += OnQuartermasterInteracted;
+        }
 
-            var p = _player.position;
-            var board = CityBlockout.BoardSpot;
-            bool atBoard = (new Vector2(p.x - board.x, p.z - board.z)).magnitude <= BoardReach;
+        private void OnDestroy()
+        {
+            if (CityBlockout.BoardInteractable != null)
+                CityBlockout.BoardInteractable.Interacted -= OnBoardInteracted;
+            if (CityNpc.QuartermasterInteractable != null)
+                CityNpc.QuartermasterInteractable.Interacted -= OnQuartermasterInteracted;
+        }
 
-            // City business happens at the board OR standing with the quartermaster (who is the one
-            // offering 발주). Either way the cursor comes free to read it; walk away and it locks back
-            // to the world.
-            bool busy = atBoard || CityNpc.NearIssuer;
-            if (atBoard == _atBoard && busy == _busyHere) return;
+        private void OnBoardInteracted()
+        {
+            _boardOpen = !_boardOpen;
+            ApplyCursor();
+        }
 
-            _atBoard = atBoard;
-            _busyHere = busy;
+        private void OnQuartermasterInteracted()
+        {
+            _quartermasterOpen = !_quartermasterOpen;
+            ApplyCursor();
+        }
+
+        private void ApplyCursor()
+        {
+            bool busy = _boardOpen || _quartermasterOpen;
             Cursor.lockState = busy ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = busy;
         }
 
+        private void Update()
+        {
+            // Esc is the universal "back out" — closes whatever city panel is open, same as walking
+            // away used to when this was proximity-driven.
+            if ((_boardOpen || _quartermasterOpen) &&
+                Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                _boardOpen = false;
+                _quartermasterOpen = false;
+                ApplyCursor();
+            }
+        }
+
         private void OnGUI()
         {
-            // Away from both there is nothing to read — just a hint of where to go.
-            if (!_busyHere)
+            // Nothing open — just a hint of where to go and what to press.
+            if (!_boardOpen && !_quartermasterOpen)
             {
-                if (_player != null)
-                {
-                    var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
-                    GUI.Label(new Rect((Screen.width - 400f) * 0.5f, Screen.height - 92f, 400f, 20f),
-                        "The contract board is in the square.", style);
-                }
+                var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
+                GUI.Label(new Rect((Screen.width - 400f) * 0.5f, Screen.height - 92f, 400f, 20f),
+                    "The contract board is in the square.", style);
                 return;
             }
 
@@ -287,8 +305,8 @@ namespace ProjectAscension.Game
             GUILayout.EndArea();
 
             // 발주 is the quartermaster's suggestion to make (stage 10) — not a window that is simply
-            // always open. Stand with him and it's there.
-            if (CityNpc.NearIssuer) DrawIssuePanel(session, ps);
+            // always open. Press [F] on him and it's there.
+            if (_quartermasterOpen) DrawIssuePanel(session, ps);
             DrawShop(session, ps);
             DrawSettlement(session, ps);
         }
