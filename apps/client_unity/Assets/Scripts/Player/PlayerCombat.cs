@@ -71,14 +71,24 @@ namespace ProjectAscension.Player
 
         private void FireDown(EquipmentSlot slot)
         {
-            if (TryWeapon(slot, out var weapon, out var ctx) && weapon.PrimaryDown(ctx))
-                GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryDown(ctx)) return;
+            GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            AnnounceIfAirborne();
+        }
+
+        // Striking from the air is its own fact (공중 공격) — one of the doc's training discoveries.
+        // Whether that MEANS anything is the discovery engine's call; this only reports it.
+        private void AnnounceIfAirborne()
+        {
+            if (TryGetComponent<CharacterController>(out var cc) && !cc.isGrounded)
+                GameplayEvents.RaiseAirAttacked();
         }
 
         private void FireUp(EquipmentSlot slot)
         {
             if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx)) return;
             GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            AnnounceIfAirborne();
             // A held/charged shot is its own discovery signal (e.g. 긴 차징 → 화염포). The
             // threshold is DB-driven (CombatTuning), so it can be retuned without a rebuild.
             if (weapon.LastCharge >= GameSimulation.Combat.CombatTuningCatalog.Current.ChargedAttackThreshold)

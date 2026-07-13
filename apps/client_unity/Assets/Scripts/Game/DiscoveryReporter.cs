@@ -30,6 +30,9 @@ namespace ProjectAscension.Game
         private const float MonsterContextWindow = 10f; // a recent kill flavors discovery for this long
 
         private readonly BehaviorAccumulator _accumulator = new();
+        // The COMPOSITE behaviours (dodge-attack / air-attack / repeated jump) are derived by a rule,
+        // not by this glue — what counts as "out of a dodge" is one tested answer (BehaviorDeriver).
+        private readonly BehaviorDeriver _deriver = new();
         private readonly Dictionary<string, float> _recentMonsters = new(); // tag -> expiry time
         private DiscoveryApiClient _api;
         private Loadout _loadout;
@@ -52,6 +55,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
             GameplayEvents.ChargedAttacked += OnChargedAttacked;
+            GameplayEvents.AirAttacked += OnAirAttacked;
             GameplayEvents.MonsterKilled += OnMonsterKilled;
         }
 
@@ -61,14 +65,33 @@ namespace ProjectAscension.Game
             GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
             GameplayEvents.ChargedAttacked -= OnChargedAttacked;
+            GameplayEvents.AirAttacked -= OnAirAttacked;
             GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
-        private void OnJumped() => _accumulator.Record(BehaviorKind.Jump);
-        private void OnDodged() => _accumulator.Record(BehaviorKind.Dodge);
-        private void OnAttacked(bool isMelee) =>
+        private void OnJumped()
+        {
+            _accumulator.Record(BehaviorKind.Jump);
+            // A deliberate chain of jumps is a behaviour in its own right (반복 점프).
+            if (_deriver.Jumped(Time.time)) _accumulator.Record(BehaviorKind.RepeatedJump);
+        }
+
+        private void OnDodged()
+        {
+            _accumulator.Record(BehaviorKind.Dodge);
+            _deriver.Dodged(Time.time);
+        }
+
+        private void OnAttacked(bool isMelee)
+        {
             _accumulator.Record(isMelee ? BehaviorKind.MeleeAttack : BehaviorKind.RangedAttack);
+            // Attacking out of a dodge (회피 직후 공격). This weight was SEEDED in the DB but nothing
+            // ever produced the behaviour — the signal was dead until now.
+            if (_deriver.IsDodgeAttack(Time.time)) _accumulator.Record(BehaviorKind.DodgeAttack);
+        }
+
         private void OnChargedAttacked() => _accumulator.Record(BehaviorKind.ChargedAttack);
+        private void OnAirAttacked() => _accumulator.Record(BehaviorKind.AirAttack);
 
         // A defeated monster flavors the discovery context for a window (몬스터는 발견의 촉매).
         private void OnMonsterKilled(GameObject monster)

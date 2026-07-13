@@ -19,6 +19,10 @@ public class BehaviorWeightConfiguration : IEntityTypeConfiguration<BehaviorWeig
             new BehaviorWeight { Behavior = "RangedAttack", Weight = 2 },
             new BehaviorWeight { Behavior = "ChargeAttack", Weight = 3 },
             new BehaviorWeight { Behavior = "DodgeAttack", Weight = 3 },
-            new BehaviorWeight { Behavior = "ChargedAttack", Weight = 3 });
+            new BehaviorWeight { Behavior = "ChargedAttack", Weight = 3 },
+            // The doc's other two training discoveries. Weighted above the raw verbs because they
+            // are deliberate SHAPES of play, not things that happen by accident.
+            new BehaviorWeight { Behavior = "AirAttack", Weight = 3 },
+            new BehaviorWeight { Behavior = "RepeatedJump", Weight = 2 });
     }
 }
