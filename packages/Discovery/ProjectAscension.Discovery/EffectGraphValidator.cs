@@ -73,7 +73,7 @@ public static class EffectGraphValidator
     {
         if (t.Kind == TriggerKind.OnHit) return false;
 
-        var kind = ManifestationFromGraph.Classify(t, magicContext: false) ?? ManifestationKind.Command;
+        var kind = ManifestationFromGraph.Classify(t, magicFusion: false) ?? ManifestationKind.Command;
         if (kind == ManifestationKind.Passive)
         {
             bool ward = Has(t.Child, n => n is Ward w && w.Effect != WardEffect.Heal);

@@ -345,7 +345,9 @@ public class SkillCompositionService : ISkillCompositionService
             .OrderBy(t => t, StringComparer.Ordinal)
             .ToList();
         var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
-        return $"{r.ActorId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
+        // The REGION is part of the style: "환경이 발견을 다르게 만든다" (discovery.md). The same play in
+        // the crystal desert and at the waterfall is not the same discovery, and must not share a ladder.
+        return $"{r.ActorId}:{r.RegionId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
     }
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
@@ -411,8 +413,10 @@ public class SkillCompositionService : ISkillCompositionService
                 taken.Add(skill.EffectGraphJson);
 
                 // Manifestation follows the graph's structure (ADR 0007) — always available now.
-                bool magicContext = SkillManifest.IsMagicContext(DeserializeTags(skill.ContextTagsJson));
-                var manifestation = ManifestationFromGraph.Classify(comp.Graph, magicContext) ?? ManifestationKind.Command;
+                // A weapon is born of a real SYNTHESIS — two hands woven, one of them magic — not of merely
+                // having held a catalyst (ADR 0011). A single spell is a command you invoke.
+                bool magicFusion = ManifestationFromGraph.IsMagicFusion(DeserializeTags(skill.BehaviorsJson));
+                var manifestation = ManifestationFromGraph.Classify(comp.Graph, magicFusion) ?? ManifestationKind.Command;
                 skill.Manifestation = manifestation.ToString();
 
                 // A command is invoked by a button combo the rule engine assigns deterministically,

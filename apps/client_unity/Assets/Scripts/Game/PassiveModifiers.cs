@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectAscension.Equipment;
 using ProjectAscension.Combat;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.GameSimulation.Player;
@@ -15,6 +16,8 @@ namespace ProjectAscension.Game
     [RequireComponent(typeof(HitReceiver))]
     public sealed class PassiveModifiers : MonoBehaviour
     {
+        private Loadout _loadout;
+
         private HitReceiver _self;
 
         /// <summary>Aggregate lifesteal fraction from discovered passives.</summary>
@@ -41,12 +44,14 @@ namespace ProjectAscension.Game
         public void Refresh()
         {
             var set = GameSession.Instance != null ? GameSession.Instance.DiscoveredSkills : null;
-            var effect = set != null ? set.AggregatePassive() : PassiveEffect.None;
+            // A passive found THROUGH a weapon sleeps when that weapon is put away (ADR 0011).
+            var equipped = EquipmentTags.CurrentTags(_loadout != null ? _loadout : (_loadout = FindAnyObjectByType<Loadout>()));
+            var effect = set != null ? set.AggregatePassive(equipped) : PassiveEffect.None;
             if (_self != null) _self.DamageReduction = effect.DamageReduction;
             Lifesteal = effect.Lifesteal;
 
             // Movement (double jump, wall-climb) is graph-driven now (ADR 0007), not a passive field.
-            var movement = set != null ? set.AggregateMovement() : MovementCapability.None;
+            var movement = set != null ? set.AggregateMovement(equipped) : MovementCapability.None;
             MovementCapabilityCatalog.Set(movement);
             if (movement.ExtraJumps != _lastExtraJumps)
             {

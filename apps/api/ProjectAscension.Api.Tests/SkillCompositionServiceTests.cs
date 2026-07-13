@@ -12,6 +12,11 @@ namespace ProjectAscension.Api.Tests;
 
 public class SkillCompositionServiceTests
 {
+    // The region is part of the discovery ladder (ADR 0011: 환경이 발견을 다르게 만든다). Real play stays
+    // in one region across a session, so the fixtures must too — a fresh Guid per call would make every
+    // evaluation a different place.
+    private static readonly Guid Region = Guid.NewGuid();
+
     private sealed class FakeSkillRepo : IDiscoverySkillRepository
     {
         public List<DiscoverySkill> Skills { get; } = new();
@@ -230,7 +235,7 @@ public class SkillCompositionServiceTests
     }
 
     private static EvaluateTriggerRequest Eval(int jumpCount, Guid? actor = null)
-        => new(actor ?? Guid.NewGuid(), Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile",
+        => new(actor ?? Guid.NewGuid(), Region, DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile",
             new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
 
     [Fact]
@@ -278,11 +283,11 @@ public class SkillCompositionServiceTests
     }
 
     private static EvaluateTriggerRequest EvalCtx(Guid actor, string[] contextTags, int jumpCount)
-        => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", contextTags, "Projectile",
+        => new(actor, Region, DiscoveryType.Skill, "t", contextTags, "Projectile",
             new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);
 
     private static EvaluateTriggerRequest EvalBehavior(Guid actor, params BehaviorCount[] behaviors)
-        => new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
+        => new(actor, Region, DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
             behaviors, Persistence: 0);
 
     [Fact]
@@ -297,7 +302,7 @@ public class SkillCompositionServiceTests
 
         var actor = Guid.NewGuid();
         EvaluateTriggerRequest Ranged(int persistence, params BehaviorCount[] extra) =>
-            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
+            new(actor, Region, DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
                 new[] { new BehaviorCount("RangedAttack", 300) }.Concat(extra).ToArray(), persistence);
 
         var plain = await service.EvaluateAndTriggerAsync(Ranged(2));
@@ -327,7 +332,7 @@ public class SkillCompositionServiceTests
 
         var actor = Guid.NewGuid();
         EvaluateTriggerRequest Style(string tag, int ranged) =>
-            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { tag }, "Beam",
+            new(actor, Region, DiscoveryType.Skill, "t", new[] { tag }, "Beam",
                 new[] { new BehaviorCount("RangedAttack", ranged) }, Persistence: 0);
 
         // BREADTH: a brilliant session (score 600) in a style he has never touched. He still gets a

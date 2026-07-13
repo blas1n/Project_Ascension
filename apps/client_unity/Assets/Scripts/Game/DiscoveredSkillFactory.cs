@@ -25,7 +25,7 @@ namespace ProjectAscension.Game
             weapon = null;
             var discovered = SkillRestore.FromResponse(
                 dto.status, dto.name, dto.manifestation, dto.primitives, dto.invocationCombo,
-                dto.contextTags, dto.description, dto.effectGraph);
+                dto.contextTags, dto.description, dto.effectGraph, dto.behaviors);
             if (discovered == null) return null;
 
             if (discovered.Manifestation == ManifestationKind.Weapon)

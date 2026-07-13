@@ -44,6 +44,8 @@ public static class TriggerEvaluator
     public const string SeqPrefix = "Seq:";      // one act flowing into the next
     public const string WhilePrefix = "While:";  // done while some quality held
     public const string ChainPrefix = "Chain:";  // done again and again
+    /// <summary>Provenance, not behaviour — which instrument made an act (ADR 0011). Never scored.</summary>
+    public const string UsePrefix = "Use:";
 
     public static TriggerOutcome Evaluate(BehaviorSignature signature, DiscoveryTuning tuning)
     {
@@ -52,6 +54,11 @@ public static class TriggerEvaluator
         foreach (var (behavior, count) in signature.Behaviors)
         {
             if (count <= 0) continue;
+
+            // Provenance keys ("Use:firearm", ADR 0011) record which instrument an act was made with, so
+            // a skill can be bound to the weapons that actually made it. They are evidence, not
+            // achievement: they must not add score, nor count as a distinct element toward synergy.
+            if (behavior.StartsWith(UsePrefix, StringComparison.Ordinal)) continue;
             // A composite is scored as a composite (ADR 0009). Tightness is the signal: fusing two acts
             // in an instant is a harder, more deliberate thing than stringing them together, and is
             // worth more than either — and far more than doing one thing many times.
