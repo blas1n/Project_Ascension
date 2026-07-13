@@ -268,6 +268,14 @@ namespace ProjectAscension.Editor
             new GameObject("DiscoveryNotification").AddComponent<DiscoveryNotification>();
             new GameObject("ContractHud").AddComponent<ContractHud>();
 
+            // The dedicated first-hour guide (playtest: the authored first hour existed in the
+            // simulation but was never SHOWN to the player — they were just dropped in the city). A
+            // per-player instanced NPC (see TutorialGuide's own doc comment for why it must not be a
+            // shared world NPC), spawned beside the player's spawn point.
+            var guideGo = new GameObject("TutorialGuide");
+            guideGo.transform.position = CityBlockout.PlayerSpawn + new Vector3(2f, 0f, 1f);
+            guideGo.AddComponent<TutorialGuide>();
+
             // VContainer scope for the player stack (input/movement/camera) — the city needs it now
             // that it has a player to drive.
             var scopeGo = new GameObject("CityLifetimeScope");
@@ -408,6 +416,12 @@ namespace ProjectAscension.Editor
             SetStringField(reporter, "serverUrl", DevServerUrl);
             new GameObject("DiscoverySkillBinder").AddComponent<DiscoverySkillBinder>();
 
+            // The first hour's stages 6-8-9-10-11 happen out here too (map, death, delegation,
+            // issuing, return) — the guide follows the player's first hour across both scenes.
+            var frontierGuideGo = new GameObject("TutorialGuide");
+            frontierGuideGo.transform.position = new Vector3(2f, 0f, 1f); // beside the frontier spawn (Vector3.zero)
+            frontierGuideGo.AddComponent<TutorialGuide>();
+
             // Objectives: collectibles (Collection), a survey marker (Survey), and a
             // green return pad (step on it to go back to the City).
             var sample = new Color(0.3f, 1f, 0.4f);
@@ -417,7 +431,7 @@ namespace ProjectAscension.Editor
             CreateTrigger("SurveyPoint", PrimitiveType.Cylinder,
                 FrontierBlockout.SurveyMarker + new Vector3(0f, 1.5f, 0f),
                 new Vector3(1f, 1.5f, 1f), new Color(0.3f, 0.6f, 1f)).AddComponent<SurveyPoint>();
-            CreateTrigger("ReturnPad", PrimitiveType.Cube, new Vector3(0f, 0.1f, -5f), new Vector3(3f, 0.2f, 3f), new Color(0.2f, 0.9f, 0.3f)).AddComponent<ReturnZone>();
+            CreateTrigger("ReturnPad", PrimitiveType.Cube, FrontierBlockout.ReturnPad, new Vector3(3f, 0.2f, 3f), new Color(0.2f, 0.9f, 0.3f)).AddComponent<ReturnZone>();
 
             // VContainer scope for the player stack.
             var scopeGo = new GameObject("FrontierLifetimeScope");

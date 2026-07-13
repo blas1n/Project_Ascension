@@ -73,8 +73,15 @@ namespace ProjectAscension.Game
         /// the slice.</summary>
         public static Interactable EquipmentInteractable { get; private set; }
 
+        /// <summary>Whether a City scene is currently built and alive. TutorialGuideStations uses this
+        /// to gate lookups (e.g. TrainingGround) that have no Interactable of their own to null-check
+        /// against — so a guide/marker built in the Frontier never reports a stale City position.</summary>
+        public static bool IsBuilt { get; private set; }
+
         private void Awake()
         {
+            IsBuilt = true;
+
             var root = new GameObject("CityBlockout_Generated").transform;
             root.SetParent(transform, false);
 
@@ -88,6 +95,8 @@ namespace ProjectAscension.Game
             Training(root);
             Npcs(root);
         }
+
+        private void OnDestroy() => IsBuilt = false;
 
         // --- pieces -----------------------------------------------------------------------------
 
