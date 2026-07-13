@@ -62,7 +62,8 @@ namespace ProjectAscension.Game
             }
             var ps = session.PlayerState;
 
-            GUILayout.BeginArea(new Rect(20, 20, 420, 560), GUI.skin.box);
+            var o = ModalOrigin(820f, 560f);
+            GUILayout.BeginArea(new Rect(o.x, o.y, 420f, 560f), GUI.skin.box);
             GUILayout.Label($"CONTRACT CLERK — Survey Clerk Mira      Gold: {ps.Currency}");
             GUILayout.Space(6);
 
@@ -168,7 +169,8 @@ namespace ProjectAscension.Game
         // pre-sale estimate so it can never drift from the authoritative one.
         private void DrawKnowledgeMarket(GameSession session, PlayerStateService ps)
         {
-            GUILayout.BeginArea(new Rect(460, 20, 380, 400), GUI.skin.box);
+            var o = ModalOrigin(820f, 560f);
+            GUILayout.BeginArea(new Rect(o.x + 440f, o.y, 380f, 400f), GUI.skin.box);
             GUILayout.Label("KNOWLEDGE MARKET (지식 거래)");
             bool marketOnline = !string.IsNullOrWhiteSpace(session.ServerUrl);
             bool anySellable = false;

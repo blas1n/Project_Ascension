@@ -48,7 +48,8 @@ namespace ProjectAscension.Game
         // supply). Prices are DB-driven (fetched into GameSession.ShopItems).
         private void DrawShop(GameSession session, PlayerStateService ps)
         {
-            GUILayout.BeginArea(new Rect(20, 20, 420, 320), GUI.skin.box);
+            var o = ModalOrigin(820f, 330f);
+            GUILayout.BeginArea(new Rect(o.x, o.y, 420f, 320f), GUI.skin.box);
             GUILayout.Label($"SHOP (materials)      Gold: {ps.Currency}");
             if (session.ShopItems.Count == 0)
             {
@@ -83,7 +84,8 @@ namespace ProjectAscension.Game
         // and advance the settlement's civilization stage. Server-persistent.
         private void DrawSettlement(GameSession session, PlayerStateService ps)
         {
-            GUILayout.BeginArea(new Rect(460, 20, 380, 250), GUI.skin.box);
+            var o = ModalOrigin(820f, 330f);
+            GUILayout.BeginArea(new Rect(o.x + 440f, o.y, 380f, 250f), GUI.skin.box);
             GUILayout.Label("FRONTIER OUTPOST (정착지)");
             var s = session.Settlement;
             if (s == null)
