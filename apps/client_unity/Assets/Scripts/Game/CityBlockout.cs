@@ -126,7 +126,7 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>The 훈련장: an arena with dummies to hit. Everything the first hour teaches — move,
-        /// jump, dodge, attack — is learned here by doing it.</summary>
+        /// jump, evade the tell, attack — is learned here by doing it.</summary>
         private static void Training(Transform root)
         {
             // A sand floor marks it out from the grass.

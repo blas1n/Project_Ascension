@@ -34,14 +34,6 @@ public class EffectGraphCoherenceTests
         Assert.True(Valid(new Trigger(TriggerKind.OnCast, new Control(ControlEffect.Stun, 1))));
     }
 
-    [Fact]
-    public void OnDodge_AsMovementOrAttack_IsCoherent()
-    {
-        Assert.True(Valid(new Trigger(TriggerKind.OnDodge, new Impulse(ImpulseDirection.Forward, 1)))); // movement
-        Assert.True(Valid(new Trigger(TriggerKind.OnDodge,
-            new Sequence(new EffectNode[] { new Impulse(ImpulseDirection.Forward, 1), new Damage(1) })))); // dodge-attack
-    }
-
     // --- dead shapes are rejected ---
 
     [Fact]

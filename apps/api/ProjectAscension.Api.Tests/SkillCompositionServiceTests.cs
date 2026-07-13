@@ -293,7 +293,7 @@ public class SkillCompositionServiceTests
     [Fact]
     public async Task Evaluate_SameAttackStyleWithStrayMovement_ClaimsOnce()
     {
-        // The duplicate fix: real play flickers (a stray jump/dodge, a rising score), but the
+        // The duplicate fix: real play flickers (a stray jump, a rising score), but the
         // same attack style must claim ONCE — not a fresh near-identical discovery per window.
         var discoveries = new FakeDiscoveryRepo();
         var skills = new FakeSkillRepo();
@@ -307,11 +307,11 @@ public class SkillCompositionServiceTests
 
         var plain = await service.EvaluateAndTriggerAsync(Ranged(2));
         var withJump = await service.EvaluateAndTriggerAsync(Ranged(6, new BehaviorCount("Jump", 40)));
-        var withDodge = await service.EvaluateAndTriggerAsync(Ranged(12, new BehaviorCount("Dodge", 50)));
+        var withMoreJump = await service.EvaluateAndTriggerAsync(Ranged(12, new BehaviorCount("Jump", 90)));
 
         Assert.True(plain.Fired);
 
-        // A stray jump or dodge must not fragment one play into a second ladder. The variants may climb
+        // A stray jump must not fragment one play into a second ladder. The variants may climb
         // the ladder (that is the progression), but they climb THE SAME ONE.
         Assert.Single(skills.Skills.Select(StyleOf).Distinct());
     }
@@ -379,7 +379,7 @@ public class SkillCompositionServiceTests
         var charging = await service.EvaluateAndTriggerAsync(
             EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
         var skirmishing = await service.EvaluateAndTriggerAsync(
-            EvalBehavior(actor, new BehaviorCount("RangedAttack", 120), new BehaviorCount("Dodge", 110)));
+            EvalBehavior(actor, new BehaviorCount("RangedAttack", 120), new BehaviorCount("Jump", 110)));
         // The same play again climbs its OWN ladder — it does not spill into the other one.
         var chargingAgain = await service.EvaluateAndTriggerAsync(
             EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));

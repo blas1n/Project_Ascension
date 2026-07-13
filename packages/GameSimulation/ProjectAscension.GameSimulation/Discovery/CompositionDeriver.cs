@@ -6,7 +6,7 @@ namespace ProjectAscension.GameSimulation.Discovery
     /// <summary>
     /// The behavior composition grammar (ADR 0009). One act stream in, composite behaviours out.
     ///
-    /// This replaces five bespoke observers — dodge-attack, air-attack, repeated-jump, charged-attack,
+    /// This replaces four bespoke observers — air-attack, repeated-jump, charged-attack,
     /// weapon-fusion — each of which was its own hand-written special case. That was the same mistake
     /// ADR 0007 was written to undo: if every new idea needs a new engine feature, the discovery space
     /// is capped at the number of features we thought to write. So the engine owns the OPERATORS, and
@@ -120,7 +120,6 @@ namespace ProjectAscension.GameSimulation.Discovery
             if ((q & ActQuality.Blocking) != 0) yield return "blocking";
             if ((q & ActQuality.Aiming) != 0) yield return "aiming";
             if ((q & ActQuality.Moving) != 0) yield return "moving";
-            if ((q & ActQuality.Dodging) != 0) yield return "dodging";
         }
     }
 }

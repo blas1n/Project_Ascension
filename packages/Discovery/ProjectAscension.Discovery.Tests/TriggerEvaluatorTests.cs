@@ -116,8 +116,8 @@ public class TriggerEvaluatorTests
     [Fact]
     public void IsDeterministic()
     {
-        var a = TriggerEvaluator.Evaluate(Sig(3, ("Jump", 40), ("Dodge", 20)), Tuning);
-        var b = TriggerEvaluator.Evaluate(Sig(3, ("Jump", 40), ("Dodge", 20)), Tuning);
+        var a = TriggerEvaluator.Evaluate(Sig(3, ("Jump", 40), ("MeleeAttack", 20)), Tuning);
+        var b = TriggerEvaluator.Evaluate(Sig(3, ("Jump", 40), ("MeleeAttack", 20)), Tuning);
         Assert.Equal(a, b);
     }
 }

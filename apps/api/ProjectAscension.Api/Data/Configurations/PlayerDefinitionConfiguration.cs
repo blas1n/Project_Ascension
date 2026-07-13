@@ -19,8 +19,6 @@ public class PlayerDefinitionConfiguration : IEntityTypeConfiguration<PlayerDefi
             MoveSpeed = 5f,
             JumpVelocity = 6f,
             Gravity = 20f,
-            DodgeSpeed = 12f,
-            DodgeDuration = 0.2f,
             MaxFocus = 100f,
             FocusRegenPerSecond = 15f,
         });

@@ -77,7 +77,7 @@ public static class EffectGraphValidator
         if (kind == ManifestationKind.Passive)
         {
             bool ward = Has(t.Child, n => n is Ward w && w.Effect != WardEffect.Heal);
-            bool moves = t.Kind is TriggerKind.OnJumpInAir or TriggerKind.OnDodge or TriggerKind.OnWallContact
+            bool moves = t.Kind is TriggerKind.OnJumpInAir or TriggerKind.OnWallContact
                          && Has(t.Child, n => n is Impulse);
             return ward || moves;
         }

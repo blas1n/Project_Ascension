@@ -19,18 +19,14 @@ public sealed class StubEffectGraphComposer : IEffectGraphComposer
     {
         var profile = request.Profile ?? new List<BehaviorWeight>();
         int attacks = profile.Where(b => b.Behavior is "RangedAttack" or "MeleeAttack" or "ChargedAttack").Sum(b => b.Count);
-        int mobility = profile.Where(b => b.Behavior is "Jump" or "Dodge").Sum(b => b.Count);
+        int mobility = profile.Where(b => b.Behavior == "Jump").Sum(b => b.Count);
 
         EffectNode graph;
         if (mobility * 2 > attacks * 3)
         {
-            // Movement-dominant → a movement capability. Dodge-led play triggers off the dodge;
-            // otherwise an extra jump in the air (double jump). No engine special-case — a trigger
-            // + an upward impulse.
-            bool dodgeLed = profile.Where(b => b.Behavior == "Dodge").Sum(b => b.Count)
-                          > profile.Where(b => b.Behavior == "Jump").Sum(b => b.Count);
-            graph = new Trigger(dodgeLed ? TriggerKind.OnDodge : TriggerKind.OnJumpInAir,
-                new Impulse(ImpulseDirection.Up, 1));
+            // Movement-dominant → a movement capability: an extra jump in the air (double jump).
+            // No engine special-case — a trigger + an upward impulse.
+            graph = new Trigger(TriggerKind.OnJumpInAir, new Impulse(ImpulseDirection.Up, 1));
         }
         else if (attacks > 0)
         {

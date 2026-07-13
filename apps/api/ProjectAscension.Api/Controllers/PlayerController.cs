@@ -22,6 +22,6 @@ public class PlayerController : ControllerBase
         if (p is null) return NotFound();
         return Ok(new PlayerDefinitionResponse(
             p.MaxHealth, p.MoveSpeed, p.JumpVelocity, p.Gravity,
-            p.DodgeSpeed, p.DodgeDuration, p.MaxFocus, p.FocusRegenPerSecond));
+            p.MaxFocus, p.FocusRegenPerSecond));
     }
 }

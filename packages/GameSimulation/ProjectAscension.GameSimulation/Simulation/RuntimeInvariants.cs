@@ -74,7 +74,7 @@ namespace ProjectAscension.GameSimulation.Harness
                 : $"air jumps {airJumps} exceeded the granted {cap.ExtraJumps}";
         }
 
-        private static PlayerInput Jump(int seq) => new(0f, 0f, Jump: true, Dodge: false, Attack: false, Sequence: seq);
+        private static PlayerInput Jump(int seq) => new(0f, 0f, Jump: true, Attack: false, Sequence: seq);
 
         private static bool Sane(float v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0f;
     }

@@ -1,5 +1,8 @@
 # ADR 0009 — 행동은 문법으로 관측한다 (Behavior Composition Grammar)
 
+> **Note (ADR 0012):** the `Dodge` verb / `Dodging` quality referenced below is removed — there is
+> no dodge button; evasion is movement.
+
 ## Status
 
 Accepted (2026-07-13). ADR 0008(Synthesis)을 **일반화하여 흡수**한다.

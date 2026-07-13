@@ -29,10 +29,9 @@ namespace ProjectAscension.GameSimulation.Player
                     if (!(graph is Trigger t)) continue;
                     switch (t.Kind)
                     {
-                        // On an in-air jump (or a dodge used as a movement tech), an upward impulse
-                        // = one extra air jump. Double jump with no special-case.
+                        // On an in-air jump, an upward impulse = one extra air jump. Double jump
+                        // with no special-case.
                         case TriggerKind.OnJumpInAir:
-                        case TriggerKind.OnDodge:
                             if (HasUpwardImpulse(t.Child)) extraJumps++;
                             break;
                         case TriggerKind.OnWallContact:

@@ -18,7 +18,7 @@ namespace ProjectAscension.GameSimulation.Harness
     public static class GraphFuzzer
     {
         private static readonly TriggerKind[] Triggers =
-            { TriggerKind.OnCast, TriggerKind.OnJumpInAir, TriggerKind.OnDodge, TriggerKind.OnHit, TriggerKind.OnWallContact, TriggerKind.Continuous };
+            { TriggerKind.OnCast, TriggerKind.OnJumpInAir, TriggerKind.OnHit, TriggerKind.OnWallContact, TriggerKind.Continuous };
         private static readonly EmitDelivery[] Deliveries =
             { EmitDelivery.Projectile, EmitDelivery.Beam, EmitDelivery.Burst, EmitDelivery.Nova };
         private static readonly ImpulseDirection[] Directions =
@@ -52,7 +52,7 @@ namespace ProjectAscension.GameSimulation.Harness
         /// <summary>A random MOVEMENT graph (a movement trigger + an impulse) — for movement invariants.</summary>
         public static EffectNode GenerateMovement(Random rng)
         {
-            var movementTriggers = new[] { TriggerKind.OnJumpInAir, TriggerKind.OnDodge, TriggerKind.OnWallContact };
+            var movementTriggers = new[] { TriggerKind.OnJumpInAir, TriggerKind.OnWallContact };
             var kind = movementTriggers[rng.Next(movementTriggers.Length)];
             return new Trigger(kind, new Impulse(Directions[rng.Next(Directions.Length)], Tier(rng)));
         }

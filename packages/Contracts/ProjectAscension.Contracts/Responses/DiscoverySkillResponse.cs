@@ -16,7 +16,6 @@ namespace ProjectAscension.Contracts.Responses
         string? Manifestation,
         IReadOnlyList<string> ContextTags,
         IReadOnlyList<string> Behaviors,
-        IReadOnlyList<string> InvocationCombo,
         string Delivery,
         string? EffectGraph = null);
 }

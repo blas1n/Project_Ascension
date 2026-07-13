@@ -20,7 +20,6 @@ namespace ProjectAscension.Player
         private Transform _body;
         private PlayerState _state;
         private bool _jumpQueued;
-        private bool _dodgeQueued;
         private bool _touchingWall; // set from the controller's side collisions last tick (wall-climb)
 
         public PlayerMovement(PlayerSimulation simulation, PlayerData data)
@@ -38,20 +37,6 @@ namespace ProjectAscension.Player
         }
 
         public void QueueJump() => _jumpQueued = true;
-        public void QueueDodge() => _dodgeQueued = true;
-
-        /// <summary>True while a dodge is granting i-frames — the combat rule lives in the shared
-        /// <see cref="PlayerSimulation"/> (headless-tested); this only feeds it the current dodge
-        /// state. The player's HitReceiver reads this to negate incoming damage.</summary>
-        public bool IsInvulnerable
-        {
-            get
-            {
-                if (_state == null) return false;
-                var s = _data.ToMovementSettings();
-                return PlayerSimulation.IsInvulnerable(_state.DodgeTimeRemaining, s.DodgeDuration, s.DodgeIFrameFraction);
-            }
-        }
 
         /// <summary>Hard-set position (respawn) and clear velocity in the simulation.</summary>
         public void Teleport(Vector3 position)
@@ -80,33 +65,23 @@ namespace ProjectAscension.Player
             Vector3 world = forward * moveInput.y + right * moveInput.x;
             if (world.sqrMagnitude > 1f) world.Normalize();
 
-            // Dodge with no directional input dashes toward where the player is
-            // facing (horizontal forward), not a fixed world axis. Only matters on
-            // the dodge-start frame; the simulation locks the dash vector after that.
-            if (_dodgeQueued && world.sqrMagnitude < 0.0001f)
-                world = forward;
-
             var input = new PlayerInput(
                 MoveX: world.x,
                 MoveZ: world.z,
                 Jump: _jumpQueued,
-                Dodge: _dodgeQueued,
                 Attack: false,
                 Sequence: _state.InputSequence + 1,
                 TouchingWall: _touchingWall);
 
             // Detect actual execution against the pre-tick state, mirroring the
-            // simulation's gates, so behavior events fire on real jumps/dodges —
-            // not on every input press (airborne spam, dodge on cooldown).
+            // simulation's gates, so behavior events fire on real jumps —
+            // not on every input press (airborne spam).
             bool jumpExecuted = _jumpQueued && _state.IsGrounded;
-            bool dodgeExecuted = _dodgeQueued && _state.IsGrounded && _state.DodgeTimeRemaining <= 0f;
 
             _state = _simulation.ApplyInput(_state, input, deltaTime, _data.ToMovementSettings());
             _jumpQueued = false;
-            _dodgeQueued = false;
 
             if (jumpExecuted) GameplayEvents.RaiseJumped();
-            if (dodgeExecuted) GameplayEvents.RaiseDodged();
 
             // Move the CharacterController toward the simulation's predicted position. The
             // sim only knows the ground plane, so it ignores obstacles; the controller's

@@ -23,11 +23,6 @@ namespace ProjectAscension.Combat
         /// passive discoveries (Game.PassiveModifiers). 0 for monsters.</summary>
         public float DamageReduction { get; set; }
 
-        /// <summary>Optional check: when it returns true the next hit is fully negated (the player's
-        /// dodge i-frames). Null (monsters) = never invulnerable. The window itself is a headless
-        /// combat rule (PlayerSimulation.IsInvulnerable); this only gates damage on it.</summary>
-        public Func<bool> Invulnerable { get; set; }
-
         /// <summary>Optional check: is a shield currently RAISED? (The player's off hand held down.)
         /// Null (monsters) = never blocking. Whether a raised shield actually stops THIS blow — the
         /// front-arc test and the absorption — is the sim's rule (BlockRules); this only supplies the
@@ -37,9 +32,6 @@ namespace ProjectAscension.Combat
         /// <summary>(receiver, amount)</summary>
         public event Action<HitReceiver, float> Damaged;
         public event Action<HitReceiver> Died;
-
-        /// <summary>A hit was fully negated by invulnerability (i-frames) — for the dodge shine.</summary>
-        public event Action<HitReceiver> DamageNegated;
 
         /// <summary>A hit was absorbed by a raised shield — for the block feedback (spark/flash).</summary>
         public event Action<HitReceiver> DamageBlocked;
@@ -56,13 +48,6 @@ namespace ProjectAscension.Combat
         public void TakeDamage(float amount, GameObject source)
         {
             if (IsDead) return;
-
-            // I-frames (a dodge) fully negate the hit — the reward for a well-timed dodge.
-            if (Invulnerable != null && Invulnerable())
-            {
-                DamageNegated?.Invoke(this);
-                return;
-            }
 
             // A RAISED shield absorbs a frontal blow. Whether this blow counts as frontal, and how much
             // it absorbs, is BlockRules' call (DB-driven); the shell only measures where it came from.

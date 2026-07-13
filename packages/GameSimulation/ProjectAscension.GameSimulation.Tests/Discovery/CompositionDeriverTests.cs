@@ -8,7 +8,7 @@ namespace ProjectAscension.GameSimulation.Tests.Discovery
     /// The composition grammar (ADR 0009), headless.
     ///
     /// The point of these tests is not that each operator works — it is that the grammar SUBSUMES the
-    /// five bespoke observers it replaced (dodge-attack, air-attack, repeated-jump, charged-attack,
+    /// four bespoke observers it replaced (air-attack, repeated-jump, charged-attack,
     /// weapon-fusion), and then keeps going: combinations nobody wrote a special case for still come
     /// out, because the engine owns the operators, not the combinations.
     /// </summary>
@@ -24,7 +24,7 @@ namespace ProjectAscension.GameSimulation.Tests.Discovery
         private static Act A(string verb, string instrument, float t, ActQuality q = ActQuality.None)
             => new(verb, instrument, t, q);
 
-        // --- the five special cases, now just sentences in the grammar -------------------------
+        // --- the four special cases, now just sentences in the grammar --------------------------
 
         [Fact]
         public void WeaponFusion_WasSynthesisDeriver()
@@ -35,16 +35,6 @@ namespace ProjectAscension.GameSimulation.Tests.Discovery
                 A("attack", "firearm", 0.1f));
 
             Assert.Contains("Fuse:arcane>firearm", got);
-        }
-
-        [Fact]
-        public void DodgeThenAttack_WasBehaviorDeriver()
-        {
-            var got = Run(new CompositionDeriver(),
-                A("dodge", null, 0f),
-                A("attack", "melee", 0.3f));
-
-            Assert.Contains("Seq:dodge>melee", got);
         }
 
         [Fact]
@@ -79,15 +69,14 @@ namespace ProjectAscension.GameSimulation.Tests.Discovery
         [Fact]
         public void TheGrammarIsSHARPER_ThanTheSpecialCaseItReplaced()
         {
-            // The old DodgeAttack said only "they attacked out of a dodge". The grammar keeps the
-            // INSTRUMENT — and rolling into a gunshot is not the same mastery as rolling into a sword.
-            // Two behaviours where there used to be one. That is resolution the special case threw away.
-            var gun = Run(new CompositionDeriver(), A("dodge", null, 0f), A("attack", "firearm", 0.3f));
-            var blade = Run(new CompositionDeriver(), A("dodge", null, 0f), A("attack", "melee", 0.3f));
+            // The grammar keeps the INSTRUMENT — and following a jump with a gunshot is not the same
+            // mastery as following it with a sword. Two behaviours where a flat verb count would give one.
+            var gun = Run(new CompositionDeriver(), A("jump", null, 0f), A("attack", "firearm", 0.3f));
+            var blade = Run(new CompositionDeriver(), A("jump", null, 0f), A("attack", "melee", 0.3f));
 
-            Assert.Contains("Seq:dodge>firearm", gun);
-            Assert.Contains("Seq:dodge>melee", blade);
-            Assert.DoesNotContain("Seq:dodge>melee", gun);
+            Assert.Contains("Seq:jump>firearm", gun);
+            Assert.Contains("Seq:jump>melee", blade);
+            Assert.DoesNotContain("Seq:jump>melee", gun);
         }
 
         [Fact]
@@ -123,7 +112,7 @@ namespace ProjectAscension.GameSimulation.Tests.Discovery
         [Fact]
         public void OneActCanCompleteSeveralThingsAtOnce()
         {
-            // A third quick jump, taken in the air, off a dodge: a chain AND a quality AND a sequence.
+            // A third quick jump, taken in the air: a chain AND a quality at once.
             var d = new CompositionDeriver(chainLength: 3);
             var got = Run(d,
                 A("jump", null, 0f),

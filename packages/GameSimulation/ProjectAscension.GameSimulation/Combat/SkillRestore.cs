@@ -23,7 +23,6 @@ namespace ProjectAscension.GameSimulation.Combat
             string? name,
             string? manifestation,
             IReadOnlyList<string>? primitives,
-            IReadOnlyList<string>? invocationCombo,
             IReadOnlyList<string>? contextTags,
             string? description,
             string? effectGraph,
@@ -37,9 +36,6 @@ namespace ProjectAscension.GameSimulation.Combat
             var kind = Enum.TryParse<ManifestationKind>(manifestation, ignoreCase: true, out var k)
                 ? k
                 : ManifestationKind.Command;
-            IReadOnlyList<InputToken> combo = kind == ManifestationKind.Command
-                ? InputCombo.Parse(invocationCombo ?? Array.Empty<string>())
-                : Array.Empty<InputToken>();
 
             // The runtime interprets the effect graph; a legacy graphless (or unparseable) response
             // is translated from its primitives so every skill runs on the graph path (Phase 4c-4).
@@ -47,7 +43,7 @@ namespace ProjectAscension.GameSimulation.Combat
                 ? PrimitiveGraphTranslator.Translate(skill)
                 : EffectGraphReader.Parse(effectGraph!) ?? PrimitiveGraphTranslator.Translate(skill);
 
-            return new DiscoveredSkill(skill.Name, kind, skill, combo, contextTags, behaviors, description, graph);
+            return new DiscoveredSkill(skill.Name, kind, skill, contextTags, behaviors, description, graph);
         }
     }
 }

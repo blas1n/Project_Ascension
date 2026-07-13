@@ -8,7 +8,7 @@ public enum ManifestationKind
     Weapon,
 
     /// <summary>A mobility / control technique — a command the player actively invokes
-    /// by a button combo (double jump, dodge-slash, a stun burst).</summary>
+    /// from a hotkey slot (double jump, a stun burst).</summary>
     Command,
 
     /// <summary>A defensive composition — an always-on passive (persistent ward /

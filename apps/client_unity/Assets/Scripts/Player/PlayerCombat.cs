@@ -9,7 +9,7 @@ namespace ProjectAscension.Player
     /// Drives weapon attacks from input. Right-hand weapon on Attack (LMB),
     /// left-hand on AttackLeft (RMB). Aim comes from the camera pivot. Announces an
     /// execution fact (melee/ranged) when a weapon actually fires; the discovery
-    /// relay derives combos (e.g. dodge-then-attack) — combat doesn't know about it.
+    /// relay derives composite behaviours from the act stream — combat doesn't know about it.
     /// </summary>
     public sealed class PlayerCombat : MonoBehaviour
     {

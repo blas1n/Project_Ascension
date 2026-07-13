@@ -28,7 +28,7 @@ public class EffectGraphSimulation
     public EffectGraphSimulation(ITestOutputHelper output) => _out = output;
 
     private static readonly TriggerKind[] Movement =
-        { TriggerKind.OnJumpInAir, TriggerKind.OnDodge, TriggerKind.OnWallContact };
+        { TriggerKind.OnJumpInAir, TriggerKind.OnWallContact };
 
     [Fact]
     public async Task AiComposesValidVariedGraphs_StructureFollowsPlay()
@@ -48,9 +48,9 @@ public class EffectGraphSimulation
         {
             ("magic-charge", "an arcane charged blast", new[] { ("ChargedAttack", 60) }, false),
             ("bow-rapid",    "a rapid arrow volley",    new[] { ("RangedAttack", 60) }, false),
-            ("double-jump",  "a nimble aerial hop",     new[] { ("Jump", 55), ("Dodge", 20) }, true),
-            ("wall-climb",   "scaling a sheer cliff face", new[] { ("Jump", 40), ("Dodge", 45) }, true),
-            ("guard",        "an enduring protective ward", new[] { ("Dodge", 30) }, false),
+            ("double-jump",  "a nimble aerial hop",     new[] { ("Jump", 75) }, true),
+            ("wall-climb",   "scaling a sheer cliff face", new[] { ("Jump", 85) }, true),
+            ("guard",        "an enduring protective ward", new[] { ("Jump", 30) }, false),
         };
 
         var triggers = new List<TriggerKind>();

@@ -1,5 +1,8 @@
 # ADR 0003 — 게임플레이 관찰: 입력이 아니라 실행에서, 단일 릴레이로
 
+> **Note (ADR 0012):** the `Dodge`/`Dodged` signal referenced below is removed — there is no dodge
+> button; evasion is movement.
+
 - 상태: 채택됨
 - 날짜: 2026-06-25
 - 맥락: 발견 시스템이 플레이어 행동을 관찰한다. 관찰 조건은 계속 늘어난다(점프·회피·공격에서 시작해 콤보·환경·타겟·처치 등으로). 처음엔 점프 발견을 입력 이벤트(`JumpPressed`)에 걸었더니, 공중에서 스페이스 연타·쿨다운 중 회피 입력에도 진행도가 쌓이는 중복 버그가 났다.

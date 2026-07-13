@@ -8,9 +8,9 @@ namespace ProjectAscension.Player
     /// <summary>
     /// The one place that watches the player and says what they just DID (ADR 0009).
     ///
-    /// Before this, five different observers each reached for a different fact — one event for an air
-    /// attack, another for a charged one, a bespoke window for dodge-attacks, another for weapon
-    /// fusion. Every new idea meant a new observer. So instead: one component, on the player, that
+    /// Before this, four different observers each reached for a different fact — one event for an air
+    /// attack, another for a charged one, another for weapon fusion, another for repeated jumps. Every
+    /// new idea meant a new observer. So instead: one component, on the player, that
     /// knows the player's STATE (are they off the ground? is the shield up? was that shot drawn?), and
     /// emits a single act stream. The grammar downstream decides what those acts add up to; adding
     /// aiming or parrying later means adding a quality here, and nothing else anywhere.
@@ -36,14 +36,12 @@ namespace ProjectAscension.Player
         private void OnEnable()
         {
             GameplayEvents.Jumped += OnJumped;
-            GameplayEvents.Dodged += OnDodged;
             GameplayEvents.WeaponUsed += OnWeaponUsed;
         }
 
         private void OnDisable()
         {
             GameplayEvents.Jumped -= OnJumped;
-            GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.WeaponUsed -= OnWeaponUsed;
         }
 
@@ -55,7 +53,6 @@ namespace ProjectAscension.Player
         }
 
         private void OnJumped() => Emit("jump", null);
-        private void OnDodged() => Emit("dodge", null);
 
         // An attack names the weapon it was made with — rolling into a gunshot is not the same act as
         // rolling into a sword, and the grammar keeps that difference.

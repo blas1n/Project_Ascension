@@ -7,24 +7,29 @@ using ProjectAscension.GameSimulation.Combat;
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// Discovered COMMANDS are cast from ability slots (hotkeys), not input combos. With only
-    /// four combat inputs (jump/dodge/LMB/RMB) — all reused for normal fighting — combo
-    /// invocation misfired during combat and didn't scale as commands accumulated. Each slot
-    /// binds a discovered command to a key (Q/E/R/F); pressing it casts the command, subject to
-    /// the equipment gate (ADR 0005). Slots auto-fill from the discovered commands in discovery
-    /// order (a reassignment UI is a follow-up). Destiny-style dedicated abilities.
+    /// Discovered COMMANDS are cast from ability slots (hotkeys), not input combos. The combat
+    /// inputs are all reused for normal fighting, so combo invocation misfired mid-fight and did
+    /// not scale as commands accumulated. Each slot binds a discovered command to a key; pressing
+    /// it casts the command, subject to the equipment gate (ADR 0011). Slots auto-fill from the
+    /// discovered commands in discovery order (a reassignment UI is a follow-up).
+    /// Destiny/Overwatch-style dedicated abilities — and since ADR 0012 removed the dodge button,
+    /// a dash IS one of these: mobility is discovered, not issued.
     ///
-    /// Uses the low-level Keyboard (the project is on the new Input System, no legacy Input),
-    /// so no .inputactions asset edit is needed. Auto-provisioned by SkillCaster.
+    /// R and F are deliberately NOT used — they are the conventional reload / interact keys.
+    ///
+    /// Uses the low-level Keyboard (the project is on the new Input System, no legacy Input);
+    /// rebinding through the action asset is a follow-up. Auto-provisioned by SkillCaster.
     /// </summary>
     public sealed class AbilitySlots : MonoBehaviour
     {
-        public static readonly Key[] SlotKeys = { Key.Q, Key.E, Key.R, Key.F };
+        public static readonly Key[] SlotKeys = { Key.Q, Key.E, Key.LeftShift, Key.C };
         public const int SlotCount = 4; // = SlotKeys.Length
 
-        /// <summary>The hotkey label for a slot index (Q/E/R/F), or null if out of range.</summary>
+        /// <summary>The hotkey label for a slot index, or null if out of range.</summary>
         public static string SlotLabel(int index)
-            => index >= 0 && index < SlotKeys.Length ? SlotKeys[index].ToString() : null;
+            => index >= 0 && index < SlotKeys.Length ? Label(SlotKeys[index]) : null;
+
+        private static string Label(Key key) => key == Key.LeftShift ? "Shift" : key.ToString();
 
         private SkillCaster _caster;
         private Loadout _loadout;

@@ -204,8 +204,6 @@ namespace ProjectAscension.Net
         public float moveSpeed;
         public float jumpVelocity;
         public float gravity;
-        public float dodgeSpeed;
-        public float dodgeDuration;
         public float maxFocus;
         public float focusRegenPerSecond;
     }

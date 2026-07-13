@@ -50,7 +50,7 @@ namespace ProjectAscension.GameSimulation.Combat
                 foreach (var weapon in WeaponTags)
                 {
                     // A behaviour NAMES its instrument ("Use:firearm", "Fuse:arcane>firearm",
-                    // "Seq:dodge>melee"). Only the ones named took part.
+                    // "Seq:jump>melee"). Only the ones named took part.
                     if (!required.Contains(weapon) && NamesWeapon(b, weapon))
                         required.Add(weapon);
                 }

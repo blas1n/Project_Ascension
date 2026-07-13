@@ -10,7 +10,7 @@ namespace ProjectAscension.GameSimulation.Player
     public static class MovementCapabilityCatalog
     {
         /// <summary>Air jumps beyond the ground jump (0 = single jump). From graph movement
-        /// triggers (OnJumpInAir/OnDodge + upward impulse). Set by PassiveModifiers.</summary>
+        /// triggers (OnJumpInAir + upward impulse). Set by PassiveModifiers.</summary>
         public static int ExtraJumps { get; private set; }
 
         /// <summary>Whether a discovered skill grants wall-climb (a graph OnWallContact trigger).</summary>

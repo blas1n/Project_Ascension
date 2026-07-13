@@ -15,8 +15,7 @@ public static class EffectGraphPrompt
     {
         int attacks = profile?.Where(b => b.Behavior is "RangedAttack" or "MeleeAttack" or "ChargedAttack").Sum(b => b.Count) ?? 0;
         int jumps = profile?.Where(b => b.Behavior == "Jump").Sum(b => b.Count) ?? 0;
-        int dodges = profile?.Where(b => b.Behavior == "Dodge").Sum(b => b.Count) ?? 0;
-        int mobility = jumps + dodges;
+        int mobility = jumps;
         string play = profile is null || profile.Count == 0
             ? "no clear pattern"
             : string.Join(", ", profile.OrderByDescending(b => b.Count).Select(b => $"{b.Behavior}:{b.Count}"));
@@ -73,10 +72,8 @@ public static class EffectGraphPrompt
         {
             string moveTrigger = wallTheme
                 ? "OnWallContact (a wall-climb — on touching a wall)"
-                : jumps >= dodges
-                    ? "OnJumpInAir (a double/air jump)"
-                    : "OnDodge (a dash/dodge move)";
-            steer = $"This play is MOVEMENT → root trigger {moveTrigger}; the effect is an Impulse (Up for a jump/climb, Forward for a dash). Match the trigger to the play/theme — a jump-heavy play is OnJumpInAir, a wall/climb theme is OnWallContact, a dodge is OnDodge. No offense.";
+                : "OnJumpInAir (a double/air jump)";
+            steer = $"This play is MOVEMENT → root trigger {moveTrigger}; the effect is an Impulse (Up for a jump/climb, Forward for a dash). Match the trigger to the play/theme — a jump-heavy play is OnJumpInAir, a wall/climb theme is OnWallContact. No offense.";
         }
         else if (attacks > 0)
             steer = "This play is OFFENSIVE → root trigger OnCast; build a Sequence: one Emit (its delivery is the shape — Projectile/Beam single-target, Burst/Nova area), then shape the attack with any of Damage (extra hit), Dot (a burn over time), Spread (hits extra targets — chain/pierce), Homing (the shot seeks), Control (Knockback/Slow/Stun). Mix these to make each attack distinct; don't just Emit+Damage every time.";
@@ -97,7 +94,7 @@ Tier (0-3) is the magnitude and is FREE and CAPPED — do not treat a big budget
 Respond ONLY as JSON of this exact shape:
 {{ ""trigger"": <TRIGGER>, ""effect"": <NODE> }}
 
-TRIGGER is one of: OnCast, OnJumpInAir, OnDodge, OnWallContact, Continuous.
+TRIGGER is one of: OnCast, OnJumpInAir, OnWallContact, Continuous.
 NODE is one of:
   {{""kind"":""Emit"",""delivery"":<Projectile|Beam|Burst|Nova>,""tier"":<0-3>}}
   {{""kind"":""Impulse"",""direction"":<Up|Forward|Aim>,""tier"":<0-3>}}
@@ -111,7 +108,7 @@ NODE is one of:
 
 Rules: exactly one top-level trigger; no trigger inside effect; tiers 0-3; keep it small (<=8 nodes);
 match the trigger to the play above. COHERENCE (or the skill does nothing and is rejected):
-a movement trigger (OnJumpInAir/OnWallContact/OnDodge-as-movement) MUST include an Impulse;
+a movement trigger (OnJumpInAir/OnWallContact) MUST include an Impulse;
 Continuous MUST include a Ward; OnCast MUST include a real effect (Emit/Damage/Dot/Control/Ward),
 not only Impulse/Homing/Spread. Numbers/balance are the engine's — only choose structure and tiers.";
     }

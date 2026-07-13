@@ -16,8 +16,6 @@ MonoBehaviour:
   jumpVelocity: 6
   gravity: 20
   groundY: 0
-  dodgeSpeed: 12
-  dodgeDuration: 0.2
   lookSensitivity: 0.1
   minPitch: -85
   maxPitch: 85

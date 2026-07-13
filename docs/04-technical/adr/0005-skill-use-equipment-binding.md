@@ -1,5 +1,8 @@
 # ADR 0005 — 발견 발현과 사용 모델 (장비 사용-게이트 폐기)
 
+> **Note (ADR 0012):** the `Dodge` action token referenced below is removed — there is no dodge
+> button; evasion is movement.
+
 ## 상태
 Accepted (개정: 초기의 "장비 정확-일치 사용 게이트"를 폐기)
 

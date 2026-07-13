@@ -36,7 +36,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             var p = Observe(TutorialProgress.Start, TutorialSignal.NameChosen);
             Assert.Equal(TutorialStep.Training, p.Step);
 
-            p = Observe(p, TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Dodged);
+            p = Observe(p, TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded);
             Assert.Equal(TutorialStep.Training, p.Step); // attack still outstanding
             Assert.Equal(TutorialSignal.Attacked, TutorialDirector.RemainingTraining(p));
 
@@ -54,7 +54,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             var p = Observe(TutorialProgress.Start,
                 TutorialSignal.DiscoveryMade,      // ahead of the script
                 TutorialSignal.NameChosen,
-                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Dodged, TutorialSignal.Attacked,
+                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked,
                 TutorialSignal.EquipmentChosen);
 
             // ChooseEquipment completed → FirstDiscovery was already banked → skipped to the next step.
@@ -74,7 +74,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         {
             var p = Observe(TutorialProgress.Start,
                 TutorialSignal.NameChosen,
-                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Dodged, TutorialSignal.Attacked,
+                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked,
                 TutorialSignal.EquipmentChosen,
                 TutorialSignal.DiscoveryMade,
                 TutorialSignal.SurveyContractAccepted,

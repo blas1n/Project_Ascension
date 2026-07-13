@@ -1,5 +1,8 @@
 # ADR 0007 — 샌드박스 결정론 이펙트 그래프 (스킬 효과 DSL)
 
+> **Note (ADR 0012):** the `OnDodge` trigger referenced below is removed — there is no dodge
+> button; evasion is movement.
+
 ## 상태
 Proposed — 착수 (Phase 1: 코어 모델 + 검증)
 

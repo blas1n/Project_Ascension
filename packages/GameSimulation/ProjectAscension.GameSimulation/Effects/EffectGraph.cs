@@ -9,7 +9,7 @@ namespace ProjectAscension.GameSimulation.Effects
 
     /// <summary>When a skill's effect runs. A NEW movement mechanic (e.g. wall-climb) is just a
     /// new trigger + a stock effect — no bespoke field.</summary>
-    public enum TriggerKind { OnCast, OnJumpInAir, OnDodge, OnHit, OnWallContact, Continuous }
+    public enum TriggerKind { OnCast, OnJumpInAir, OnHit, OnWallContact, Continuous }
 
     public enum EmitDelivery { Projectile, Beam, Burst, Nova }
     public enum ImpulseDirection { Up, Forward, Aim }

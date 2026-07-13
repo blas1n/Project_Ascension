@@ -267,8 +267,10 @@ Implement:
 
 * movement
 * jump
-* dodge
 * camera
+
+Evasion is movement, cover and reading the telegraph — not a button. There is no
+dodge. Mobility (dash, blink) is discovered, not issued. See ADR 0012.
 
 ---
 
