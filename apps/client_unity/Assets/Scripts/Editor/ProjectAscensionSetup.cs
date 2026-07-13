@@ -300,6 +300,12 @@ namespace ProjectAscension.Editor
             var playerController = player.AddComponent<PlayerController>();
             SetObjectField(playerController, "cameraPivot", pivot.transform);
 
+            // Press-[F]-to-interact: the sensor picks the nearest reachable Interactable each frame
+            // (InteractionRules, headless-tested), the HUD renders whatever it picked. Both City and
+            // Frontier need this now that the board/quartermaster/return-pad no longer fire on touch.
+            player.AddComponent<InteractionSensor>();
+            player.AddComponent<InteractPromptHud>();
+
             // Hand anchors under the camera pivot (view-locked) + Loadout that
             // equips the pre-chosen pair on spawn.
             var leftHand = new GameObject("LeftHand");

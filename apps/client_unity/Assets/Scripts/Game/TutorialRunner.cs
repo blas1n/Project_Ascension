@@ -159,13 +159,13 @@ namespace ProjectAscension.Game
             TutorialStep.Training => TrainingPrompt(progress),
             TutorialStep.ChooseEquipment => "Choose two pieces of equipment.",
             TutorialStep.FirstDiscovery => "Fight your own way — discovery comes from how you act.",
-            TutorialStep.AcceptSurveyContract => "Take a contract from the board.",
+            TutorialStep.AcceptSurveyContract => "Press [F] at the board to take a contract.",
             TutorialStep.EarnMap => "Survey the outskirts. Reach the marker.",
-            TutorialStep.AcceptDeepContract => "Take the next contract.",
+            TutorialStep.AcceptDeepContract => "Press [F] at the board to take the next contract.",
             TutorialStep.FirstDeath => "Go deeper.",
             TutorialStep.DelegateContract => "You cannot finish this alone. Delegate it (위임).",
             TutorialStep.IssueContract => "Then hire someone who can. Issue a contract (발주).",
-            TutorialStep.Return => "Return to the city.",
+            TutorialStep.Return => "Press [F] at the return pad to go back to the city.",
             _ => "",
         };
 
