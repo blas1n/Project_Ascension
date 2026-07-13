@@ -40,6 +40,7 @@ namespace ProjectAscension.Game
 
         private Transform _player;
         private bool _atBoard;
+        private bool _busyHere; // at the board, or standing with the quartermaster
 
         // The city is a place now, so the hub is a THING YOU WALK UP TO — the board — not a panel that
         // is simply always on screen. Standing at it frees the cursor to read it; stepping away locks
@@ -56,18 +57,24 @@ namespace ProjectAscension.Game
 
             var p = _player.position;
             var board = CityBlockout.BoardSpot;
-            bool near = (new Vector2(p.x - board.x, p.z - board.z)).magnitude <= BoardReach;
-            if (near == _atBoard) return;
+            bool atBoard = (new Vector2(p.x - board.x, p.z - board.z)).magnitude <= BoardReach;
 
-            _atBoard = near;
-            Cursor.lockState = _atBoard ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = _atBoard;
+            // City business happens at the board OR standing with the quartermaster (who is the one
+            // offering 발주). Either way the cursor comes free to read it; walk away and it locks back
+            // to the world.
+            bool busy = atBoard || CityNpc.NearIssuer;
+            if (atBoard == _atBoard && busy == _busyHere) return;
+
+            _atBoard = atBoard;
+            _busyHere = busy;
+            Cursor.lockState = busy ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = busy;
         }
 
         private void OnGUI()
         {
-            // Away from the board there is nothing to read — just a hint of where to go.
-            if (!_atBoard)
+            // Away from both there is nothing to read — just a hint of where to go.
+            if (!_busyHere)
             {
                 if (_player != null)
                 {
@@ -279,7 +286,9 @@ namespace ProjectAscension.Game
             GUILayout.EndScrollView();
             GUILayout.EndArea();
 
-            DrawIssuePanel(session, ps);
+            // 발주 is the quartermaster's suggestion to make (stage 10) — not a window that is simply
+            // always open. Stand with him and it's there.
+            if (CityNpc.NearIssuer) DrawIssuePanel(session, ps);
             DrawShop(session, ps);
             DrawSettlement(session, ps);
         }

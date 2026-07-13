@@ -162,15 +162,17 @@ namespace ProjectAscension.Game
         /// the NPC pass; for now the city simply has someone standing in it.</summary>
         private static void Npcs(Transform root)
         {
-            Npc(root, "Quartermaster Hale", new Vector3(-6f, 0f, 2f), new Color(0.45f, 0.5f, 0.62f));
-            Npc(root, "Serjeant Bran", new Vector3(-12f, 0f, 0f), new Color(0.62f, 0.45f, 0.42f));
-            Npc(root, "Survey Clerk Mira", new Vector3(4f, 0f, 6f), new Color(0.5f, 0.6f, 0.5f));
+            // The quartermaster stands where the commissioning happens — 발주 is HIS offer to make.
+            Npc(root, "Quartermaster Hale", CityNpc.Role.Quartermaster, new Vector3(-6f, 0f, 2f), new Color(0.45f, 0.5f, 0.62f));
+            Npc(root, "Serjeant Bran", CityNpc.Role.Serjeant, new Vector3(-13f, 0f, 3f), new Color(0.62f, 0.45f, 0.42f)); // by the training ground
+            Npc(root, "Survey Clerk Mira", CityNpc.Role.Clerk, new Vector3(3.5f, 0f, 5f), new Color(0.5f, 0.6f, 0.5f)); // by the board
         }
 
-        private static void Npc(Transform root, string name, Vector3 at, Color color)
+        private static void Npc(Transform root, string name, CityNpc.Role role, Vector3 at, Color color)
         {
             var body = Box(root, $"NPC_{name}", at + new Vector3(0f, 0.9f, 0f), new Vector3(0.6f, 1.8f, 0.5f), color);
             Box(body.transform, "Head", new Vector3(0f, 0.62f, 0f), new Vector3(0.6f, 0.3f, 0.7f), new Color(0.85f, 0.75f, 0.65f));
+            body.AddComponent<CityNpc>().Configure(name, role);
         }
 
         // --- primitives -------------------------------------------------------------------------
