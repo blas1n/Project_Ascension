@@ -34,8 +34,19 @@ namespace ProjectAscension.Game
         /// <summary>The deep arena — where the thing that kills you is waiting (staged in the next pass).</summary>
         public static readonly Vector3 DeepArena = new Vector3(0f, 0f, 78f);
 
+        /// <summary>The green return pad — stage 11's "첫 귀환". Single source of truth for where it
+        /// actually sits, so ProjectAscensionSetup (which places the physical pad) and
+        /// TutorialGuideStations (which points a marker at it) can never drift apart.</summary>
+        public static readonly Vector3 ReturnPad = new Vector3(0f, 0.1f, -5f);
+
+        /// <summary>Whether a Frontier scene is currently built and alive — same rationale as
+        /// CityBlockout.IsBuilt.</summary>
+        public static bool IsBuilt { get; private set; }
+
         private void Awake()
         {
+            IsBuilt = true;
+
             var root = new GameObject("FrontierBlockout_Generated").transform;
             root.SetParent(transform, false);
 
@@ -43,6 +54,8 @@ namespace ProjectAscension.Game
             Threshold(root);
             Deep(root);
         }
+
+        private void OnDestroy() => IsBuilt = false;
 
         private static void Outskirts(Transform root)
         {

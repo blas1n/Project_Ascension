@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using ProjectAscension.Combat;
@@ -26,6 +27,12 @@ namespace ProjectAscension.Game
         public static TutorialRunner Instance { get; private set; }
 
         public TutorialProgress Progress { get; private set; } = TutorialProgress.Start;
+
+        /// <summary>Raised when the director's step actually advances (never fires for a repeated or
+        /// out-of-order signal — TutorialDirector.Observe already guarantees Step only moves forward).
+        /// TutorialGuide is the reason this exists: it needs to know the moment a NEW step begins so
+        /// it can walk up and say the new line, without polling Progress every frame itself.</summary>
+        public event Action<TutorialStep> StepChanged;
 
         private ContractService _contracts;
         private Transform _player;
@@ -60,7 +67,12 @@ namespace ProjectAscension.Game
 
         /// <summary>Report a fact to the director. Public so systems that land later (the map item,
         /// character creation) can report their beat without this class knowing about them.</summary>
-        public void Signal(TutorialSignal signal) => Progress = TutorialDirector.Observe(Progress, signal);
+        public void Signal(TutorialSignal signal)
+        {
+            var before = Progress.Step;
+            Progress = TutorialDirector.Observe(Progress, signal);
+            if (Progress.Step != before) StepChanged?.Invoke(Progress.Step);
+        }
 
         private void OnJumped() => Signal(TutorialSignal.Jumped);
         private void OnEvaded() => Signal(TutorialSignal.Evaded);
