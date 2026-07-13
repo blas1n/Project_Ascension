@@ -20,6 +20,9 @@ public class DiscoveryTuningSettingsConfiguration : IEntityTypeConfiguration<Dis
             KnowledgeDepthWeight = 12,
             PersistenceWeight = 5,
             CombinationSynergy = 15,
+            // A fusion is worth more than a dozen shots (ADR 0008). You do not stumble into
+            // wreathing your gunshot in fire — and spamming one hand must never get you there.
+            SynthesisWeight = 25,
             FireThreshold = 100,
             BudgetBase = 8,
             BudgetPerScore = 0.18,

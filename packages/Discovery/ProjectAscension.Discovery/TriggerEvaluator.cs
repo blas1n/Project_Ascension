@@ -35,6 +35,10 @@ public sealed record TriggerOutcome(bool Fires, Rarity Rarity, int Score);
 /// </summary>
 public static class TriggerEvaluator
 {
+    /// <summary>Behaviour keys that are a FUSION of two hands rather than a count of one (ADR 0008).
+    /// Mirrors GameSimulation's SynthesisDeriver.Prefix — the client observes it, the engine scores it.</summary>
+    public const string SynthesisPrefix = "Synthesis:";
+
     public static TriggerOutcome Evaluate(BehaviorSignature signature, DiscoveryTuning tuning)
     {
         int behaviorScore = 0;
@@ -42,7 +46,11 @@ public static class TriggerEvaluator
         foreach (var (behavior, count) in signature.Behaviors)
         {
             if (count <= 0) continue;
-            int weight = tuning.BehaviorWeights.TryGetValue(behavior, out var w) ? w : tuning.DefaultBehaviorWeight;
+            // A fusion (ADR 0008) is scored as one — by prefix, so a new weapon or element opens new
+            // combinations without seeding a single row. Everything else is a plain weighted count.
+            int weight = behavior.StartsWith(SynthesisPrefix, StringComparison.Ordinal)
+                ? tuning.SynthesisWeight
+                : tuning.BehaviorWeights.TryGetValue(behavior, out var w) ? w : tuning.DefaultBehaviorWeight;
             behaviorScore += count * weight;
             distinct++;
         }

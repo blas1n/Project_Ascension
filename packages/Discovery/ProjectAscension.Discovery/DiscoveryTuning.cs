@@ -14,6 +14,9 @@ public sealed record DiscoveryTuning(
     int KnowledgeDepthWeight,
     int PersistenceWeight,
     int CombinationSynergy,
+    // A FUSION of two hands (ADR 0008) — deliberately far above a raw attack count (2). You do not
+    // stumble into fusing your catalyst with your gunshot; spamming one hand must never reach here.
+    int SynthesisWeight,
     int FireThreshold,
     int BudgetBase,
     double BudgetPerScore,
@@ -62,6 +65,7 @@ public sealed record DiscoveryTuning(
         KnowledgeDepthWeight: 12,
         PersistenceWeight: 5,
         CombinationSynergy: 15,
+        SynthesisWeight: 25,
         FireThreshold: 100,
         BudgetBase: 8,
         BudgetPerScore: 0.18,

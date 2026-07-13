@@ -21,6 +21,22 @@ public static class EffectGraphPrompt
             ? "no clear pattern"
             : string.Join(", ", profile.OrderByDescending(b => b.Count).Select(b => $"{b.Behavior}:{b.Count}"));
 
+        // A FUSION the player actually performed (ADR 0008) — two hands used as one act. This is the
+        // ONLY evidence that a skill should be a synthesis. Carrying a catalyst is not fusing with it.
+        var fusions = profile?.Where(b => b.Behavior.StartsWith(TriggerEvaluator.SynthesisPrefix, StringComparison.Ordinal))
+                              .OrderByDescending(b => b.Count).ToList();
+        string fusionSteer = fusions is null || fusions.Count == 0
+            ? "NO FUSION was performed. The player never used their two hands as one act. Do NOT invent a hybrid/imbued skill (no \"flaming bullet\", no \"frost blade\") merely because they were CARRYING two things — equipment tags say what they held, never what they combined. Compose from what they actually DID."
+            : "FUSION PERFORMED — this is the heart of the skill. " +
+              string.Join("; ", fusions.Select(f =>
+              {
+                  var pair = f.Behavior.Substring(TriggerEvaluator.SynthesisPrefix.Length).Split('>');
+                  string primer = pair.Length > 0 ? pair[0] : "?";
+                  string delivery = pair.Length > 1 ? pair[1] : "?";
+                  return $"the player wove {primer} INTO {delivery} ({f.Count}x) — the skill IS that fusion: {delivery} is the vehicle and {primer} is what it now carries";
+              })) +
+              ". The ORDER matters: X>Y means X was primed and Y delivered it. Compose the graph so the delivery carries the primer's nature (e.g. arcane>firearm = a shot that carries the arcane; firearm>arcane = the arcane detonating what the shot left behind).";
+
         string themeLower = (theme ?? string.Empty).ToLowerInvariant();
         bool defensiveTheme = themeLower.Contains("ward") || themeLower.Contains("shield") || themeLower.Contains("guard")
                               || themeLower.Contains("barrier") || themeLower.Contains("protect") || themeLower.Contains("aegis");
@@ -51,6 +67,7 @@ $@"Compose a unique combat skill for a discovery as a deterministic EFFECT GRAPH
 
 Theme: {theme}
 How the player fought: {play}
+{fusionSteer}
 {steer}
 Power budget: {budget.Total} (Emit/Damage/Dot cost (tier+1)*3, Impulse (tier+1)*4, Control (tier+1)*5, Ward (tier+1)*4, Spread (tier+1)*2, Homing 2; stay within budget).
 

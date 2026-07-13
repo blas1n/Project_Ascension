@@ -20,6 +20,10 @@ namespace ProjectAscension.Combat
         public static event Action<bool> Attacked; // isMelee
         public static event Action ChargedAttacked; // a high-charge shot was loosed
         public static event Action AirAttacked;     // a blow struck while airborne (공중 공격)
+        /// <summary>A weapon of this context ("arcane", "firearm", "melee", "bow") was just used.
+        /// Carries WHAT was used, not merely that something was — so a fusion of the two hands can be
+        /// observed instead of inferred from the loadout (ADR 0008).</summary>
+        public static event Action<string> WeaponUsed;
 
         // Raw attack-button inputs (left/right click) — feed the command combo
         // recognizer, which needs the button press, not the weapon-fire execution.
@@ -49,6 +53,7 @@ namespace ProjectAscension.Combat
         public static void RaiseAttacked(bool isMelee) => Attacked?.Invoke(isMelee);
         public static void RaiseChargedAttacked() => ChargedAttacked?.Invoke();
         public static void RaiseAirAttacked() => AirAttacked?.Invoke();
+        public static void RaiseWeaponUsed(string contextTag) => WeaponUsed?.Invoke(contextTag);
 
         public static void RaiseLeftClicked() => LeftClicked?.Invoke();
         public static void RaiseRightClicked() => RightClicked?.Invoke();
