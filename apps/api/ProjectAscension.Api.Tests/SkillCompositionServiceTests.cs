@@ -239,6 +239,45 @@ public class SkillCompositionServiceTests
         Assert.Equal(id, owned.DiscoveryId);
     }
 
+    [Fact]
+    public async Task GetByDiscoveryAsync_ReflectsLicensedFlag()
+    {
+        // The client restores/polls through this endpoint (GameSession, SkillCaster) — it must
+        // carry the server-authoritative Licensed truth so the knowledge market never offers to
+        // re-sell what would only 409 (the playtest bug this fixes).
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        var knowledge = new FakeKnowledgeRepo();
+        using var metrics = new CompositionMetrics();
+        var discoveryId = Guid.NewGuid();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = discoveryId,
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Bolt",
+            EffectGraphJson = "{\"trigger\":\"OnCast\",\"effect\":{\"kind\":\"Emit\",\"delivery\":\"Burst\",\"tier\":1}}",
+            CreatedAt = DateTime.UtcNow,
+        });
+        var service = Service(discoveries, skills, knowledge, metrics);
+
+        var beforeLicense = await service.GetByDiscoveryAsync(discoveryId);
+        Assert.False(beforeLicense!.Licensed);
+
+        knowledge.Items.Add(new Knowledge
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = discoveryId,
+            OwnerActorId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            Licensed = true,
+            LicensedAt = DateTime.UtcNow,
+        });
+
+        var afterLicense = await service.GetByDiscoveryAsync(discoveryId);
+        Assert.True(afterLicense!.Licensed);
+    }
+
     private static EvaluateTriggerRequest Eval(int jumpCount, Guid? actor = null)
         => new(actor ?? Guid.NewGuid(), Region, DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile",
             new[] { new BehaviorCount("Jump", jumpCount) }, Persistence: 0);

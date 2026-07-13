@@ -162,9 +162,11 @@ public class KnowledgeServiceTests
         Assert.True(k.Licensed);
         Assert.NotNull(k.LicensedAt);
 
-        // Selling it again is now impossible — the flag persisted, not a client-held set.
+        // Selling it again is now impossible — the flag persisted, not a client-held set. The error
+        // is CONFLICT, which KnowledgeController maps to HTTP 409 (ResultExtensions.ToActionResult).
         var replay = await svc.LicenseAsync(new LicenseKnowledgeRequest(actor, discovery));
         Assert.False(replay.IsSuccess);
+        Assert.Equal("CONFLICT", replay.Error.Code);
         Assert.Equal(expectedPrice, players.Profile!.Currency); // not paid twice
     }
 }

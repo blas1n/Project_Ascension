@@ -10,9 +10,9 @@ namespace ProjectAscension.Game
     /// The armoury rack — docs/03-gameplay/first-hour-experience.md's stage 3 "첫 장비 선택" and
     /// Phase 7's "storage / equipment management" (CLAUDE.md). This is where you pick the two
     /// weapons that go in your hands, bind discovered commands to their hotkeys, see what's in
-    /// storage, and (since it's the last stop before heading out) save and depart. None of that is
-    /// the contract board's or an NPC's business — it is a THING in the city you walk up to and use,
-    /// same as the board.
+    /// storage, and save your progress. None of that is the contract board's or an NPC's business —
+    /// it is a THING in the city you walk up to and use, same as the board. Departure itself is a
+    /// separate PLACE (the frontier gate, CityBlockout.Gate / DepartZone) — not a button here.
     /// </summary>
     public sealed class EquipmentStationPanel : CityStationPanel
     {
@@ -20,13 +20,33 @@ namespace ProjectAscension.Game
         {
             if (CityBlockout.EquipmentInteractable != null)
                 CityBlockout.EquipmentInteractable.Interacted += Toggle;
+
+            // The tutorial's "첫 장비 선택" beat fires on the ACT of choosing a hand's weapon
+            // (LoadoutChanged), never on merely opening this panel. LoadoutChanged is raised only
+            // by SetLeft/SetRight — the cyclers below — so a returning player's constructor-time
+            // default loadout (which never calls them) can't auto-complete the step.
+            var session = GameSession.Instance;
+            if (session != null)
+                session.PlayerState.LoadoutChanged += OnLoadoutChanged;
         }
 
         protected override void OnDestroy()
         {
             if (CityBlockout.EquipmentInteractable != null)
                 CityBlockout.EquipmentInteractable.Interacted -= Toggle;
+            var session = GameSession.Instance;
+            if (session != null)
+                session.PlayerState.LoadoutChanged -= OnLoadoutChanged;
             base.OnDestroy();
+        }
+
+        // Gated on both hands filled: a deliberate pick that leaves a hand empty is not yet "a
+        // pair chosen" (matches the old button's hasFullLoadout gate).
+        private void OnLoadoutChanged()
+        {
+            var ps = GameSession.Instance?.PlayerState;
+            if (ps != null && ps.SelectedLeft != null && ps.SelectedRight != null)
+                GameplayEvents.RaiseEquipmentChosen();
         }
 
         protected override void DrawPanel()
@@ -49,16 +69,6 @@ namespace ProjectAscension.Game
             // guide's "LMB/RMB" is unambiguous.
             DrawWeaponSelector("Left (RMB) ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
             DrawWeaponSelector("Right (LMB)", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
-
-            // The tutorial's "첫 장비 선택" beat fires on this explicit commit, never on merely
-            // opening the panel — browsing the < > cyclers alone must not advance the first hour.
-            // Gated on both hands filled so it also can't fire on a half-empty loadout; a returning
-            // player who already has both hands filled can just press it again to satisfy the step.
-            bool hasFullLoadout = ps.SelectedLeft != null && ps.SelectedRight != null;
-            GUI.enabled = hasFullLoadout;
-            if (GUILayout.Button("Confirm Loadout", GUILayout.Height(28)))
-                GameplayEvents.RaiseEquipmentChosen();
-            GUI.enabled = true;
 
             // Ability bar: bind discovered commands to the Q/E/Shift/C hotkeys. Always shown, so the
             // player can see the slots even before discovering any command.
@@ -88,16 +98,11 @@ namespace ProjectAscension.Game
             if (!anyStored)
                 GUILayout.Label("  (empty)");
 
+            // Departure is a place now (the frontier gate pad, CityBlockout), not a button in an open
+            // panel — that used to unload the scene while this panel still held the UiFocus gate.
             GUILayout.Space(12);
-            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save", GUILayout.Height(34), GUILayout.Width(80)))
                 session.Save();
-            if (GUILayout.Button("Depart to Frontier", GUILayout.Height(34)))
-            {
-                session.Save(); // persist progress before leaving
-                GameScenes.LoadFrontier();
-            }
-            GUILayout.EndHorizontal();
 
             GUILayout.EndArea();
         }

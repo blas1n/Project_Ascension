@@ -17,5 +17,8 @@ namespace ProjectAscension.Contracts.Responses
         IReadOnlyList<string> ContextTags,
         IReadOnlyList<string> Behaviors,
         string Delivery,
-        string? EffectGraph = null);
+        string? EffectGraph = null,
+        // Whether the owner has already sold this discovery's knowledge license (ADR 0014) —
+        // server-authoritative truth so the client never offers to sell what can only 409.
+        bool Licensed = false);
 }

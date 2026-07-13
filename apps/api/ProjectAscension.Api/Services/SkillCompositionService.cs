@@ -432,9 +432,15 @@ public class SkillCompositionService : ISkillCompositionService
         var contextTags = DeserializeTags(skill.ContextTagsJson);
         var behaviors = DeserializeTags(skill.BehaviorsJson);
 
+        // The client polls/restores through this endpoint (GameSession restore, SkillCaster) — it's
+        // the natural home for the licensed truth, so the knowledge market never offers to re-sell
+        // what the server already sold (fixes the client-side 409, the flag stays server-owned).
+        var knowledge = await _knowledge.GetByDiscoveryIdAsync(discoveryId, ct);
+
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost,
-            skill.Manifestation, contextTags, behaviors, skill.Delivery, skill.EffectGraphJson);
+            skill.Manifestation, contextTags, behaviors, skill.Delivery, skill.EffectGraphJson,
+            knowledge?.Licensed ?? false);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)

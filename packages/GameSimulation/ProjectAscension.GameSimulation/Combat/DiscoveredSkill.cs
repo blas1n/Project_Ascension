@@ -35,7 +35,11 @@ namespace ProjectAscension.GameSimulation.Combat
         // The server's discovery record id (Guid.Empty for a legacy/offline skill with no
         // server backing) — the handle knowledge licensing (ADR 0014) sells BY, since selling
         // must be tied to the fact the server owns, not a name a modified client could invent.
-        System.Guid DiscoveryId = default)
+        System.Guid DiscoveryId = default,
+        // Whether the knowledge license has already been sold — server-authoritative (the
+        // discovery/skill response the client already fetches), never a client-held "sold" set.
+        // The knowledge market reads this to show "Licensed" instead of a button that can only 409.
+        bool Licensed = false)
     {
         /// <summary>The skill's effect graph, always present (ADR 0007 Phase 4c-4) — the composed
         /// graph, or a deterministic translation of the primitives for a legacy graphless skill.

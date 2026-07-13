@@ -43,6 +43,25 @@ namespace ProjectAscension.GameSimulation.Combat
             }
         }
 
+        /// <summary>Flip a discovered skill's Licensed flag to true after a successful sale — the
+        /// set IS the source of truth (a <see cref="DiscoveredSkill"/> is immutable, so this
+        /// replaces the entry in place), never a separate client-held "sold" cache (ADR 0014).
+        /// No-op if the discovery isn't in this set (e.g. Guid.Empty legacy skills).</summary>
+        public void MarkLicensed(System.Guid discoveryId)
+        {
+            if (discoveryId == System.Guid.Empty) return;
+            MarkLicensed(_weapons, discoveryId);
+            MarkLicensed(_commands, discoveryId);
+            MarkLicensed(_passives, discoveryId);
+        }
+
+        private static void MarkLicensed(List<DiscoveredSkill> list, System.Guid discoveryId)
+        {
+            for (int i = 0; i < list.Count; i++)
+                if (list[i].DiscoveryId == discoveryId)
+                    list[i] = list[i] with { Licensed = true };
+        }
+
         /// <summary>The combined always-on bonuses from every discovered passive — resolved from
         /// each skill's effect graph (ADR 0007; EffectiveGraph is always present).</summary>
         public PassiveEffect AggregatePassive(ICollection<string>? equipped = null)
