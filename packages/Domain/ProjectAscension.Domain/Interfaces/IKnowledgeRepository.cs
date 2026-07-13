@@ -11,5 +11,7 @@ namespace ProjectAscension.Domain.Interfaces
     {
         Task AddAsync(Knowledge knowledge, CancellationToken ct = default);
         Task<IReadOnlyList<Knowledge>> GetByOwnerAsync(Guid ownerActorId, CancellationToken ct = default);
+        Task<Knowledge?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default);
+        Task UpdateAsync(Knowledge knowledge, CancellationToken ct = default);
     }
 }

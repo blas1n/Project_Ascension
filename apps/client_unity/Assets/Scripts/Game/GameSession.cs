@@ -28,6 +28,10 @@ namespace ProjectAscension.Game
         /// make its own requests.</summary>
         public string ServerUrl => serverUrl;
 
+        /// <summary>This player's actor id — the identity contract accept/turn-in/delegate and
+        /// knowledge licensing act as (ADR 0014's server checks are keyed on this).</summary>
+        public string ActorId => actorId;
+
         public ContractService Contracts { get; private set; }
         public PlayerStateService PlayerState { get; private set; }
 
@@ -188,7 +192,11 @@ namespace ProjectAscension.Game
             return list.ToArray();
         }
 
-        private void ApplyPlayerState(PlayerStateDto dto)
+        /// <summary>Apply a server-authoritative player state to the session (ADR 0014) — the
+        /// single place every economy transaction response (save/load, contract turn-in/issue/
+        /// delegate, shop buy/sell, knowledge licensing) funnels through, so the client never
+        /// computes currency/reputation/resources itself.</summary>
+        public void ApplyPlayerState(PlayerStateDto dto)
         {
             if (dto == null) return;
             PlayerState.Currency = dto.currency;
@@ -236,13 +244,34 @@ namespace ProjectAscension.Game
             if (failed != null) ApplyFailure(failed, "expired");
         }
 
+        // Failure never mutates PlayerState locally — the client reports only the INTENT (which
+        // contract, why) and the server computes the reputation penalty from the contract's own
+        // stored reward via ContractRules.ReputationPenalty, same as every other economy
+        // transaction (ADR 0014). A local-only board entry (Id == Guid.Empty) or an offline
+        // session has no server contract to fail, matching turn-in/delegate's serverBacked rule.
         private void ApplyFailure(ContractInstance contract, string reason)
         {
-            // The clamped-subtraction formula is ContractRules' call (ADR: Unity is a shell) — it
-            // already owns every other contract rule, this one belongs beside them, not inline here.
-            int penalty = ContractRules.ReputationPenalty(PlayerState.Reputation, contract.RewardReputation);
-            PlayerState.Reputation -= penalty;
-            Contracts.FailedRecently.Add($"{contract.Title} ({reason}, -{penalty} rep)");
+            bool serverBacked = !string.IsNullOrWhiteSpace(serverUrl) && contract.Id != System.Guid.Empty;
+            if (serverBacked) StartCoroutine(DoFail(contract, reason));
+            else Contracts.FailedRecently.Add($"{contract.Title} ({reason}) — offline, no penalty");
+        }
+
+        private IEnumerator DoFail(ContractInstance contract, string reason)
+        {
+            _api ??= new CatalogApiClient(serverUrl);
+            int before = PlayerState.Reputation;
+            PlayerStateDto response = null;
+            yield return _api.FailContract(contract.Id.ToString(), actorId, reason, r => response = r, _ => { });
+            if (response != null)
+            {
+                ApplyPlayerState(response);
+                int penalty = before - PlayerState.Reputation;
+                Contracts.FailedRecently.Add($"{contract.Title} ({reason}, -{penalty} rep)");
+            }
+            else
+            {
+                Contracts.FailedRecently.Add($"{contract.Title} ({reason})");
+            }
         }
 
         // Pull the DB-driven balance once at startup. Any failure leaves the defaults in
@@ -297,7 +326,7 @@ namespace ProjectAscension.Game
                         d.purpose, d.title, d.description, d.targetCount, d.rewardCurrency, d.target,
                         d.issuer, d.delegationAllowed, d.rewardReputation, d.minReputation,
                         d.timeLimitSeconds, d.failOnTimeout, d.failOnDeath,
-                        d.rewardItemKey, d.rewardItemAmount));
+                        d.rewardItemKey, d.rewardItemAmount, d.id));
                 Contracts.SetAvailable(board);
             });
         }

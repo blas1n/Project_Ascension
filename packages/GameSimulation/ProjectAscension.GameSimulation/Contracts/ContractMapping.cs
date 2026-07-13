@@ -15,10 +15,15 @@ namespace ProjectAscension.GameSimulation.Contracts
             int rewardCurrency, string? target, string? issuer, bool delegationAllowed,
             int rewardReputation, int minReputation, int timeLimitSeconds,
             bool failOnTimeout, bool failOnDeath,
-            string? rewardItemKey = null, int rewardItemAmount = 0)
+            string? rewardItemKey = null, int rewardItemAmount = 0,
+            // The server's contract row id — needed to accept/turn-in/delegate THIS contract
+            // server-side later (ADR 0014). Unparseable/absent → Guid.Empty (no server backing).
+            string? id = null)
         {
+            System.Guid.TryParse(id, out var contractId);
             return new ContractInstance
             {
+                Id = contractId,
                 RewardItemKey = rewardItemKey ?? "",
                 RewardItemAmount = rewardItemAmount < 0 ? 0 : rewardItemAmount,
                 Purpose = System.Enum.TryParse<ContractPurpose>(purpose, out var p) ? p : ContractPurpose.Hunt,

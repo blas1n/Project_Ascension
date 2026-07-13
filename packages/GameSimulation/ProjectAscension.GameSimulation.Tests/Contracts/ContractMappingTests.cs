@@ -75,6 +75,40 @@ namespace ProjectAscension.GameSimulation.Tests.Contracts
         }
 
         [Fact]
+        public void Id_ParsesTheServerGuid()
+        {
+            var guid = System.Guid.NewGuid();
+            var c = ContractMapping.FromFields("Hunt", "t", "d", 1, 10, "elite", "office",
+                false, 0, 0, 0, false, false, id: guid.ToString());
+            Assert.Equal(guid, c.Id);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("not-a-guid")]
+        public void Id_AbsentOrUnparseable_IsEmpty(string? raw)
+        {
+            // A local-only board entry (offline defaults) has no server backing — Guid.Empty
+            // marks it as such, so turn-in/delegate know there's nothing to call (ADR 0014).
+            var c = ContractMapping.FromFields("Hunt", "t", "d", 1, 10, "elite", "office",
+                false, 0, 0, 0, false, false, id: raw);
+            Assert.Equal(System.Guid.Empty, c.Id);
+        }
+
+        [Fact]
+        public void Fresh_PreservesTheServerId()
+        {
+            // Accept() clones via Fresh() — losing the id here would silently strand every
+            // accepted contract with no way to turn it in server-side (ADR 0014).
+            var guid = System.Guid.NewGuid();
+            var template = ContractMapping.FromFields("Hunt", "t", "d", 1, 10, "elite", "office",
+                false, 0, 0, 0, false, false, id: guid.ToString());
+
+            Assert.Equal(guid, template.Fresh().Id);
+        }
+
+        [Fact]
         public void CarriesTheFullTerms()
         {
             var c = Map(rewardReputation: 5, minReputation: 10, timeLimitSeconds: 120,

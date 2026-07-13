@@ -9,6 +9,11 @@ namespace ProjectAscension.GameSimulation.Contracts
     /// </summary>
     public sealed class ContractInstance
     {
+        /// <summary>The server's contract row id (System.Guid.Empty for a local-only default —
+        /// an offline board entry with no server backing, which therefore cannot be turned in
+        /// server-side; ADR 0014 — the server, not the client, decides completion + payout).</summary>
+        public System.Guid Id;
+
         public ContractPurpose Purpose;
         public string Title = "";
         public string Description = "";
@@ -41,6 +46,7 @@ namespace ProjectAscension.GameSimulation.Contracts
 
         public ContractInstance Fresh() => new()
         {
+            Id = Id,
             Purpose = Purpose,
             Title = Title,
             Description = Description,

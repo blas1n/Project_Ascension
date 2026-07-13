@@ -16,6 +16,12 @@ namespace ProjectAscension.Domain.Entities
         public Guid OwnerActorId { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        /// <summary>Whether the owner has sold a license for this knowledge (server-
+        /// authoritative — a license can be sold exactly ONCE per discovery; the discoverer
+        /// keeps the discovery itself, ADR 0002/0014). Set the instant the sale is paid out.</summary>
+        public bool Licensed { get; set; }
+        public DateTime? LicensedAt { get; set; }
+
         public Discovery? Discovery { get; set; }
         public Actor? Owner { get; set; }
     }

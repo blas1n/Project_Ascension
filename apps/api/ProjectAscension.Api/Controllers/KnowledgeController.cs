@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using ProjectAscension.Api.Extensions;
 using ProjectAscension.Api.Services;
+using ProjectAscension.Contracts.Requests;
 
 namespace ProjectAscension.Api.Controllers;
 
@@ -18,4 +20,11 @@ public class KnowledgeController : ControllerBase
         var result = await _service.GetByOwnerAsync(ownerActorId, ct);
         return Ok(result.Value);
     }
+
+    /// <summary>Sell a license for an owned discovery's knowledge — once per discovery
+    /// (server-enforced). Price/reputation are derived from the skill's own composed effect
+    /// graph and DB-driven tuning, never the request body.</summary>
+    [HttpPost("license")]
+    public async Task<IActionResult> License([FromBody] LicenseKnowledgeRequest request, CancellationToken ct)
+        => (await _service.LicenseAsync(request, ct)).ToActionResult(this);
 }

@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<ItemDefinition> ItemDefinitions => Set<ItemDefinition>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<PlayerProfile> PlayerProfiles => Set<PlayerProfile>();
+    public DbSet<EconomyTuning> EconomyTuning => Set<EconomyTuning>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

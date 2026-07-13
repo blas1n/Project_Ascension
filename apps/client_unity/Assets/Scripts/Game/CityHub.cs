@@ -18,8 +18,6 @@ namespace ProjectAscension.Game
     {
         private const string IssuerActorId = "11111111-1111-1111-1111-111111111111";
         private const float DelegationSeconds = 20f; // stub contractor finishes a delegated contract in this time
-        private const int KnowledgeGoldPerPoint = 6;  // knowledge license price per power point
-        private const int KnowledgePointsPerRep = 5;  // power per standing point from a license sale
         private static readonly string[] TargetKeys = { "", "melee", "ranged", "elite" };
 
         // Scroll positions for the discovery journal and knowledge market (they grow long).
@@ -35,6 +33,10 @@ namespace ProjectAscension.Game
         private ContractQuoteDto _quote;
         private bool _busy;
         private CatalogApiClient _api;
+
+        // The last economy transaction's outcome (ADR 0014) — the server's OWN reason on a
+        // rejection, never a local guess. Shown near whichever panel triggered it.
+        private string _txMessage = "";
 
         // The board and the quartermaster open their own panels — both press-[F] actions, not
         // proximity. Both still free the cursor the same way the old "_busyHere" did.
@@ -172,7 +174,15 @@ namespace ProjectAscension.Game
                     GUILayout.EndHorizontal();
                 }
                 if (toAccept != null)
-                    contracts.Accept(toAccept);
+                {
+                    // A server-backed contract must be assigned server-side first (so a later
+                    // turn-in/delegate can be validated there, ADR 0014); a local-only board entry
+                    // (offline defaults, Id == Guid.Empty) has nothing to call.
+                    if (!string.IsNullOrWhiteSpace(session.ServerUrl) && toAccept.Id != System.Guid.Empty)
+                        StartCoroutine(DoAccept(session, toAccept));
+                    else
+                        contracts.Accept(toAccept);
+                }
             }
             else
             {
@@ -187,42 +197,36 @@ namespace ProjectAscension.Game
                     if (c.FailOnDeath) conds.Add("death");
                     GUILayout.Label($"Fails on: {string.Join(", ", conds)}");
                 }
+                bool serverBacked = !string.IsNullOrWhiteSpace(session.ServerUrl) && c.Id != System.Guid.Empty;
                 if (c.IsComplete)
                 {
                     string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";
                     string item = c.RewardItemAmount > 0 && !string.IsNullOrEmpty(c.RewardItemKey)
                         ? $", {c.RewardItemKey}" : "";
-                    if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g{rep}{item})", GUILayout.Height(28)))
+                    if (serverBacked)
                     {
-                        var r = contracts.TurnIn();
-                        ps.Currency += r.Currency;
-                        ps.Reputation += r.Reputation;
-
-                        // An item reward is a POSSESSION, not a payout — the survey hands over a map.
-                        if (r.ItemAmount > 0 && !string.IsNullOrEmpty(r.ItemKey))
-                        {
-                            ps.Inventory.Add(r.ItemKey, r.ItemAmount);
-                            if (TutorialRunner.Instance != null)
-                                TutorialRunner.Instance.Signal(GameSimulation.Tutorial.TutorialSignal.MapReceived);
-                        }
+                        GUI.enabled = !_busy;
+                        if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g{rep}{item})", GUILayout.Height(28)))
+                            StartCoroutine(DoTurnIn(session, c));
+                        GUI.enabled = true;
+                    }
+                    else
+                    {
+                        GUILayout.Label("Complete — offline, needs the server to claim the reward.");
                     }
                 }
                 else
                 {
                     // Delegation tutorial: a too-hard contract can be handed to a contractor
                     // instead of cleared alone. The hint appears after a death.
-                    if (c.DelegationAllowed)
+                    if (c.DelegationAllowed && serverBacked)
                     {
                         if (session.SuggestDelegation)
                             GUILayout.Label("You fell in battle. Too hard? Delegate it — a contractor will handle it.");
                         bool affordable = ps.Currency >= c.RewardCurrency;
-                        GUI.enabled = affordable;
+                        GUI.enabled = affordable && !_busy;
                         if (GUILayout.Button(affordable ? $"Delegate  (-{c.RewardCurrency}g)" : "Delegate  (not enough gold)", GUILayout.Height(28)))
-                        {
-                            ps.Currency = Mathf.Max(0, ps.Currency - c.RewardCurrency); // escrow the contractor's pay
-                            contracts.DelegateActive(DelegationSeconds);
-                            session.SuggestDelegation = false;
-                        }
+                            StartCoroutine(DoDelegate(session, c));
                         GUI.enabled = true;
                     }
                     if (GUILayout.Button("Abandon"))
@@ -237,6 +241,8 @@ namespace ProjectAscension.Game
                 GUILayout.Label($"✓ Contractor completed your delegated contract: {title}");
             foreach (var msg in contracts.FailedRecently)
                 GUILayout.Label($"✗ Contract failed: {msg}");
+            if (!string.IsNullOrEmpty(_txMessage))
+                GUILayout.Label(_txMessage);
 
             GUILayout.Space(12);
             GUILayout.BeginHorizontal();
@@ -280,26 +286,27 @@ namespace ProjectAscension.Game
 
             GUILayout.Space(8);
             GUILayout.Label("KNOWLEDGE MARKET (지식 거래)");
+            bool marketOnline = !string.IsNullOrWhiteSpace(session.ServerUrl);
             bool anySellable = false;
             _marketScroll = GUILayout.BeginScrollView(_marketScroll, GUILayout.Height(120));
             foreach (var discovered in session.DiscoveredSkills.All)
             {
                 if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
+                if (discovered.DiscoveryId == System.Guid.Empty) continue; // no server-backed discovery to license
                 anySellable = true;
-                // Value from the effect graph (ADR 0007; EffectiveGraph is always present).
-                int price = KnowledgeValuation.LicensePrice(discovered.EffectiveGraph, KnowledgeGoldPerPoint);
-                int rep = KnowledgeValuation.LicenseReputation(discovered.EffectiveGraph, KnowledgePointsPerRep);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
-                if (GUILayout.Button($"Sell +{price}g +{rep}rep", GUILayout.Width(150)))
-                {
-                    ps.Currency += price;
-                    ps.Reputation += rep;
-                    ps.SoldKnowledge.Add(discovered.Name);
-                }
+                // Price/reputation are server-computed (DB-driven tuning, ADR 0014) — the client
+                // shows no pre-sale estimate so it can never drift from the authoritative one.
+                GUI.enabled = marketOnline && !_busy;
+                if (GUILayout.Button("License knowledge", GUILayout.Width(150)))
+                    StartCoroutine(DoLicense(session, discovered));
+                GUI.enabled = true;
                 GUILayout.EndHorizontal();
             }
-            if (!anySellable)
+            if (!marketOnline)
+                GUILayout.Label("Offline — needs the server to license knowledge.");
+            else if (!anySellable)
                 GUILayout.Label("No unsold knowledge — discover skills to license.");
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -375,24 +382,22 @@ namespace ProjectAscension.Game
             foreach (var item in session.ShopItems)
             {
                 ps.Resources.TryGetValue(item.key, out var have);
+                string key = item.key; // captured per-iteration for the coroutine closures below
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{item.displayName} (x{have})", GUILayout.Width(150));
-                GUI.enabled = item.sellPrice > 0 && have > 0;
+                GUI.enabled = item.sellPrice > 0 && have > 0 && !_busy;
                 if (GUILayout.Button($"Sell +{item.sellPrice}g", GUILayout.Width(95)))
-                {
-                    if (ps.SpendResource(item.key, 1)) ps.Currency += item.sellPrice;
-                }
-                GUI.enabled = item.buyPrice > 0 && ps.Currency >= item.buyPrice;
+                    StartCoroutine(DoSell(session, key));
+                GUI.enabled = item.buyPrice > 0 && ps.Currency >= item.buyPrice && !_busy;
                 if (GUILayout.Button($"Buy -{item.buyPrice}g", GUILayout.Width(95)))
-                {
-                    ps.Currency -= item.buyPrice;
-                    ps.AddResource(item.key, 1);
-                }
+                    StartCoroutine(DoBuy(session, key));
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
                 if (!string.IsNullOrEmpty(item.description))
                     GUILayout.Label($"   {item.description}");
             }
+            if (!string.IsNullOrEmpty(_txMessage))
+                GUILayout.Label(_txMessage);
             GUILayout.EndArea();
         }
 
@@ -540,19 +545,149 @@ namespace ProjectAscension.Game
                 desiredReward = _iReward,
                 durationHours = 24,
             };
-            yield return _api.IssueContract(request, dto =>
+            yield return _api.IssueContract(request, response =>
             {
-                if (dto == null) return;
+                if (response?.contract == null) return;
+                var dto = response.contract;
                 // Same mapping as the board (ContractMapping) — carries the full terms, not just a
                 // subset, so a player-issued contract keeps its reputation/deadline/fail conditions.
                 session.Contracts.AddIssued(ContractMapping.FromFields(
                     dto.purpose, dto.title, dto.description, dto.targetCount, dto.rewardCurrency, dto.target,
                     dto.issuer, dto.delegationAllowed, dto.rewardReputation, dto.minReputation,
                     dto.timeLimitSeconds, dto.failOnTimeout, dto.failOnDeath,
-                    dto.rewardItemKey, dto.rewardItemAmount));
-                ps.Currency = Mathf.Max(0, ps.Currency - dto.rewardCurrency); // escrow the reward
+                    dto.rewardItemKey, dto.rewardItemAmount, dto.id));
+                // The escrow was already taken server-side — apply the RETURNED state, don't guess it.
+                if (response.playerState != null) session.ApplyPlayerState(response.playerState);
                 _quote = null;
-            });
+                _txMessage = "";
+            },
+            error => _txMessage = "Issue failed: " + CatalogApiClient.ParseErrorMessage(error));
+            _busy = false;
+        }
+
+        // --- Server-authoritative economy transactions (ADR 0014) --------------
+
+        private IEnumerator DoAccept(GameSession session, ContractInstance template)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            bool ok = false;
+            yield return _api.AcceptContract(template.Id.ToString(), session.ActorId,
+                dto => ok = dto != null,
+                error => _txMessage = "Accept failed: " + CatalogApiClient.ParseErrorMessage(error));
+            if (ok)
+            {
+                session.Contracts.Accept(template);
+                _txMessage = "";
+            }
+            _busy = false;
+        }
+
+        private IEnumerator DoTurnIn(GameSession session, ContractInstance c)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            string id = c.Id.ToString();
+
+            // Report the tracked progress first — kill/objective credit is still client-reported
+            // (no server combat simulation yet); TurnInContract checks THIS stored count, so the
+            // payout itself stays server-computed regardless.
+            yield return _api.UpdateContractProgress(id, session.ActorId, c.Progress, _ => { });
+
+            ContractTurnInResponseDto response = null;
+            string failure = null;
+            yield return _api.TurnInContract(id, session.ActorId,
+                r => response = r,
+                error => failure = CatalogApiClient.ParseErrorMessage(error));
+
+            if (response != null)
+            {
+                session.ApplyPlayerState(response.playerState);
+                // An item reward is a POSSESSION, not a payout — the survey hands over a map. The
+                // key/amount come from the server's OWN contract record, never invented locally.
+                var reward = response.contract;
+                if (reward != null && reward.rewardItemAmount > 0 && !string.IsNullOrEmpty(reward.rewardItemKey))
+                {
+                    session.PlayerState.Inventory.Add(reward.rewardItemKey, reward.rewardItemAmount);
+                    if (TutorialRunner.Instance != null)
+                        TutorialRunner.Instance.Signal(GameSimulation.Tutorial.TutorialSignal.MapReceived);
+                }
+                session.Contracts.ClearActiveAfterServerTurnIn();
+                _txMessage = "";
+            }
+            else
+            {
+                _txMessage = "Turn-in failed: " + (failure ?? "unknown error");
+            }
+            _busy = false;
+        }
+
+        private IEnumerator DoDelegate(GameSession session, ContractInstance c)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            PlayerStateDto response = null;
+            yield return _api.DelegateContract(c.Id.ToString(), session.ActorId,
+                r => response = r,
+                error => _txMessage = "Delegate failed: " + CatalogApiClient.ParseErrorMessage(error));
+            if (response != null)
+            {
+                session.ApplyPlayerState(response);
+                session.Contracts.DelegateActive(DelegationSeconds);
+                session.SuggestDelegation = false;
+                _txMessage = "";
+            }
+            _busy = false;
+        }
+
+        private IEnumerator DoLicense(GameSession session, DiscoveredSkill discovered)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            int beforeCurrency = session.PlayerState.Currency;
+            int beforeReputation = session.PlayerState.Reputation;
+            PlayerStateDto response = null;
+            yield return _api.LicenseKnowledge(session.ActorId, discovered.DiscoveryId.ToString(),
+                r => response = r,
+                error => _txMessage = "License failed: " + CatalogApiClient.ParseErrorMessage(error));
+            if (response != null)
+            {
+                session.ApplyPlayerState(response);
+                session.PlayerState.SoldKnowledge.Add(discovered.Name); // UI cache only — the server flag is authoritative
+                _txMessage = $"Licensed '{discovered.Name}' for +{response.currency - beforeCurrency}g +{response.reputation - beforeReputation}rep";
+            }
+            _busy = false;
+        }
+
+        private IEnumerator DoBuy(GameSession session, string itemKey)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            PlayerStateDto response = null;
+            yield return _api.BuyItem(itemKey, 1,
+                r => response = r,
+                error => _txMessage = "Buy failed: " + CatalogApiClient.ParseErrorMessage(error));
+            if (response != null)
+            {
+                session.ApplyPlayerState(response);
+                _txMessage = "";
+            }
+            _busy = false;
+        }
+
+        private IEnumerator DoSell(GameSession session, string itemKey)
+        {
+            _busy = true;
+            _api ??= new CatalogApiClient(session.ServerUrl);
+            PlayerStateDto response = null;
+            yield return _api.SellItem(itemKey, 1,
+                r => response = r,
+                error => _txMessage = "Sell failed: " + CatalogApiClient.ParseErrorMessage(error));
+            if (response != null)
+            {
+                session.ApplyPlayerState(response);
+                _txMessage = "";
+            }
             _busy = false;
         }
 

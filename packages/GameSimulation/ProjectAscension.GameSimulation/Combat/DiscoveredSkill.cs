@@ -31,7 +31,11 @@ namespace ProjectAscension.GameSimulation.Combat
         string? Description = null,
         // The AI-composed effect graph (ADR 0007) the runtime interprets. Null only for a legacy
         // graphless DTO before translation; prefer EffectiveGraph, which is never null.
-        EffectNode? Graph = null)
+        EffectNode? Graph = null,
+        // The server's discovery record id (Guid.Empty for a legacy/offline skill with no
+        // server backing) — the handle knowledge licensing (ADR 0014) sells BY, since selling
+        // must be tied to the fact the server owns, not a name a modified client could invent.
+        System.Guid DiscoveryId = default)
     {
         /// <summary>The skill's effect graph, always present (ADR 0007 Phase 4c-4) — the composed
         /// graph, or a deterministic translation of the primitives for a legacy graphless skill.
