@@ -13,11 +13,12 @@ namespace ProjectAscension.Combat
             go.transform.localScale = Vector3.one * radius;
             go.transform.position = ctx.Origin + ctx.Direction.normalized * 0.6f;
 
-            go.GetComponent<Collider>().isTrigger = true;
-
-            var rb = go.AddComponent<Rigidbody>();
-            rb.useGravity = false;
-            rb.isKinematic = true;
+            // No collider, no rigidbody: the bolt finds its own hits by sweeping the segment it flew
+            // (see Projectile). A trigger volume would only re-introduce the spawn-overlap and
+            // tunnelling bugs it used to have.
+            var collider = go.GetComponent<Collider>();
+            collider.enabled = false; // Destroy is deferred to end of frame; disable it NOW so it can't
+            Object.Destroy(collider);  // block another bolt's sweep for the rest of this frame
 
             var renderer = go.GetComponent<Renderer>();
             if (renderer != null)
@@ -28,7 +29,7 @@ namespace ProjectAscension.Combat
 
             var projectile = go.AddComponent<Projectile>();
             projectile.SetImpactColor(color);
-            projectile.Launch(ctx.Direction, speed, damage, ctx.Attacker, gravity: gravity);
+            projectile.Launch(ctx.Direction, speed, damage, ctx.Attacker, gravity: gravity, radius: radius * 0.5f);
         }
     }
 }
