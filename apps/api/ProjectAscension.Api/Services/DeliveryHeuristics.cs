@@ -28,7 +28,7 @@ public static class DeliveryHeuristics
     /// prompt guides the model with: attack decides beam/projectile, mobility the mobile
     /// variant. Charged+still → beam, charged+mobile → nova, rapid+still → projectile,
     /// rapid+mobile → arc, melee → burst.</summary>
-    private static readonly string[] Movement = { "Jump", "Dodge" };
+    private static readonly string[] Movement = { "Jump" };
 
     public static string ForBehavior(IReadOnlyList<BehaviorCount> behaviors)
     {

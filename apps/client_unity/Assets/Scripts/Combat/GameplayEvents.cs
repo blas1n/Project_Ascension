@@ -16,7 +16,6 @@ namespace ProjectAscension.Combat
     {
         // Player execution facts.
         public static event Action Jumped;
-        public static event Action Dodged;
         public static event Action<bool> Attacked; // isMelee
         /// <summary>Something the player DID, with what, when, and what was true of them at the time
         /// (ADR 0009). The discovery grammar composes every composite behaviour from this one stream —
@@ -51,9 +50,15 @@ namespace ProjectAscension.Combat
         public static event Action<GameObject> SampleCollected;
         public static event Action<GameObject> MarkerSurveyed;
 
+        /// <summary>A monster's telegraphed strike whiffed because the target left AttackRange during
+        /// the wind-up (ADR 0012 — evasion is movement: the tell is beaten by reading it and stepping
+        /// out of range, not by a dodge button). Raised by the monster shell (MonsterBase) off
+        /// MonsterAi's own Winding→Chase transition.</summary>
+        public static event Action AttackEvaded;
+
         public static void RaiseJumped() => Jumped?.Invoke();
-        public static void RaiseDodged() => Dodged?.Invoke();
         public static void RaiseAttacked(bool isMelee) => Attacked?.Invoke(isMelee);
+        public static void RaiseAttackEvaded() => AttackEvaded?.Invoke();
         public static void RaiseWeaponUsed(string contextTag) => WeaponUsed?.Invoke(contextTag);
         public static void RaiseActPerformed(GameSimulation.Discovery.Act act) => ActPerformed?.Invoke(act);
 

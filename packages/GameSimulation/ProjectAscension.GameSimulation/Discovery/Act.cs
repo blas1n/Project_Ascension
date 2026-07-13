@@ -13,18 +13,17 @@ namespace ProjectAscension.GameSimulation.Discovery
         Blocking = 1 << 2, // the shield was up
         Aiming = 1 << 3,   // reserved — the grammar will pick it up the day aiming exists
         Moving = 1 << 4,   // under way, not standing still
-        Dodging = 1 << 5,  // inside the dodge window
     }
 
     /// <summary>
     /// One thing the player did (ADR 0009): a verb, what they did it WITH, when, and what was true of
     /// them at the time. This is the ONLY input the discovery grammar needs — every composite
-    /// (fusions, dodge-attacks, air attacks, chained jumps) is derived from a stream of these, rather
+    /// (fusions, air attacks, chained jumps) is derived from a stream of these, rather
     /// than each getting its own bespoke observer.
     /// </summary>
     public readonly struct Act
     {
-        /// <summary>What was done: "jump", "dodge", "attack", "land"…</summary>
+        /// <summary>What was done: "jump", "attack", "land"…</summary>
         public readonly string Verb;
 
         /// <summary>What it was done WITH — for an attack, the weapon's context ("arcane", "firearm",

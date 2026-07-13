@@ -22,7 +22,7 @@ public class DeliveryHeuristicsTests
     public void RapidStanding_IsProjectile_RapidMobile_IsArc()
     {
         Assert.Equal("projectile", DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 60) }));
-        Assert.Equal("arc", DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 40), B("Dodge", 30), B("Jump", 15) }));
+        Assert.Equal("arc", DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 40), B("Jump", 45) }));
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class DeliveryHeuristicsTests
             DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 60) }),                 // beam
             DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 40), B("Jump", 40) }),  // nova
             DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 60) }),                  // projectile
-            DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 40), B("Dodge", 40) }),  // arc
+            DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 40), B("Jump", 40) }),   // arc
             DeliveryHeuristics.ForBehavior(new[] { B("MeleeAttack", 60) }),                   // burst
         };
         Assert.Equal(5, styles.Distinct().Count());

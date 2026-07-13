@@ -10,7 +10,7 @@ namespace ProjectAscension.GameSimulation.Tutorial
     public enum TutorialStep
     {
         CreateCharacter,        // 0 — name + appearance
-        Training,               // 2 — move, jump, dodge, attack
+        Training,               // 2 — move, jump, evade a telegraph, attack
         ChooseEquipment,        // 3 — pick two
         FirstDiscovery,         // 4 — arises from behaviour, never granted
         AcceptSurveyContract,   // 5 — "외곽 조사" from the board
@@ -36,7 +36,7 @@ namespace ProjectAscension.GameSimulation.Tutorial
         NameChosen = 1 << 0,
         Moved = 1 << 1,
         Jumped = 1 << 2,
-        Dodged = 1 << 3,
+        Evaded = 1 << 3, // read a monster's wind-up and stepped out of range, making it whiff (ADR 0012)
         Attacked = 1 << 4,
         EquipmentChosen = 1 << 5,
         DiscoveryMade = 1 << 6,
@@ -71,7 +71,7 @@ namespace ProjectAscension.GameSimulation.Tutorial
         {
             TutorialStep.CreateCharacter => TutorialSignal.NameChosen,
             TutorialStep.Training => TutorialSignal.Moved | TutorialSignal.Jumped
-                                   | TutorialSignal.Dodged | TutorialSignal.Attacked,
+                                   | TutorialSignal.Evaded | TutorialSignal.Attacked,
             TutorialStep.ChooseEquipment => TutorialSignal.EquipmentChosen,
             TutorialStep.FirstDiscovery => TutorialSignal.DiscoveryMade,
             TutorialStep.AcceptSurveyContract => TutorialSignal.SurveyContractAccepted,

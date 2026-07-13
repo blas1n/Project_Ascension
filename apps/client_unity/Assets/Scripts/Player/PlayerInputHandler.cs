@@ -15,13 +15,11 @@ namespace ProjectAscension.Player
         private readonly InputAction _move;
         private readonly InputAction _look;
         private readonly InputAction _jump;
-        private readonly InputAction _dodge;
         private readonly InputAction _attack;
         private readonly InputAction _attackLeft;
 
         public event Action<Vector2> MoveInput;
         public event Action JumpPressed;
-        public event Action DodgePressed;
 
         /// <summary>Primary attack (right-hand weapon) — pressed / released (for charge).</summary>
         public event Action AttackPressed;
@@ -40,14 +38,12 @@ namespace ProjectAscension.Player
             _move = _playerMap.FindAction("Move", throwIfNotFound: true);
             _look = _playerMap.FindAction("Look", throwIfNotFound: true);
             _jump = _playerMap.FindAction("Jump", throwIfNotFound: true);
-            _dodge = _playerMap.FindAction("Dodge", throwIfNotFound: true);
             _attack = _playerMap.FindAction("Attack", throwIfNotFound: true);
             _attackLeft = _playerMap.FindAction("AttackLeft", throwIfNotFound: true);
 
             _move.performed += OnMove;
             _move.canceled += OnMove;
             _jump.performed += OnJump;
-            _dodge.performed += OnDodge;
             _attack.performed += OnAttack;
             _attack.canceled += OnAttackUp;
             _attackLeft.performed += OnAttackLeft;
@@ -58,7 +54,6 @@ namespace ProjectAscension.Player
 
         private void OnMove(InputAction.CallbackContext ctx) => MoveInput?.Invoke(ctx.ReadValue<Vector2>());
         private void OnJump(InputAction.CallbackContext ctx) => JumpPressed?.Invoke();
-        private void OnDodge(InputAction.CallbackContext ctx) => DodgePressed?.Invoke();
         private void OnAttack(InputAction.CallbackContext ctx) => AttackPressed?.Invoke();
         private void OnAttackUp(InputAction.CallbackContext ctx) => AttackReleased?.Invoke();
         private void OnAttackLeft(InputAction.CallbackContext ctx) => AttackLeftPressed?.Invoke();
@@ -69,7 +64,6 @@ namespace ProjectAscension.Player
             _move.performed -= OnMove;
             _move.canceled -= OnMove;
             _jump.performed -= OnJump;
-            _dodge.performed -= OnDodge;
             _attack.performed -= OnAttack;
             _attack.canceled -= OnAttackUp;
             _attackLeft.performed -= OnAttackLeft;

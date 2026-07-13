@@ -22,7 +22,7 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             // The exact shape the graph-only server now returns: Ready, empty primitives, a graph.
             var skill = SkillRestore.FromResponse(
                 status: "Ready", name: "Crimson Cascade", manifestation: "Weapon",
-                primitives: Array.Empty<string>(), invocationCombo: Array.Empty<string>(),
+                primitives: Array.Empty<string>(),
                 contextTags: new[] { "arcane" }, description: "A burst of flame.", effectGraph: Graph);
 
             Assert.NotNull(skill);                                  // <-- the regression: this was null
@@ -36,7 +36,7 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         {
             // JsonUtility may hand null (not []) for an empty array — must still restore.
             var skill = SkillRestore.FromResponse("Ready", "Graphed", "Command",
-                primitives: null, invocationCombo: null, contextTags: null, description: null, effectGraph: Graph);
+                primitives: null, contextTags: null, description: null, effectGraph: Graph);
             Assert.NotNull(skill);
             Assert.Equal(ManifestationKind.Command, skill!.Manifestation);
         }
@@ -45,9 +45,9 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         public void NotReady_IsRejected()
         {
             Assert.Null(SkillRestore.FromResponse("Pending", "x", "Weapon",
-                Array.Empty<string>(), null, null, null, Graph));
+                Array.Empty<string>(), null, null, Graph));
             Assert.Null(SkillRestore.FromResponse(null, "x", "Weapon",
-                Array.Empty<string>(), null, null, null, Graph));
+                Array.Empty<string>(), null, null, Graph));
         }
 
         [Fact]
@@ -57,25 +57,13 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             // translated onto the graph path.
             var skill = SkillRestore.FromResponse("Ready", "Old Bolt", "Weapon",
                 primitives: new[] { "Projectile x3 r1", "DamageOverTime x1 d2" },
-                invocationCombo: null, contextTags: null, description: null, effectGraph: null);
+                contextTags: null, description: null, effectGraph: null);
             Assert.NotNull(skill);
             Assert.IsType<Trigger>(skill!.EffectiveGraph);
 
             var garbled = SkillRestore.FromResponse("Ready", "Bad", "Command",
-                new[] { "Beam x2" }, null, null, null, effectGraph: "{not json");
+                new[] { "Beam x2" }, null, null, effectGraph: "{not json");
             Assert.NotNull(garbled); // unparseable graph → translated, not dropped
-        }
-
-        [Fact]
-        public void CommandKeepsItsCombo_WeaponAndPassiveDoNot()
-        {
-            var command = SkillRestore.FromResponse("Ready", "Hex", "Command",
-                Array.Empty<string>(), new[] { "Jump", "LeftClick" }, null, null, Graph);
-            Assert.NotEmpty(command!.Combo);
-
-            var weapon = SkillRestore.FromResponse("Ready", "Blade", "Weapon",
-                Array.Empty<string>(), new[] { "Jump" }, null, null, Graph);
-            Assert.Empty(weapon!.Combo); // only commands carry an invocation combo
         }
     }
 }

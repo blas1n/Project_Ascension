@@ -45,7 +45,6 @@ namespace ProjectAscension.Player
             _camera.Initialize(transform, cameraPivot);
 
             _input.JumpPressed += _movement.QueueJump;
-            _input.DodgePressed += _movement.QueueDodge;
 
             _spawnPoint = transform.position;
             _hitReceiver = GetComponent<HitReceiver>();
@@ -55,8 +54,6 @@ namespace ProjectAscension.Player
                 // else the HitReceiver's authored value.
                 var stats = GameSimulation.Player.PlayerStatsCatalog.Current;
                 if (stats != null) _hitReceiver.SetMaxHealth(stats.MaxHealth);
-                // A dodge's i-frames negate incoming damage — the rule is the movement sim's.
-                _hitReceiver.Invulnerable = () => _movement.IsInvulnerable;
                 _hitReceiver.Died += OnDied;
             }
 
@@ -78,7 +75,6 @@ namespace ProjectAscension.Player
                 _hitReceiver.Died -= OnDied;
             if (_input == null) return;
             _input.JumpPressed -= _movement.QueueJump;
-            _input.DodgePressed -= _movement.QueueDodge;
         }
 
         private void Update()

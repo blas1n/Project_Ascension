@@ -8,7 +8,6 @@ namespace ProjectAscension.SkillForge;
 /// the category its effects weigh toward:
 /// <list type="bullet">
 /// <item>A movement trigger (OnJumpInAir/OnWallContact) → Passive (a movement capability).</item>
-/// <item>OnDodge → Command if it attacks/controls (a dodge tech), else Passive (a movement dodge).</item>
 /// <item>Continuous / OnHit → Passive (an always-on ward or an on-hit rider).</item>
 /// <item>OnCast (and default) → offensive-dominant becomes a Weapon only when magic-from-magic
 ///   (ADR 0005), else a Command; control-dominant → Command; mobility/defensive → Passive.</item>
@@ -50,10 +49,6 @@ public static class ManifestationFromGraph
             case TriggerKind.OnJumpInAir:
             case TriggerKind.OnWallContact:
                 return ManifestationKind.Passive; // a movement capability
-
-            case TriggerKind.OnDodge:
-                // A dodge that also attacks/controls is an invoked tech; a pure movement dodge is a passive.
-                return offensive > 0 || control > 0 ? ManifestationKind.Command : ManifestationKind.Passive;
 
             case TriggerKind.Continuous:
             case TriggerKind.OnHit:

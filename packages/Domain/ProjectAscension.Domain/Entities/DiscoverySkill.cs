@@ -28,8 +28,8 @@ namespace ProjectAscension.Domain.Entities
         public string ContextTagsJson { get; set; } = "[]";
         public string PrimaryBehavior { get; set; } = string.Empty; // PrimitiveKind name
 
-        /// <summary>The player behaviors that triggered this discovery (e.g. ["Dodge",
-        /// "MeleeAttack"]) — a Command is invoked by re-performing this combo. JSON array.</summary>
+        /// <summary>The player behaviors that triggered this discovery (e.g. ["Jump",
+        /// "MeleeAttack"]). JSON array.</summary>
         public string BehaviorsJson { get; set; } = "[]";
 
         /// <summary>How the player fought, as weighted counts (e.g. [{"Behavior":"RangedAttack",
@@ -55,14 +55,10 @@ namespace ProjectAscension.Domain.Entities
         public string? EffectGraphJson { get; set; }
 
         /// <summary>How the skill is wielded — "Weapon" (a synthesized-magic weapon) or
-        /// "Command" (an invoked technique). Classified deterministically at compose
-        /// time. Stored as a string so the Domain stays free of the SkillForge package.</summary>
+        /// "Command" (an invoked technique, cast from an ability hotkey slot). Classified
+        /// deterministically at compose time. Stored as a string so the Domain stays free
+        /// of the SkillForge package.</summary>
         public string? Manifestation { get; set; }
-
-        /// <summary>For a Command, the button-input combo that invokes it (e.g.
-        /// ["Jump","RightClick","LeftClick"]) — assigned deterministically by the rule
-        /// engine at compose time. Empty for weapons. JSON array.</summary>
-        public string InvocationComboJson { get; set; } = "[]";
 
         public int Attempts { get; set; }
         public DateTime CreatedAt { get; set; }

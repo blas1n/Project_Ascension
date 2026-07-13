@@ -64,7 +64,7 @@ public class DiscoveryEconomyTests
         var artistry = Score(0,
             ("RangedAttack", 10),
             ("Fuse:arcane>firearm", 8),
-            ("Seq:dodge>firearm", 5),
+            ("Seq:jump>firearm", 5),
             ("While:firearm@airborne", 4));
 
         Assert.True(artistry.Score > grind.Score);

@@ -36,18 +36,25 @@ namespace ProjectAscension.Game
         public DiscoveredSkillSet DiscoveredSkills { get; private set; }
 
         /// <summary>The player's ability bar — discovered Commands bound to the AbilitySlots
-        /// hotkeys (Q/E/R/F). Session-persistent (like the weapon loadout); defaults to the
-        /// first discovered commands until the player customises it in the city.</summary>
+        /// hotkeys. Session-persistent (like the weapon loadout); free keys auto-fill with
+        /// discovered commands until the player arranges them in the city.</summary>
         public DiscoveredSkill[] CommandSlots { get; } = new DiscoveredSkill[AbilitySlots.SlotCount];
 
-        private bool _slotDefaultsApplied;
+        /// <summary>Keys the player set themselves — never auto-filled again, even if emptied.</summary>
+        private readonly bool[] _playerSetSlots = new bool[AbilitySlots.SlotCount];
 
         /// <summary>Bind a discovered command (or null) to a hotkey slot.</summary>
         public void AssignCommandSlot(int index, DiscoveredSkill command)
         {
             if (index < 0 || index >= CommandSlots.Length) return;
+
+            if (command != null)
+                for (int i = 0; i < CommandSlots.Length; i++)
+                    if (i != index && ReferenceEquals(CommandSlots[i], command))
+                        CommandSlots[i] = null; // a command lives on exactly one key
+
             CommandSlots[index] = command;
-            _slotDefaultsApplied = true; // player took control — stop auto-defaulting
+            _playerSetSlots[index] = true; // the player owns this key now
         }
 
         /// <summary>The slot a command is bound to, or -1 if unassigned.</summary>
@@ -59,15 +66,14 @@ namespace ProjectAscension.Game
             return -1;
         }
 
-        /// <summary>Seed empty slots with the first discovered commands, once, when the player
-        /// hasn't customised the bar (retried until commands finish loading).</summary>
+        /// <summary>Give every discovered command a key, filling free slots in discovery order.
+        /// Idempotent and cheap, so a command discovered mid-expedition is on the bar the moment
+        /// it exists — not next session.</summary>
         public void EnsureDefaultCommandSlots()
         {
-            if (_slotDefaultsApplied) return;
             var commands = DiscoveredSkills?.Commands;
             if (commands == null || commands.Count == 0) return;
-            GameSimulation.Combat.CommandSlotDefaults.Seed(CommandSlots, commands);
-            _slotDefaultsApplied = true;
+            GameSimulation.Combat.CommandSlotDefaults.FillFreeSlots(CommandSlots, commands, _playerSetSlots);
         }
 
         // The combat balance the resolvers use is DB-driven, fetched once at startup into
@@ -264,7 +270,7 @@ namespace ProjectAscension.Game
                 if (d != null)
                     GameSimulation.Player.PlayerStatsCatalog.Set(new GameSimulation.Player.PlayerStats(
                         d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity,
-                        d.dodgeSpeed, d.dodgeDuration, d.maxFocus, d.focusRegenPerSecond));
+                        d.maxFocus, d.focusRegenPerSecond));
             });
             yield return api.GetShop(items =>
             {

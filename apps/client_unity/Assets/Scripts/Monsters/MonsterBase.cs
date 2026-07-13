@@ -33,7 +33,7 @@ namespace ProjectAscension.Monsters
         private Vector3 _knockback;
 
         // The attack tell (rendering only): the monster flashes hot and swells as it winds up, so the
-        // player can read + dodge the incoming strike. A code-driven placeholder until real anim/VFX.
+        // player can read it and step out of range. A code-driven placeholder until real anim/VFX.
         private static readonly Color TelegraphColor = new Color(1f, 0.92f, 0.6f); // hot flash, contrasts all bodies
         private Renderer[] _renderers;   // the body is a composite silhouette (MonsterBody), not one capsule
         private Color[] _baseColors;
@@ -97,10 +97,17 @@ namespace ProjectAscension.Monsters
             var settings = new MonsterAiSettings(_moveSpeed, _aggroRange, _attackRange, _attackCooldown, _attackWindup);
 
             // The decision is GameSimulation's (headless-tested); this shell only enacts the result.
+            var previousState = _state;
             var step = MonsterAi.Step(_state, settings, dist, _target != null, _status.IsStunned, Time.time, _nextAttackTime, _windupEndTime);
             _state = step.State;
             _nextAttackTime = step.NextAttackTime;
             _windupEndTime = step.WindupEndTime;
+
+            // Evasion is movement (ADR 0012): the telegraph whiffed because the target left AttackRange
+            // during the wind-up — MonsterAi's own Winding->Chase transition IS the "dodge", so this
+            // shell only reports the fact for feedback/tutorial, it makes no decision.
+            if (previousState == MonsterState.Winding && _state == MonsterState.Chase)
+                GameplayEvents.RaiseAttackEvaded();
 
             if (_state != MonsterState.Idle) FaceTarget();
             UpdateTelegraph(step.Telegraph, Time.time);
@@ -109,8 +116,8 @@ namespace ProjectAscension.Monsters
         }
 
         // The wind-up tell (rendering only): flash hot + swell as the strike nears, restore when the
-        // telegraph ends (the strike landed or the player dodged it). No gameplay effect — the AI owns
-        // the timing; this only makes it readable.
+        // telegraph ends (the strike landed or the player stepped out of range). No gameplay effect —
+        // the AI owns the timing; this only makes it readable.
         private void UpdateTelegraph(bool telegraphing, float time)
         {
             if (telegraphing)

@@ -54,7 +54,7 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         [Fact]
         public void ASkillMadeThroughTheWeapon_IsGoneWithoutIt()
         {
-            var behaviours = new[] { "Use:melee", "Seq:dodge>melee" };
+            var behaviours = new[] { "Use:melee", "Seq:jump>melee" };
 
             Assert.Equal(new[] { "melee" }, SkillBinding.RequiredEquipment(behaviours));
             Assert.False(SkillBinding.Usable(behaviours, GunOnly)); // a swordsman's technique means nothing to a gunman

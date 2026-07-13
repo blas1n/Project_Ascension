@@ -17,14 +17,11 @@ namespace ProjectAscension.GameSimulation.Combat
     /// <summary>A discovered, executable skill plus how the player wields it — a
     /// synthesized-magic <see cref="ManifestationKind.Weapon"/> (a new equippable
     /// weapon, equipped and fired) or an invoked <see cref="ManifestationKind.Command"/>
-    /// (a button-combo technique). No equipment use-gate (ADR 0005). <see cref="Combo"/> is
-    /// the command's assigned invocation combo (empty for weapons/passives) — the guide HUD
-    /// shows it so the player knows how to trigger the command.</summary>
+    /// (cast from an ability hotkey slot). No equipment use-gate (ADR 0005).</summary>
     public sealed record DiscoveredSkill(
         string Name, ManifestationKind Manifestation, Skill Skill,
-        IReadOnlyList<InputToken>? Combo = null,
-        // The discovery's context tags (equipment + situation at discovery). A command whose
-        // combo uses a weapon click is gated by its equipment tags — ADR 0005 (재개정).
+        // The discovery's context tags (equipment + situation at discovery). A command that
+        // needs a weapon click is gated by its equipment tags — ADR 0005 (재개정).
         IReadOnlyList<string>? ContextTags = null,
         // The behaviours that MADE this discovery. They name the instruments that took part
         // ("Fuse:arcane>firearm", "Use:melee"), which is what binds the skill to a weapon — or leaves

@@ -249,39 +249,6 @@ public class SkillCompositionService : ISkillCompositionService
         catch (JsonException) { return new List<string>(); }
     }
 
-    // Make every existing command's combo prefix-free (in CreatedAt order, so the result is
-    // stable), persisting any that had to change, and return the resulting set to seed new
-    // assignments. Idempotent — once settled, later passes read but don't write.
-    private async Task<List<IReadOnlyList<InputToken>>> ReconcileCommandCombosAsync(CancellationToken ct)
-    {
-        var commands = (await _skills.GetReadyAsync(ct))
-            .Where(s => string.Equals(s.Manifestation, nameof(ManifestationKind.Command), StringComparison.OrdinalIgnoreCase))
-            .OrderBy(s => s.CreatedAt)
-            .ToList();
-
-        var seen = new List<IReadOnlyList<InputToken>>();
-        foreach (var s in commands)
-        {
-            var current = ComboAssigner.Parse(DeserializeTags(s.InvocationComboJson));
-            var reconciled = ComboAssigner.EnsurePrefixFree(current, seen, s.DiscoveryId.ToString());
-            seen.Add(reconciled);
-            if (!SameCombo(current, reconciled))
-            {
-                s.InvocationComboJson = JsonSerializer.Serialize(reconciled.Select(t => t.ToString()).ToList());
-                await _skills.UpdateAsync(s, ct);
-            }
-        }
-        return seen;
-    }
-
-    private static bool SameCombo(IReadOnlyList<InputToken> a, IReadOnlyList<InputToken> b)
-    {
-        if (a.Count != b.Count) return false;
-        for (int i = 0; i < a.Count; i++)
-            if (a[i] != b[i]) return false;
-        return true;
-    }
-
     // The composed ancestors a discovery builds on — Ready skills with a graph, nearest first
     // (RAG over the discovery graph, ADR 0007). The graph composer evolves their theme/structure.
     private async Task<IReadOnlyList<SkillLineage>> RetrieveGraphLineageAsync(Guid discoveryId, CancellationToken ct)
@@ -337,7 +304,7 @@ public class SkillCompositionService : ISkillCompositionService
     {
         // Keyed on the play STYLE — the delivery the play maps to (beam/projectile/arc/nova/
         // burst), 5 buckets. Keeps the real variety (a still charge vs. a leaping one are
-        // different discoveries) yet is coarse enough that a stray jump/dodge or a rising
+        // different discoveries) yet is coarse enough that a stray jump or a rising
         // score no longer fragments one play into a stream; the composer's retry loop then
         // keeps the distinct claims mechanically unique.
         var stable = r.ContextTags
@@ -366,10 +333,6 @@ public class SkillCompositionService : ISkillCompositionService
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in await _skills.GetReadyAsync(ct))
             if (!string.IsNullOrEmpty(s.EffectGraphJson)) taken.Add(s.EffectGraphJson!);
-
-        // Command combos must be PREFIX-FREE across the actor so the client fires the instant a
-        // combo completes. Reconcile the existing commands' combos and seed the set for new ones.
-        var comboSet = await ReconcileCommandCombosAsync(ct);
 
         foreach (var skill in pending)
         {
@@ -419,21 +382,6 @@ public class SkillCompositionService : ISkillCompositionService
                 var manifestation = ManifestationFromGraph.Classify(comp.Graph, magicFusion) ?? ManifestationKind.Command;
                 skill.Manifestation = manifestation.ToString();
 
-                // A command is invoked by a button combo the rule engine assigns deterministically,
-                // made PREFIX-FREE against the actor's other commands so the client fires the instant
-                // the combo completes. Weapons fire on the attack input.
-                if (manifestation == ManifestationKind.Command)
-                {
-                    var combo = ComboAssigner.Assign(DeserializeTags(skill.BehaviorsJson), skill.DiscoveryId.ToString());
-                    combo = ComboAssigner.EnsurePrefixFree(combo, comboSet, skill.DiscoveryId.ToString());
-                    comboSet.Add(combo);
-                    skill.InvocationComboJson = JsonSerializer.Serialize(combo.Select(t => t.ToString()).ToList());
-                }
-                else
-                {
-                    skill.InvocationComboJson = "[]";
-                }
-
                 skill.Status = DiscoveryContentStatus.Ready;
                 skill.ComposedAt = DateTime.UtcNow;
 
@@ -461,11 +409,10 @@ public class SkillCompositionService : ISkillCompositionService
 
         var contextTags = DeserializeTags(skill.ContextTagsJson);
         var behaviors = DeserializeTags(skill.BehaviorsJson);
-        var invocationCombo = DeserializeTags(skill.InvocationComboJson);
 
         return new DiscoverySkillResponse(
             skill.DiscoveryId, skill.Status, skill.Name, skill.Description, skill.PowerCost,
-            skill.Manifestation, contextTags, behaviors, invocationCombo, skill.Delivery, skill.EffectGraphJson);
+            skill.Manifestation, contextTags, behaviors, skill.Delivery, skill.EffectGraphJson);
     }
 
     private static bool TryBuildRequest(DiscoverySkill skill, out CompositionRequest request)

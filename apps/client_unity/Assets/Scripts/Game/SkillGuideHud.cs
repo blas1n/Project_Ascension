@@ -7,12 +7,12 @@ using ProjectAscension.GameSimulation.Combat;
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// A small always-on guide listing the player's discovered COMMANDS and the button combo
-    /// that invokes each (the rule engine assigns every command an "incantation"), plus active
+    /// A small always-on guide listing the player's discovered COMMANDS and the hotkey that
+    /// invokes each (assigned to an ability slot — <see cref="AbilitySlots"/>), plus active
     /// passives and discovered weapons. Without it the player has no way to know how to trigger
-    /// a discovered command — you press the shown sequence (e.g. Dodge > LMB) within the combo
-    /// window. Immediate-mode GUI like DiscoveryNotification; auto-provisioned by SkillCaster,
-    /// so no scene wiring. Uses no legacy Input API (project is on the new Input System).
+    /// a discovered command — you press the shown hotkey. Immediate-mode GUI like
+    /// DiscoveryNotification; auto-provisioned by SkillCaster, so no scene wiring. Uses no
+    /// legacy Input API (project is on the new Input System).
     /// </summary>
     public sealed class SkillGuideHud : MonoBehaviour
     {

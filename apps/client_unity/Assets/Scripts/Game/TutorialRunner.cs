@@ -39,7 +39,7 @@ namespace ProjectAscension.Game
             Instance = this;
 
             GameplayEvents.Jumped += OnJumped;
-            GameplayEvents.Dodged += OnDodged;
+            GameplayEvents.AttackEvaded += OnEvaded;
             GameplayEvents.Attacked += OnAttacked;
             GameplayEvents.PlayerDied += OnPlayerDied;
             GameplayEvents.SkillDiscovered += OnSkillDiscovered;
@@ -49,7 +49,7 @@ namespace ProjectAscension.Game
         private void OnDestroy()
         {
             GameplayEvents.Jumped -= OnJumped;
-            GameplayEvents.Dodged -= OnDodged;
+            GameplayEvents.AttackEvaded -= OnEvaded;
             GameplayEvents.Attacked -= OnAttacked;
             GameplayEvents.PlayerDied -= OnPlayerDied;
             GameplayEvents.SkillDiscovered -= OnSkillDiscovered;
@@ -63,7 +63,7 @@ namespace ProjectAscension.Game
         public void Signal(TutorialSignal signal) => Progress = TutorialDirector.Observe(Progress, signal);
 
         private void OnJumped() => Signal(TutorialSignal.Jumped);
-        private void OnDodged() => Signal(TutorialSignal.Dodged);
+        private void OnEvaded() => Signal(TutorialSignal.Evaded);
         private void OnAttacked(bool _) => Signal(TutorialSignal.Attacked);
         private void OnPlayerDied() => Signal(TutorialSignal.Died);
         private void OnSkillDiscovered(string _) => Signal(TutorialSignal.DiscoveryMade);
@@ -178,7 +178,7 @@ namespace ProjectAscension.Game
             var parts = new System.Collections.Generic.List<string>(4);
             if ((left & TutorialSignal.Moved) != 0) parts.Add("Move");
             if ((left & TutorialSignal.Jumped) != 0) parts.Add("Jump");
-            if ((left & TutorialSignal.Dodged) != 0) parts.Add("Dodge");
+            if ((left & TutorialSignal.Evaded) != 0) parts.Add("Step out of range during a monster's wind-up");
             if ((left & TutorialSignal.Attacked) != 0) parts.Add("Attack");
             return string.Join("   ·   ", parts);
         }

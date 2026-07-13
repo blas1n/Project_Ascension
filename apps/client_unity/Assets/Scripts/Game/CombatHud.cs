@@ -5,11 +5,11 @@ namespace ProjectAscension.Game
 {
     /// <summary>
     /// Player combat-feedback HUD — health bar, crosshair, and a flash that tells you WHAT happened to
-    /// an incoming blow: red = it landed, cyan = a dodge's i-frames negated it, pale steel = a raised
-    /// shield absorbed it. OnGUI placeholder (a uGUI migration is a later track); this delivers the FEEL
-    /// now. Self-installs at runtime and binds to the player's <see cref="HitReceiver"/>, drawing nothing
-    /// when there is no player (city/menu). Rendering only — health, damage, i-frames, and blocking are
-    /// owned by GameSimulation + HitReceiver.
+    /// an incoming blow: red = it landed, pale steel = a raised shield absorbed it. OnGUI placeholder
+    /// (a uGUI migration is a later track); this delivers the FEEL now. Self-installs at runtime and
+    /// binds to the player's <see cref="HitReceiver"/>, drawing nothing when there is no player
+    /// (city/menu). Rendering only — health, damage, and blocking are owned by GameSimulation +
+    /// HitReceiver.
     /// </summary>
     public sealed class CombatHud : MonoBehaviour
     {
@@ -26,7 +26,6 @@ namespace ProjectAscension.Game
 
         private HitReceiver _player;
         private float _damageFlash; // 1 → 0 red on taking damage
-        private float _negateFlash; // 1 → 0 cyan on an i-frame negate
         private float _blockFlash;  // 1 → 0 pale on a shield absorbing a blow
         private Texture2D _tex;
 
@@ -56,7 +55,6 @@ namespace ProjectAscension.Game
 
             float dt = Time.unscaledDeltaTime; // fade even during hit-stop
             _damageFlash = Mathf.MoveTowards(_damageFlash, 0f, dt / FlashDuration);
-            _negateFlash = Mathf.MoveTowards(_negateFlash, 0f, dt / FlashDuration);
             _blockFlash = Mathf.MoveTowards(_blockFlash, 0f, dt / FlashDuration);
         }
 
@@ -65,7 +63,6 @@ namespace ProjectAscension.Game
             Unbind();
             _player = hr;
             _player.Damaged += OnDamaged;
-            _player.DamageNegated += OnNegated;
             _player.DamageBlocked += OnBlocked;
         }
 
@@ -73,21 +70,18 @@ namespace ProjectAscension.Game
         {
             if (_player == null) return;
             _player.Damaged -= OnDamaged;
-            _player.DamageNegated -= OnNegated;
             _player.DamageBlocked -= OnBlocked;
             _player = null;
         }
 
         private void OnDamaged(HitReceiver _, float __) => _damageFlash = 1f;
-        private void OnNegated(HitReceiver _) => _negateFlash = 1f;
         private void OnBlocked(HitReceiver _) => _blockFlash = 1f;
 
         private void OnGUI()
         {
-            // Full-screen feedback flashes (red = hit, cyan = i-frame negate). Drawn even with no
-            // player so a negate right as a scene ends still reads.
+            // Full-screen feedback flashes (red = hit, pale steel = blocked). Drawn even with no
+            // player so a flash right as a scene ends still reads.
             if (_damageFlash > 0f) DrawFullscreen(new Color(0.8f, 0.05f, 0.05f, 0.45f * _damageFlash));
-            if (_negateFlash > 0f) DrawFullscreen(new Color(0.4f, 0.85f, 1f, 0.5f * _negateFlash));
             if (_blockFlash > 0f) DrawFullscreen(new Color(0.85f, 0.88f, 0.95f, 0.35f * _blockFlash));
 
             if (_player == null) return;

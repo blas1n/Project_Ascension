@@ -11,12 +11,9 @@ namespace ProjectAscension.GameSimulation.Player
         float JumpVelocity = 6f,
         float Gravity = 20f,
         float GroundY = 0f,
-        float DodgeSpeed = 12f,
-        float DodgeDuration = 0.2f,
         int ExtraJumps = 0, // air jumps beyond the ground jump (from a discovered skill's graph — double jump)
         bool WallClimb = false, // a discovered OnWallContact skill lets the player scale walls (ADR 0007)
-        float WallClimbSpeed = 4f, // upward speed while clinging to a wall
-        float DodgeIFrameFraction = 0.75f // fraction of the dodge that grants i-frames (leading window)
+        float WallClimbSpeed = 4f // upward speed while clinging to a wall
     )
     {
         public static readonly MovementSettings Default = new();

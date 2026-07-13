@@ -31,10 +31,10 @@ namespace ProjectAscension.Game
         private const float MonsterContextWindow = 10f; // a recent kill flavors discovery for this long
 
         private readonly BehaviorAccumulator _accumulator = new();
-        // The COMPOSITE behaviours (dodge-attack / air-attack / repeated jump) are derived by a rule,
-        // not by this glue — what counts as "out of a dodge" is one tested answer (BehaviorDeriver).
-        // ONE grammar (ADR 0009) instead of five bespoke observers. It knows nothing about catalysts,
-        // dodges or jumps — it composes whatever acts arrive, so a new act needs no new observer.
+        // The COMPOSITE behaviours (air-attack / repeated jump / weapon fusion) are derived by a rule,
+        // not by this glue — what counts as a composite is one tested answer (CompositionDeriver).
+        // ONE grammar (ADR 0009) instead of four bespoke observers. It knows nothing about catalysts
+        // or jumps — it composes whatever acts arrive, so a new act needs no new observer.
         private readonly CompositionDeriver _grammar = new();
         private readonly List<string> _composites = new();
         private readonly Dictionary<string, float> _recentMonsters = new(); // tag -> expiry time
@@ -56,7 +56,6 @@ namespace ProjectAscension.Game
         private void OnEnable()
         {
             GameplayEvents.Jumped += OnJumped;
-            GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
             GameplayEvents.ActPerformed += OnActPerformed;
             GameplayEvents.MonsterKilled += OnMonsterKilled;
@@ -65,16 +64,14 @@ namespace ProjectAscension.Game
         private void OnDisable()
         {
             GameplayEvents.Jumped -= OnJumped;
-            GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
             GameplayEvents.ActPerformed -= OnActPerformed;
             GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
         // The RAW counts stay raw: what, and how many times. Everything compositional — fusions,
-        // dodge-attacks, air attacks, chains — is the grammar's business now (ADR 0009).
+        // air attacks, chains — is the grammar's business now (ADR 0009).
         private void OnJumped() => _accumulator.Record(BehaviorKind.Jump);
-        private void OnDodged() => _accumulator.Record(BehaviorKind.Dodge);
         private void OnAttacked(bool isMelee) =>
             _accumulator.Record(isMelee ? BehaviorKind.MeleeAttack : BehaviorKind.RangedAttack);
 

@@ -46,7 +46,7 @@ public class EffectGraphRuntimeSimulation
         {
             ("fire", "a searing fire bolt", new[] { ("RangedAttack", 60) }),
             ("frost", "a chilling frost nova", new[] { ("ChargedAttack", 55) }),
-            ("leap", "a nimble aerial hop", new[] { ("Jump", 55), ("Dodge", 15) }),
+            ("leap", "a nimble aerial hop", new[] { ("Jump", 70) }),
         };
         int ok = 0, seed = 7500;
         foreach (var c in cases)
@@ -85,8 +85,8 @@ public class EffectGraphRuntimeSimulation
             ("fire-bolt",   "a searing fire bolt that lingers",  new[] { ("RangedAttack", 60) }, true),
             ("frost-nova",  "a frost nova that chills all",      new[] { ("ChargedAttack", 55) }, true),
             ("chain-arc",   "lightning that leaps between foes", new[] { ("RangedAttack", 50) }, true),
-            ("double-jump", "a nimble aerial hop",               new[] { ("Jump", 55), ("Dodge", 15) }, false),
-            ("wall-climb",  "scaling a sheer cliff face",        new[] { ("Jump", 40), ("Dodge", 45) }, false),
+            ("double-jump", "a nimble aerial hop",               new[] { ("Jump", 70) }, false),
+            ("wall-climb",  "scaling a sheer cliff face",        new[] { ("Jump", 85) }, false),
         };
 
         int parsed = 0, cleanRuntime = 0, offensiveFought = 0, offensiveCases = 0;

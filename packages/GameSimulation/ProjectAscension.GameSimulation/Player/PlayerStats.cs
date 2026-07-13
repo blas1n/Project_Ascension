@@ -1,6 +1,6 @@
 namespace ProjectAscension.GameSimulation.Player
 {
-    /// <summary>The player's DB-driven balance stats — health, movement, dodge, focus.
+    /// <summary>The player's DB-driven balance stats — health, movement, focus.
     /// Lives in the shared simulation so every client layer (movement in Player, health in
     /// Combat, focus in Game) can read the same fetched values.</summary>
     // A record class (not record struct) so it compiles under Unity's C# 9.
@@ -9,8 +9,6 @@ namespace ProjectAscension.GameSimulation.Player
         float MoveSpeed,
         float JumpVelocity,
         float Gravity,
-        float DodgeSpeed,
-        float DodgeDuration,
         float MaxFocus,
         float FocusRegenPerSecond);
 

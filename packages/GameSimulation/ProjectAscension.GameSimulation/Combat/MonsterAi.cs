@@ -3,7 +3,7 @@ namespace ProjectAscension.GameSimulation.Combat
     /// <summary>How a monster is behaving. The deterministic state a monster AI moves through —
     /// the logic lives here (headless, testable), not in the Unity MonoBehaviour, which only reads
     /// the result to move/attack/render. <see cref="Winding"/> is the telegraph: the monster has
-    /// committed to a strike and is winding up, giving the player a window to read and dodge it.</summary>
+    /// committed to a strike and is winding up, giving the player a window to read it and move.</summary>
     public enum MonsterState { Idle, Chase, Winding, Attack, Dead }
 
     /// <summary>A monster's tuned AI ranges/timing (from MonsterStats — DB-driven). <see cref="AttackWindup"/>
@@ -91,7 +91,7 @@ namespace ProjectAscension.GameSimulation.Combat
                     {
                         if (settings.AttackWindup > 0f)
                         {
-                            // Commit to a strike and telegraph it — the player can read + dodge now.
+                            // Commit to a strike and telegraph it — the player can read it and move now.
                             state = MonsterState.Winding;
                             windupEndTime = time + settings.AttackWindup;
                             telegraph = true;

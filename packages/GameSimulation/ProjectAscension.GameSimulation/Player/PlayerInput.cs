@@ -4,7 +4,6 @@ namespace ProjectAscension.GameSimulation.Player
         float MoveX,
         float MoveZ,
         bool Jump,
-        bool Dodge,
         bool Attack,
         int Sequence,
         bool TouchingWall = false // against a wall this tick — enables wall-climb (ADR 0007)

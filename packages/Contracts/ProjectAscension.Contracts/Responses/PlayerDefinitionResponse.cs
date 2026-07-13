@@ -9,8 +9,6 @@ namespace ProjectAscension.Contracts.Responses
         float MoveSpeed,
         float JumpVelocity,
         float Gravity,
-        float DodgeSpeed,
-        float DodgeDuration,
         float MaxFocus,
         float FocusRegenPerSecond);
 }

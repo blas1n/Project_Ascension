@@ -54,7 +54,7 @@ public class GameLoop
         var actorId = _sessions.GetActorId(peer);
         if (!actorId.HasValue) return;
 
-        var input = new PlayerInput(msg.MoveX, msg.MoveZ, msg.Jump, msg.Dodge, msg.Attack, msg.Sequence);
+        var input = new PlayerInput(msg.MoveX, msg.MoveZ, msg.Jump, msg.Attack, msg.Sequence);
         _zone.BufferInput(actorId.Value, input);
     }
 

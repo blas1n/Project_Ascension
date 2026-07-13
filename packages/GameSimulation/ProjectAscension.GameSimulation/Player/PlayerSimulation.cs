@@ -9,52 +9,14 @@ namespace ProjectAscension.GameSimulation.Player
     /// </summary>
     public class PlayerSimulation
     {
-        /// <summary>Whether a dodge is currently granting invulnerability (i-frames). The leading
-        /// <paramref name="iframeFraction"/> of the dodge window is invulnerable; the recovery tail
-        /// stays vulnerable, so a dodge is a read — not spam-immunity. Pure combat rule (ADR: Unity
-        /// is a shell) — identical on client + server, headless-tested. <paramref name="dodgeTimeRemaining"/>
-        /// counts down from <paramref name="dodgeDuration"/>, so i-frames hold while it is above the
-        /// recovery threshold.</summary>
-        public static bool IsInvulnerable(float dodgeTimeRemaining, float dodgeDuration, float iframeFraction)
-        {
-            if (dodgeTimeRemaining <= 0f || dodgeDuration <= 0f) return false;
-            float f = iframeFraction < 0f ? 0f : (iframeFraction > 1f ? 1f : iframeFraction);
-            return dodgeTimeRemaining > dodgeDuration * (1f - f);
-        }
-
         public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime)
             => ApplyInput(state, input, deltaTime, MovementSettings.Default);
 
         public PlayerState ApplyInput(PlayerState state, PlayerInput input, float deltaTime, MovementSettings settings)
         {
             var velocity = state.Velocity;
-            var dodgeVelocity = state.DodgeVelocity;
-            var dodgeTimeRemaining = state.DodgeTimeRemaining;
 
-            // Begin a dodge: only when grounded and not already dodging.
-            if (input.Dodge && state.IsGrounded && dodgeTimeRemaining <= 0f)
-            {
-                var dir = new Vector3(input.MoveX, 0f, input.MoveZ);
-                dir = dir.LengthSquared() > 0.0001f
-                    ? Vector3.Normalize(dir)
-                    : new Vector3(0f, 0f, 1f); // no input → dash forward (world +Z)
-
-                dodgeVelocity = dir * settings.DodgeSpeed;
-                dodgeTimeRemaining = settings.DodgeDuration;
-            }
-
-            // Horizontal movement: locked to the dodge vector while dodging.
-            // (Construct new Vector3 values rather than `with` — `with` on structs
-            // is C# 10, but this is shared with the Unity client which is C# 9.)
-            if (dodgeTimeRemaining > 0f)
-            {
-                velocity = new Vector3(dodgeVelocity.X, velocity.Y, dodgeVelocity.Z);
-                dodgeTimeRemaining -= deltaTime;
-            }
-            else
-            {
-                velocity = new Vector3(input.MoveX * settings.MoveSpeed, velocity.Y, input.MoveZ * settings.MoveSpeed);
-            }
+            velocity = new Vector3(input.MoveX * settings.MoveSpeed, velocity.Y, input.MoveZ * settings.MoveSpeed);
 
             // Wall-climb (ADR 0007): a discovered OnWallContact skill lets the player scale a wall.
             // While airborne against a wall and holding jump, ascend instead of falling; clinging
@@ -103,8 +65,6 @@ namespace ProjectAscension.GameSimulation.Player
                 Velocity = velocity,
                 IsGrounded = isGrounded,
                 InputSequence = input.Sequence,
-                DodgeVelocity = dodgeVelocity,
-                DodgeTimeRemaining = dodgeTimeRemaining < 0f ? 0f : dodgeTimeRemaining,
                 JumpsUsed = jumpsUsed
             };
         }

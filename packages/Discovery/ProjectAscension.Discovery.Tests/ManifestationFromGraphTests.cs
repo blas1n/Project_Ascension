@@ -60,6 +60,6 @@ public class ManifestationFromGraphTests
     public void AFusionWithNoMagicInIt_ForgesNothing()
     {
         // Rolling into a gunshot is a fine technique. It is not spellcraft, and it makes no weapon.
-        Assert.False(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:melee>firearm", "Seq:dodge>firearm" }));
+        Assert.False(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:melee>firearm", "Seq:jump>firearm" }));
     }
 }
