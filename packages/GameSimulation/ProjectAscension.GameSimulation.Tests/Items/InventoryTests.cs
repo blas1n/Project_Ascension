@@ -35,7 +35,7 @@ namespace ProjectAscension.GameSimulation.Tests.Items
         [InlineData("", 1)]
         [InlineData("map", 0)]
         [InlineData("map", -3)]
-        public void NothingRewards_AreIgnored(string key, int amount)
+        public void NothingRewards_AreIgnored(string? key, int amount)
         {
             // A contract with no item reward must grant nothing rather than a phantom entry.
             var inv = new Inventory();
