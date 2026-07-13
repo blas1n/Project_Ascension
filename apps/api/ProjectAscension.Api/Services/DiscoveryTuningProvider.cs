@@ -31,6 +31,7 @@ public class DiscoveryTuningProvider : IDiscoveryTuningProvider
             settings.KnowledgeDepthWeight,
             settings.PersistenceWeight,
             settings.CombinationSynergy,
+            settings.SynthesisWeight,
             settings.FireThreshold,
             settings.BudgetBase,
             settings.BudgetPerScore,

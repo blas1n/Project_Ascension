@@ -33,6 +33,8 @@ namespace ProjectAscension.Game
         // The COMPOSITE behaviours (dodge-attack / air-attack / repeated jump) are derived by a rule,
         // not by this glue — what counts as "out of a dodge" is one tested answer (BehaviorDeriver).
         private readonly BehaviorDeriver _deriver = new();
+        // Fusing the two hands is the seed of a synthesis skill — observed, never inferred (ADR 0008).
+        private readonly SynthesisDeriver _synthesis = new();
         private readonly Dictionary<string, float> _recentMonsters = new(); // tag -> expiry time
         private DiscoveryApiClient _api;
         private Loadout _loadout;
@@ -56,6 +58,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Attacked += OnAttacked;
             GameplayEvents.ChargedAttacked += OnChargedAttacked;
             GameplayEvents.AirAttacked += OnAirAttacked;
+            GameplayEvents.WeaponUsed += OnWeaponUsed;
             GameplayEvents.MonsterKilled += OnMonsterKilled;
         }
 
@@ -66,6 +69,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Attacked -= OnAttacked;
             GameplayEvents.ChargedAttacked -= OnChargedAttacked;
             GameplayEvents.AirAttacked -= OnAirAttacked;
+            GameplayEvents.WeaponUsed -= OnWeaponUsed;
             GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
@@ -92,6 +96,14 @@ namespace ProjectAscension.Game
 
         private void OnChargedAttacked() => _accumulator.Record(BehaviorKind.ChargedAttack);
         private void OnAirAttacked() => _accumulator.Record(BehaviorKind.AirAttack);
+
+        // Catalyst then gunshot, near enough to be one act: the shot carries the arcane. The ORDER is
+        // part of the signal — the reverse is a different act, and must be a different discovery.
+        private void OnWeaponUsed(string contextTag)
+        {
+            var fusion = _synthesis.Used(contextTag, Time.time);
+            if (fusion != null) _accumulator.Record(fusion);
+        }
 
         // A defeated monster flavors the discovery context for a window (몬스터는 발견의 촉매).
         private void OnMonsterKilled(GameObject monster)

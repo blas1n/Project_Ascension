@@ -18,9 +18,14 @@ namespace ProjectAscension.GameSimulation.Discovery
         public IReadOnlyDictionary<string, int> Counts => _counts;
         public IReadOnlyCollection<string> Tags => _tags;
 
-        public void Record(BehaviorKind behavior)
+        public void Record(BehaviorKind behavior) => Record(behavior.ToString());
+
+        /// <summary>Record a behavior by key. Most are <see cref="BehaviorKind"/> names, but a FUSION
+        /// (ADR 0008) is a pair — "Synthesis:arcane&gt;firearm" — and the pair is the whole point, so it
+        /// cannot be an enum member.</summary>
+        public void Record(string key)
         {
-            var key = behavior.ToString();
+            if (string.IsNullOrEmpty(key)) return;
             _counts[key] = (_counts.TryGetValue(key, out var c) ? c : 0) + 1;
         }
 

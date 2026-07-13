@@ -72,7 +72,15 @@ namespace ProjectAscension.Player
         private void FireDown(EquipmentSlot slot)
         {
             if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryDown(ctx)) return;
+            Announce(weapon);
+        }
+
+        // WHAT was used, not just that something was: fusing the two hands is an act to be observed,
+        // not a thing to be guessed at from the loadout (ADR 0008).
+        private void Announce(WeaponBase weapon)
+        {
             GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
+            GameplayEvents.RaiseWeaponUsed(EquipmentTags.For(weapon.Data));
             AnnounceIfAirborne();
         }
 
@@ -87,8 +95,7 @@ namespace ProjectAscension.Player
         private void FireUp(EquipmentSlot slot)
         {
             if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx)) return;
-            GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
-            AnnounceIfAirborne();
+            Announce(weapon);
             // A held/charged shot is its own discovery signal (e.g. 긴 차징 → 화염포). The
             // threshold is DB-driven (CombatTuning), so it can be retuned without a rebuild.
             if (weapon.LastCharge >= GameSimulation.Combat.CombatTuningCatalog.Current.ChargedAttackThreshold)

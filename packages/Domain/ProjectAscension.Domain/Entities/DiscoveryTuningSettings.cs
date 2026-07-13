@@ -31,5 +31,9 @@ namespace ProjectAscension.Domain.Entities
         public int RareScore { get; set; }
         public int EpicScore { get; set; }
         public int LegendaryScore { get; set; }
+
+        // A fusion of two hands (ADR 0008), scored far above a raw attack count — a fusion skill
+        // must be EARNED by actually fusing, never reached by spamming one hand.
+        public int SynthesisWeight { get; set; }
     }
 }
