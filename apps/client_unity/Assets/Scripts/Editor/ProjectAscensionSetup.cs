@@ -239,37 +239,43 @@ namespace ProjectAscension.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "CityGround";
-            ground.transform.localScale = new Vector3(3f, 1f, 3f);
+            // The city is a PLACE, not a menu (docs/03-gameplay/first-hour-experience.md): the player
+            // walks to the training ground, the board, and the people. CityBlockout builds it
+            // procedurally at load — 훈련장 / 게시판 / 안전 구역, the three things stage 1 requires.
+            new GameObject("CityBlockout").AddComponent<CityBlockout>();
+
+            BuildPlayerStack(CityBlockout.PlayerSpawn);
 
             var hub = new GameObject("CityHub");
             hub.AddComponent<CityHub>();
+
+            // The first discovery happens in the TRAINING GROUND — which is inside the city. So the
+            // discovery stack has to live here too, not only in the frontier, or stage 4 can never fire.
+            var reporter = new GameObject("DiscoveryReporter").AddComponent<DiscoveryReporter>();
+            SetStringField(reporter, "serverUrl", DevServerUrl);
+            new GameObject("DiscoverySkillBinder").AddComponent<DiscoverySkillBinder>();
+            new GameObject("DiscoveryNotification").AddComponent<DiscoveryNotification>();
+            new GameObject("ContractHud").AddComponent<ContractHud>();
+
+            // VContainer scope for the player stack (input/movement/camera) — the city needs it now
+            // that it has a player to drive.
+            var scopeGo = new GameObject("CityLifetimeScope");
+            var scope = scopeGo.AddComponent<FrontierLifetimeScope>();
+            SetObjectField(scope, "inputActions", AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath));
+            SetObjectField(scope, "playerData", AssetDatabase.LoadAssetAtPath<PlayerData>(PlayerDataPath));
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, CityScene);
         }
 
-        private static void BuildFrontierScene()
+        /// <summary>The full player stack (body, camera, hands, loadout, combat, focus, discovery).
+        /// Both the City and the Frontier need it: the city is a PLACE the player walks around, not a
+        /// menu — the first hour has them walk to the training ground, the board, and the people.</summary>
+        private static GameObject BuildPlayerStack(Vector3 spawn)
         {
-            // Asset references are (re)loaded immediately before each SetObjectField
-            // below. Loading earlier and holding a reference is unreliable: any
-            // intervening AssetDatabase write or scene op can invalidate it, which
-            // then serializes as null (fileID: 0) in the scene.
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-
-            // Ground (50 x 50, top at y = 0 to match the simulation's ground plane).
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "Ground";
-            ground.transform.localScale = new Vector3(5f, 1f, 5f);
-
-            // A couple of blocks so movement/camera are visibly readable.
-            CreateBlock("Block_A", new Vector3(4f, 1f, 6f));
-            CreateBlock("Block_B", new Vector3(-5f, 1f, 3f));
-
             // Player.
             var player = new GameObject("Player");
-            player.transform.position = Vector3.zero;
+            player.transform.position = spawn;
             var controller = player.AddComponent<CharacterController>();
             controller.center = new Vector3(0f, 1f, 0f);
             controller.height = 2f;
@@ -336,6 +342,27 @@ namespace ProjectAscension.Editor
             if (mainCam != null && mainCam.GetComponent<CinemachineBrain>() == null)
                 mainCam.gameObject.AddComponent<CinemachineBrain>();
 
+            return player;
+        }
+
+        private static void BuildFrontierScene()
+        {
+            // Asset references are (re)loaded immediately before each SetObjectField
+            // below. Loading earlier and holding a reference is unreliable: any
+            // intervening AssetDatabase write or scene op can invalidate it, which
+            // then serializes as null (fileID: 0) in the scene.
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            // Ground (50 x 50, top at y = 0 to match the simulation's ground plane).
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "Ground";
+            ground.transform.localScale = new Vector3(5f, 1f, 5f);
+
+            // A couple of blocks so movement/camera are visibly readable.
+            CreateBlock("Block_A", new Vector3(4f, 1f, 6f));
+            CreateBlock("Block_B", new Vector3(-5f, 1f, 3f));
+
+            BuildPlayerStack(Vector3.zero);
             // Monsters: spawner drops the 3 types around the origin on play.
             var spawnerGo = new GameObject("MonsterSpawner");
             spawnerGo.transform.position = Vector3.zero;
