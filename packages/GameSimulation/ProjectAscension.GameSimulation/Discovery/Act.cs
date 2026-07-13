@@ -41,10 +41,29 @@ namespace ProjectAscension.GameSimulation.Discovery
             Qualities = qualities;
         }
 
-        /// <summary>How this act names itself in a composition. An attack names its WEAPON, because
-        /// rolling into a gunshot and rolling into a sword are not the same skill — keeping the
-        /// instrument is what makes the grammar sharper than the special cases it replaces.</summary>
-        public string Token => string.IsNullOrEmpty(Instrument) ? Verb : Instrument;
+        /// <summary>The verb that IS an instrument's use. Firing a gun is simply USING it, so an attack
+        /// names its weapon and nothing else — "Fuse:arcane&gt;firearm" must read "a spell woven into a
+        /// GUNSHOT".</summary>
+        public const string Use = "attack";
+
+        /// <summary>
+        /// How this act names itself in a composition. An attack names its WEAPON, because weaving a
+        /// spell into a gunshot and into a sword swing are not the same skill — keeping the instrument
+        /// is what makes the grammar sharper than the special cases it replaces.
+        ///
+        /// Any OTHER verb done WITH a weapon names both ("reload:firearm"), because handling a gun is
+        /// not firing it: a spell cast beside a RELOAD must not be able to pass itself off as a spell
+        /// woven into a SHOT. The weapon stays in the name so the skill still binds to it (ADR 0011) —
+        /// the token boundary is what makes "reload:firearm" still implicate the firearm.
+        /// </summary>
+        public string Token
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Instrument)) return Verb;
+                return Verb == Use ? Instrument : Verb + ":" + Instrument;
+            }
+        }
 
         public bool IsValid => !string.IsNullOrEmpty(Token);
     }

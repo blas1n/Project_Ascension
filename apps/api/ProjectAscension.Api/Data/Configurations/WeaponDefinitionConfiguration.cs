@@ -56,6 +56,10 @@ public class WeaponDefinitionConfiguration : IEntityTypeConfiguration<WeaponDefi
                 SpreadMax = 9f,
                 SpreadPerShot = 1.4f,
                 SpreadRecovery = 7f,
+                // A magazine, not an ammo economy: running dry costs a beat of vulnerability (the
+                // reload) — there is no reserve to track. Everything else is 0 (no magazine, never reloads).
+                MagazineSize = 12,
+                ReloadTime = 1.6f,
             },
             new WeaponDefinition
             {

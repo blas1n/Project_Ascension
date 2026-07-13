@@ -7,6 +7,7 @@
     "ProjectAscension.Combat",
     "ProjectAscension.GameSimulation",
     "ProjectAscension.Net",
+    "ProjectAscension.Player",
     "ProjectAscension.World",
     "Unity.InputSystem",
     "Unity.RenderPipelines.Core.Runtime",

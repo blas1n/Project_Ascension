@@ -21,5 +21,7 @@ namespace ProjectAscension.Contracts.Responses
         float SpreadMin,
         float SpreadMax,
         float SpreadPerShot,
-        float SpreadRecovery);
+        float SpreadRecovery,
+        int MagazineSize,
+        float ReloadTime);
 }

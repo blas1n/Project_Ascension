@@ -37,12 +37,14 @@ namespace ProjectAscension.Player
         {
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.WeaponUsed += OnWeaponUsed;
+            GameplayEvents.Reloaded += OnReloaded;
         }
 
         private void OnDisable()
         {
             GameplayEvents.Jumped -= OnJumped;
             GameplayEvents.WeaponUsed -= OnWeaponUsed;
+            GameplayEvents.Reloaded -= OnReloaded;
         }
 
         private void Update()
@@ -57,6 +59,10 @@ namespace ProjectAscension.Player
         // An attack names the weapon it was made with — rolling into a gunshot is not the same act as
         // rolling into a sword, and the grammar keeps that difference.
         private void OnWeaponUsed(string contextTag) => Emit("attack", contextTag, ChargedNow());
+
+        // Reload is a verb like any other (ADR 0009) — no bespoke observer, no new scoring. It rides
+        // the same act stream, so weaving a spell into a reload composes into a discovery for free.
+        private void OnReloaded(string contextTag) => Emit("reload", contextTag);
 
         private void Emit(string verb, string instrument, bool charged = false)
         {

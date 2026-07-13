@@ -35,6 +35,10 @@ namespace ProjectAscension.Equipment
         [SerializeField] private float spreadPerShot = 0f;    // bloom added per shot (deg)
         [SerializeField] private float spreadRecovery = 0f;   // tightening per second when not firing (deg)
 
+        [Header("Magazine (firearms; 0 = no magazine, never reloads)")]
+        [SerializeField] private int magazineSize = 0;
+        [SerializeField] private float reloadTime = 0f;
+
         [Header("Discovery (later phase hook — unused)")]
         [SerializeField] private float discoveryWeight = 0f;
 
@@ -53,9 +57,15 @@ namespace ProjectAscension.Equipment
         public float SpreadMax => spreadMax;
         public float SpreadPerShot => spreadPerShot;
         public float SpreadRecovery => spreadRecovery;
+        public int MagazineSize => magazineSize;
+        public float ReloadTime => reloadTime;
 
         /// <summary>Only firearms spread; melee, magic, and the bow are precise.</summary>
         public bool HasSpread => spreadMax > 0f;
+
+        /// <summary>A magazine weapon must reload when it runs dry — everything else (sword, bow,
+        /// catalyst, shield) is unaffected by reload state entirely.</summary>
+        public bool HasMagazine => magazineSize > 0;
 
         /// <summary>Melee weapons strike in range; everything else is ranged.</summary>
         public bool IsMelee => equipmentType == EquipmentType.Weapon;
@@ -85,7 +95,8 @@ namespace ProjectAscension.Equipment
             string displayName, EquipmentType equipmentType, SlotType slotType,
             float damage, float range, float projectileSpeed, float projectileGravity, float cooldown,
             float chargeTime, float maxChargeMultiplier,
-            float spreadMin, float spreadMax, float spreadPerShot, float spreadRecovery)
+            float spreadMin, float spreadMax, float spreadPerShot, float spreadRecovery,
+            int magazineSize, float reloadTime)
         {
             var data = CreateInstance<WeaponData>();
             data.displayName = displayName;
@@ -102,6 +113,8 @@ namespace ProjectAscension.Equipment
             data.spreadMax = spreadMax;
             data.spreadPerShot = spreadPerShot;
             data.spreadRecovery = spreadRecovery;
+            data.magazineSize = magazineSize;
+            data.reloadTime = reloadTime;
             return data;
         }
 

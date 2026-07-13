@@ -23,6 +23,7 @@ public class WeaponsController : ControllerBase
             w.Key, w.DisplayName, w.EquipmentType, w.SlotType,
             w.Damage, w.Range, w.ProjectileSpeed, w.ProjectileGravity, w.Cooldown,
             w.ChargeTime, w.MaxChargeMultiplier,
-            w.SpreadMin, w.SpreadMax, w.SpreadPerShot, w.SpreadRecovery)));
+            w.SpreadMin, w.SpreadMax, w.SpreadPerShot, w.SpreadRecovery,
+            w.MagazineSize, w.ReloadTime)));
     }
 }

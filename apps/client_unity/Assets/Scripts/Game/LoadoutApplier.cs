@@ -54,7 +54,8 @@ namespace ProjectAscension.Game
                 def.displayName, equipmentType, slotType,
                 def.damage, def.range, def.projectileSpeed, def.projectileGravity, def.cooldown,
                 def.chargeTime, def.maxChargeMultiplier,
-                def.spreadMin, def.spreadMax, def.spreadPerShot, def.spreadRecovery);
+                def.spreadMin, def.spreadMax, def.spreadPerShot, def.spreadRecovery,
+                def.magazineSize, def.reloadTime);
         }
     }
 }

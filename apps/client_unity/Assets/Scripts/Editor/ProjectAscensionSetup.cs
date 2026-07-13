@@ -117,9 +117,10 @@ namespace ProjectAscension.Editor
             CreateWeapon("Sword", "Sword", EquipmentType.Weapon, SlotType.Either, damage: 25f, range: 2.2f, projectileSpeed: 0f, cooldown: 0.5f);
             // Bow: a two-handed charge weapon (hold to draw, release to loose) whose arrows arc.
             CreateWeapon("Bow", "Bow", EquipmentType.Bow, SlotType.TwoHand, damage: 18f, range: 60f, projectileSpeed: 28f, cooldown: 0.6f, chargeTime: 0.8f, maxChargeMultiplier: 2.5f, projectileGravity: 9.8f);
-            // Pistol: a firearm whose accuracy blooms under sustained fire (spread).
+            // Pistol: a firearm whose accuracy blooms under sustained fire (spread), and whose 12-round
+            // magazine means running dry costs a beat of vulnerability (the reload) — no ammo economy.
             CreateWeapon("Pistol", "Pistol", EquipmentType.Firearm, SlotType.Either, damage: 12f, range: 60f, projectileSpeed: 0f, cooldown: 0.25f,
-                spreadMin: 1f, spreadMax: 9f, spreadPerShot: 1.4f, spreadRecovery: 7f);
+                spreadMin: 1f, spreadMax: 9f, spreadPerShot: 1.4f, spreadRecovery: 7f, magazineSize: 12, reloadTime: 1.6f);
             CreateWeapon("Catalyst", "Arcane Catalyst", EquipmentType.Catalyst, SlotType.Either, damage: 22f, range: 50f, projectileSpeed: 18f, cooldown: 0.8f);
 
             var config = AssetDatabase.LoadAssetAtPath<LoadoutConfig>(LoadoutConfigPath);
@@ -145,7 +146,7 @@ namespace ProjectAscension.Editor
             float damage, float range, float projectileSpeed, float cooldown,
             float chargeTime = 0f, float maxChargeMultiplier = 1f,
             float spreadMin = 0f, float spreadMax = 0f, float spreadPerShot = 0f, float spreadRecovery = 0f,
-            float projectileGravity = 0f)
+            float projectileGravity = 0f, int magazineSize = 0, float reloadTime = 0f)
         {
             var path = $"{WeaponsDir}/{assetName}.asset";
             var data = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
@@ -169,6 +170,8 @@ namespace ProjectAscension.Editor
             so.FindProperty("spreadMax").floatValue = spreadMax;
             so.FindProperty("spreadPerShot").floatValue = spreadPerShot;
             so.FindProperty("spreadRecovery").floatValue = spreadRecovery;
+            so.FindProperty("magazineSize").intValue = magazineSize;
+            so.FindProperty("reloadTime").floatValue = reloadTime;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

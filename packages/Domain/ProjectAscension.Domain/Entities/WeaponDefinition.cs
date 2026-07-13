@@ -32,5 +32,10 @@ namespace ProjectAscension.Domain.Entities
         public float SpreadMax { get; set; }
         public float SpreadPerShot { get; set; }
         public float SpreadRecovery { get; set; }
+
+        // Magazine (firearms; 0 = no magazine, never reloads — the vulnerability beat of running
+        // dry is the point, not an ammo economy: there is no reserve, only the magazine).
+        public int MagazineSize { get; set; }
+        public float ReloadTime { get; set; }
     }
 }

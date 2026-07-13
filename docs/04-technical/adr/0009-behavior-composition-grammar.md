@@ -76,3 +76,18 @@ ADR 0008로 "무기 융합"을 관측하게 됐다. 그런데 그걸 만들고 �
   전부 문법의 특수 사례였다.
 - 남는 raw 행동은 `Jump`/`Dodge`/`MeleeAttack`/`RangedAttack` — 순수한 "무엇을 몇 번" 뿐이다.
 - 과적합 방어: 우리는 `arcane>firearm`을 열거하지 않는다. **"임의의 a>b"**를 관측할 뿐이다.
+
+## Amendment (2026-07-13) — a token names the ACT, not just the instrument
+
+`Act.Token` was `Instrument ?? Verb`, which was fine only while `attack` was the sole verb that
+carried an instrument. Reload (a real verb, done WITH a gun) broke it: a reload and a gunshot
+collapsed to the same token `firearm`, so a spell cast beside a **reload** scored as a spell woven
+into a **shot** — a flame bullet nobody earned.
+
+The rule is now: an attack names its weapon and nothing else (firing a gun is simply *using* it),
+and any other verb done with a weapon names both — `reload:firearm`. The weapon stays in the name so
+the skill still binds to it (ADR 0011); the token boundary is what keeps `reload:firearm` implicating
+the firearm.
+
+This is the general form. Every future verb that can be done *with* something (aim, holster, parry)
+falls out of it without a special case.

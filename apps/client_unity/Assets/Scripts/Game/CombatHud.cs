@@ -1,5 +1,7 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.Equipment;
+using ProjectAscension.Player;
 
 namespace ProjectAscension.Game
 {
@@ -25,6 +27,7 @@ namespace ProjectAscension.Game
         private const float FlashDuration = 0.35f;
 
         private HitReceiver _player;
+        private Loadout _loadout; // read-only: which equipped weapon (if any) has a magazine to show
         private float _damageFlash; // 1 → 0 red on taking damage
         private float _blockFlash;  // 1 → 0 pale on a shield absorbing a blow
         private Texture2D _tex;
@@ -50,7 +53,10 @@ namespace ProjectAscension.Game
             {
                 var playerGo = GameObject.FindWithTag("Player");
                 if (playerGo != null && playerGo.TryGetComponent<HitReceiver>(out var hr))
+                {
                     Bind(hr);
+                    playerGo.TryGetComponent(out _loadout); // may be null offline; magazine draw just no-ops
+                }
             }
 
             float dt = Time.unscaledDeltaTime; // fade even during hit-stop
@@ -72,6 +78,7 @@ namespace ProjectAscension.Game
             _player.Damaged -= OnDamaged;
             _player.DamageBlocked -= OnBlocked;
             _player = null;
+            _loadout = null;
         }
 
         private void OnDamaged(HitReceiver _, float __) => _damageFlash = 1f;
@@ -88,6 +95,7 @@ namespace ProjectAscension.Game
 
             DrawCrosshair();
             DrawHealthBar();
+            DrawMagazine();
         }
 
         private void DrawFullscreen(Color c)
@@ -130,6 +138,62 @@ namespace ProjectAscension.Game
 
             var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             GUI.Label(new Rect(x, y, w, h), $"{Mathf.CeilToInt(_player.Current)} / {Mathf.CeilToInt(_player.Max)}", style);
+        }
+
+        // Ammo readout near the crosshair — only for a weapon that actually has a magazine (sword/bow/
+        // catalyst/shield draw nothing here). Reloading shows progress instead of a count; empty and
+        // idle hints the reload key rather than leaving the player clicking a dead trigger unexplained.
+        private void DrawMagazine()
+        {
+            var weapon = ActiveFirearm();
+            if (weapon == null) return;
+
+            float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
+            var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            var rect = new Rect(cx - 70f, cy + 26f, 140f, 20f);
+            var prev = GUI.color;
+
+            if (weapon.IsReloading)
+            {
+                GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
+                GUI.Label(rect, "Reloading…", style);
+                DrawReloadBar(cx, cy + 48f, weapon.ReloadFraction);
+            }
+            else if (weapon.Loaded <= 0)
+            {
+                GUI.color = new Color(0.9f, 0.3f, 0.25f, 0.95f);
+                GUI.Label(rect, $"Reload [{PlayerInputHandler.ReloadKeyLabel}]", style);
+            }
+            else
+            {
+                GUI.color = new Color(1f, 1f, 1f, 0.85f);
+                GUI.Label(rect, $"{weapon.Loaded} / {weapon.MagazineSize}", style);
+            }
+            GUI.color = prev;
+        }
+
+        private void DrawReloadBar(float cx, float y, float frac)
+        {
+            const float w = 100f, h = 6f;
+            float x = cx - w * 0.5f;
+            var prev = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.5f);
+            GUI.DrawTexture(new Rect(x - 1, y - 1, w + 2, h + 2), _tex);
+            GUI.color = new Color(0.2f, 0.2f, 0.2f, 0.85f);
+            GUI.DrawTexture(new Rect(x, y, w, h), _tex);
+            GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
+            GUI.DrawTexture(new Rect(x, y, w * Mathf.Clamp01(frac), h), _tex);
+            GUI.color = prev;
+        }
+
+        // Whichever hand holds a magazine weapon (right hand takes priority — dual pistols still
+        // reload both, this just picks which one's ammo count is on screen).
+        private WeaponBase ActiveFirearm()
+        {
+            if (_loadout == null) return null;
+            if (_loadout.RightSlot?.Current is WeaponBase right && right.HasMagazine) return right;
+            if (_loadout.LeftSlot?.Current is WeaponBase left && left.HasMagazine) return left;
+            return null;
         }
     }
 }

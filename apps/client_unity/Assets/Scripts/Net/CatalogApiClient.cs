@@ -58,6 +58,8 @@ namespace ProjectAscension.Net
         public float spreadMax;
         public float spreadPerShot;
         public float spreadRecovery;
+        public int magazineSize;   // 0 = no magazine, never reloads
+        public float reloadTime;
     }
 
     [Serializable]
