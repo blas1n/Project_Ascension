@@ -5,24 +5,39 @@ using ProjectAscension.Equipment;
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// In the Frontier, equips the loadout the player chose in the City. When played
-    /// directly (no GameSession), falls back to a serialized config. An authored weapon's
-    /// stats come from the DB definition (fetched at startup) when available, so balance
-    /// edits apply with no client rebuild; offline it uses the authored asset as-is.
+    /// Puts the chosen loadout in the player's hands — in the City and in the Frontier alike, and the
+    /// INSTANT the choice changes, not at the next scene load. Picking a weapon at the equipment
+    /// station is not filling in a form that takes effect when you leave town; it is picking up the
+    /// weapon. You should see it in your hand while you are still standing at the rack — and when the
+    /// art track puts a real model there, this is the seam that swaps it.
+    ///
+    /// When played directly (no GameSession), falls back to a serialized config. An authored weapon's
+    /// stats come from the DB definition (fetched at startup) when available, so balance edits apply
+    /// with no client rebuild; offline it uses the authored asset as-is.
     /// </summary>
     public sealed class LoadoutApplier : MonoBehaviour
     {
         [SerializeField] private LoadoutConfig fallback;
 
-        private void Start()
+        private PlayerStateService _watched;
+
+        private void Start() => Apply();
+
+        private void OnDestroy()
+        {
+            if (_watched != null) _watched.LoadoutChanged -= Apply;
+        }
+
+        private void Apply()
         {
             var loadout = FindAnyObjectByType<Loadout>();
             if (loadout == null) return;
 
             WeaponData left, right;
             var session = GameSession.Instance;
-            if (session != null)
+            if (session != null && session.PlayerState != null)
             {
+                Watch(session.PlayerState);
                 left = session.PlayerState.SelectedLeft;
                 right = session.PlayerState.SelectedRight;
             }
@@ -37,6 +52,15 @@ namespace ProjectAscension.Game
             }
 
             loadout.Equip(WithServerStats(left), WithServerStats(right));
+        }
+
+        // Subscribe once — the state outlives the scene, so a re-subscribe per scene would stack.
+        private void Watch(PlayerStateService state)
+        {
+            if (ReferenceEquals(_watched, state)) return;
+            if (_watched != null) _watched.LoadoutChanged -= Apply;
+            _watched = state;
+            _watched.LoadoutChanged += Apply;
         }
 
         // Swap an authored weapon for a DB-driven build of the same weapon (matched by

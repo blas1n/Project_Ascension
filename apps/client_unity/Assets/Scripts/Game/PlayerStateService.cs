@@ -57,8 +57,25 @@ namespace ProjectAscension.Game
             if (_owned.Count > 1) SelectedRight = _owned[1];
         }
 
-        public void SetLeft(WeaponData weapon) => SelectedLeft = weapon;
-        public void SetRight(WeaponData weapon) => SelectedRight = weapon;
+        /// <summary>Raised the moment the chosen pair changes. Choosing a weapon IS equipping it —
+        /// there is no separate "apply" step to forget, and no saved intention that only becomes real
+        /// at the next scene load. You picked up the sword; it is in your hand. (This is also the seam
+        /// the art track needs: when a real weapon model exists, THIS is what swaps it.)</summary>
+        public event System.Action LoadoutChanged;
+
+        public void SetLeft(WeaponData weapon)
+        {
+            if (ReferenceEquals(SelectedLeft, weapon)) return;
+            SelectedLeft = weapon;
+            LoadoutChanged?.Invoke();
+        }
+
+        public void SetRight(WeaponData weapon)
+        {
+            if (ReferenceEquals(SelectedRight, weapon)) return;
+            SelectedRight = weapon;
+            LoadoutChanged?.Invoke();
+        }
 
         /// <summary>Add a weapon to the inventory (e.g. a discovered weapon). Persists
         /// for the session, so it survives City&lt;-&gt;Frontier and can be re-equipped.</summary>
