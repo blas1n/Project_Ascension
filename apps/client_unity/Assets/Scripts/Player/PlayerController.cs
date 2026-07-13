@@ -57,8 +57,10 @@ namespace ProjectAscension.Player
                 _hitReceiver.Died += OnDied;
             }
 
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            // NOT "lock the cursor" — "put the cursor where focus says it goes". The character-creation
+            // form is already open when this scene loads, and locking here took the cursor away from
+            // its name field: you could not click it, so you could not type your own name.
+            UiFocus.ApplyCursor();
         }
 
         private void OnDied(HitReceiver hitReceiver)
