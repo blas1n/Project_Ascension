@@ -35,9 +35,13 @@ public sealed record TriggerOutcome(bool Fires, Rarity Rarity, int Score);
 /// </summary>
 public static class TriggerEvaluator
 {
-    /// <summary>Behaviour keys that are a FUSION of two hands rather than a count of one (ADR 0008).
-    /// Mirrors GameSimulation's SynthesisDeriver.Prefix — the client observes it, the engine scores it.</summary>
-    public const string SynthesisPrefix = "Synthesis:";
+    /// <summary>Composite behaviours (ADR 0009) — the grammar's four operators. Scored by PREFIX, so a
+    /// new weapon, a new act, or a combination nobody thought of opens up without seeding a single row.
+    /// Mirrors GameSimulation's CompositionDeriver.</summary>
+    public const string FusePrefix = "Fuse:";    // almost the same instant — the tightest mastery
+    public const string SeqPrefix = "Seq:";      // one act flowing into the next
+    public const string WhilePrefix = "While:";  // done while some quality held
+    public const string ChainPrefix = "Chain:";  // done again and again
 
     public static TriggerOutcome Evaluate(BehaviorSignature signature, DiscoveryTuning tuning)
     {
@@ -46,11 +50,11 @@ public static class TriggerEvaluator
         foreach (var (behavior, count) in signature.Behaviors)
         {
             if (count <= 0) continue;
-            // A fusion (ADR 0008) is scored as one — by prefix, so a new weapon or element opens new
-            // combinations without seeding a single row. Everything else is a plain weighted count.
-            int weight = behavior.StartsWith(SynthesisPrefix, StringComparison.Ordinal)
-                ? tuning.SynthesisWeight
-                : tuning.BehaviorWeights.TryGetValue(behavior, out var w) ? w : tuning.DefaultBehaviorWeight;
+            // A composite is scored as a composite (ADR 0009). Tightness is the signal: fusing two acts
+            // in an instant is a harder, more deliberate thing than stringing them together, and is
+            // worth more than either — and far more than doing one thing many times.
+            int weight = Composite(behavior, tuning) ?? (
+                tuning.BehaviorWeights.TryGetValue(behavior, out var w) ? w : tuning.DefaultBehaviorWeight);
             behaviorScore += count * weight;
             distinct++;
         }
@@ -82,6 +86,16 @@ public static class TriggerEvaluator
             + signature.Persistence * tuning.PersistenceWeight;
 
         return new TriggerOutcome(score >= tuning.FireThreshold, RarityFor(score, tuning), score);
+    }
+
+    /// <summary>The weight of a composite behaviour, or null if it is a plain count.</summary>
+    private static int? Composite(string behavior, DiscoveryTuning t)
+    {
+        if (behavior.StartsWith(FusePrefix, StringComparison.Ordinal)) return t.FuseWeight;
+        if (behavior.StartsWith(SeqPrefix, StringComparison.Ordinal)) return t.SequenceWeight;
+        if (behavior.StartsWith(WhilePrefix, StringComparison.Ordinal)) return t.ConcurrencyWeight;
+        if (behavior.StartsWith(ChainPrefix, StringComparison.Ordinal)) return t.ChainWeight;
+        return null;
     }
 
     private static Rarity RarityFor(int score, DiscoveryTuning t) =>

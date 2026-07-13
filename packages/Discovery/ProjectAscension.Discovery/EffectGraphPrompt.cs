@@ -21,21 +21,42 @@ public static class EffectGraphPrompt
             ? "no clear pattern"
             : string.Join(", ", profile.OrderByDescending(b => b.Count).Select(b => $"{b.Behavior}:{b.Count}"));
 
-        // A FUSION the player actually performed (ADR 0008) — two hands used as one act. This is the
-        // ONLY evidence that a skill should be a synthesis. Carrying a catalyst is not fusing with it.
-        var fusions = profile?.Where(b => b.Behavior.StartsWith(TriggerEvaluator.SynthesisPrefix, StringComparison.Ordinal))
-                              .OrderByDescending(b => b.Count).ToList();
-        string fusionSteer = fusions is null || fusions.Count == 0
-            ? "NO FUSION was performed. The player never used their two hands as one act. Do NOT invent a hybrid/imbued skill (no \"flaming bullet\", no \"frost blade\") merely because they were CARRYING two things — equipment tags say what they held, never what they combined. Compose from what they actually DID."
-            : "FUSION PERFORMED — this is the heart of the skill. " +
-              string.Join("; ", fusions.Select(f =>
-              {
-                  var pair = f.Behavior.Substring(TriggerEvaluator.SynthesisPrefix.Length).Split('>');
-                  string primer = pair.Length > 0 ? pair[0] : "?";
-                  string delivery = pair.Length > 1 ? pair[1] : "?";
-                  return $"the player wove {primer} INTO {delivery} ({f.Count}x) — the skill IS that fusion: {delivery} is the vehicle and {primer} is what it now carries";
-              })) +
-              ". The ORDER matters: X>Y means X was primed and Y delivered it. Compose the graph so the delivery carries the primer's nature (e.g. arcane>firearm = a shot that carries the arcane; firearm>arcane = the arcane detonating what the shot left behind).";
+        // The COMPOSITION GRAMMAR (ADR 0009). These are the only evidence that a skill is a composite
+        // of two things — carrying a catalyst is not fusing with it, and never was.
+        var composites = profile?.Where(b =>
+            b.Behavior.StartsWith(TriggerEvaluator.FusePrefix, StringComparison.Ordinal) ||
+            b.Behavior.StartsWith(TriggerEvaluator.SeqPrefix, StringComparison.Ordinal) ||
+            b.Behavior.StartsWith(TriggerEvaluator.WhilePrefix, StringComparison.Ordinal) ||
+            b.Behavior.StartsWith(TriggerEvaluator.ChainPrefix, StringComparison.Ordinal))
+            .OrderByDescending(b => b.Count).ToList();
+
+        string fusionSteer = composites is null || composites.Count == 0
+            ? "The player COMPOSED NOTHING — they only repeated simple acts. Do NOT invent a hybrid or imbued skill (no \"flaming bullet\", no \"frost blade\") merely because they were CARRYING two things: the equipment tags say what they HELD, never what they COMBINED. Compose from what they actually DID."
+            : "HOW THEY COMPOSED THEIR ACTS — this is the heart of the skill:\n" +
+              string.Join("\n", composites.Select(Describe)) +
+              "\nThe skill must BE that composition. Order matters: a>b means a was primed and b delivered it, so b is the vehicle and a is what it now carries.";
+
+        static string Describe(BehaviorWeight b)
+        {
+            string k = b.Behavior;
+            if (k.StartsWith(TriggerEvaluator.FusePrefix, StringComparison.Ordinal))
+            {
+                var p = k.Substring(TriggerEvaluator.FusePrefix.Length).Split('>');
+                return $"- FUSED (almost the same instant, {b.Count}x): wove {p[0]} INTO {p[1]} — one act, not two. The skill IS that fusion.";
+            }
+            if (k.StartsWith(TriggerEvaluator.SeqPrefix, StringComparison.Ordinal))
+            {
+                var p = k.Substring(TriggerEvaluator.SeqPrefix.Length).Split('>');
+                return $"- CHAINED ({b.Count}x): {p[0]} flowing straight into {p[1]} — a follow-through, not a fusion.";
+            }
+            if (k.StartsWith(TriggerEvaluator.WhilePrefix, StringComparison.Ordinal))
+            {
+                var p = k.Substring(TriggerEvaluator.WhilePrefix.Length).Split('@');
+                return $"- {p[0]} performed while {p[1]} ({b.Count}x) — the condition is part of the skill.";
+            }
+            var t = k.Substring(TriggerEvaluator.ChainPrefix.Length);
+            return $"- REPEATED {t} relentlessly ({b.Count}x) — insistence, not artistry.";
+        }
 
         string themeLower = (theme ?? string.Empty).ToLowerInvariant();
         bool defensiveTheme = themeLower.Contains("ward") || themeLower.Contains("shield") || themeLower.Contains("guard")

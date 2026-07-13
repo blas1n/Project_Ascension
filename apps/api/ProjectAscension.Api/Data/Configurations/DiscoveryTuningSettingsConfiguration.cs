@@ -20,9 +20,13 @@ public class DiscoveryTuningSettingsConfiguration : IEntityTypeConfiguration<Dis
             KnowledgeDepthWeight = 12,
             PersistenceWeight = 5,
             CombinationSynergy = 15,
-            // A fusion is worth more than a dozen shots (ADR 0008). You do not stumble into
-            // wreathing your gunshot in fire — and spamming one hand must never get you there.
-            SynthesisWeight = 25,
+            // The grammar's operators (ADR 0009), by how deliberate the act is. A fusion is worth more
+            // than a dozen shots; repetition is worth the least, because it is the easiest thing a
+            // player can do and must not be the road to every discovery.
+            FuseWeight = 25,
+            SequenceWeight = 15,
+            ConcurrencyWeight = 12,
+            ChainWeight = 6,
             FireThreshold = 100,
             BudgetBase = 8,
             BudgetPerScore = 0.18,

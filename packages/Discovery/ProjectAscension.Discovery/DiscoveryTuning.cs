@@ -14,9 +14,14 @@ public sealed record DiscoveryTuning(
     int KnowledgeDepthWeight,
     int PersistenceWeight,
     int CombinationSynergy,
-    // A FUSION of two hands (ADR 0008) — deliberately far above a raw attack count (2). You do not
-    // stumble into fusing your catalyst with your gunshot; spamming one hand must never reach here.
-    int SynthesisWeight,
+    // The composition grammar's operators (ADR 0009), scored by prefix. Ordered by how deliberate the
+    // act is: fusing two things in an instant is the hardest, and repetition the easiest. You do not
+    // stumble into weaving your catalyst through your gunshot — and spamming one hand must never get
+    // you there.
+    int FuseWeight,        // Fuse:a>b  — almost the same instant
+    int SequenceWeight,    // Seq:a>b   — one act into the next
+    int ConcurrencyWeight, // While:a@q — done while airborne / charged / blocking
+    int ChainWeight,       // Chain:a   — done again and again
     int FireThreshold,
     int BudgetBase,
     double BudgetPerScore,
@@ -65,7 +70,10 @@ public sealed record DiscoveryTuning(
         KnowledgeDepthWeight: 12,
         PersistenceWeight: 5,
         CombinationSynergy: 15,
-        SynthesisWeight: 25,
+        FuseWeight: 25,
+        SequenceWeight: 15,
+        ConcurrencyWeight: 12,
+        ChainWeight: 6,
         FireThreshold: 100,
         BudgetBase: 8,
         BudgetPerScore: 0.18,

@@ -32,8 +32,11 @@ namespace ProjectAscension.Domain.Entities
         public int EpicScore { get; set; }
         public int LegendaryScore { get; set; }
 
-        // A fusion of two hands (ADR 0008), scored far above a raw attack count — a fusion skill
-        // must be EARNED by actually fusing, never reached by spamming one hand.
-        public int SynthesisWeight { get; set; }
+        // The composition grammar's operators (ADR 0009), scored by prefix — ordered by how deliberate
+        // the act is. A composite must be EARNED by composing, never reached by spamming one hand.
+        public int FuseWeight { get; set; }
+        public int SequenceWeight { get; set; }
+        public int ConcurrencyWeight { get; set; }
+        public int ChainWeight { get; set; }
     }
 }
