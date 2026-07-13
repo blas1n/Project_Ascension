@@ -265,7 +265,7 @@ public class SkillCompositionServiceTests
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
-        var req = Eval(jumpCount: 200); // score 200
+        var req = Eval(jumpCount: 350); // score 350
 
         // However well you played, a style you have never touched starts at COMMON (ADR 0010) — that is
         // what makes breadth pay in quantity and depth pay in rarity.
@@ -273,11 +273,11 @@ public class SkillCompositionServiceTests
         Assert.True(first.Fired);
         Assert.NotNull(first.DiscoveryId);
 
-        // The same play again climbs at most ONE rung, and only if it is worth it (Uncommon needs 150).
+        // The same play again climbs at most ONE rung, and only if it is worth it (Uncommon needs 300).
         var second = await service.EvaluateAndTriggerAsync(req);
         Assert.True(second.Fired);
 
-        // And then it STALLS: Rare demands 225, and repeating yourself will never get there. The only
+        // And then it STALLS: Rare demands 450, and repeating yourself will never get there. The only
         // way on is to play better.
         Assert.False((await service.EvaluateAndTriggerAsync(req)).Fired);
         Assert.False((await service.EvaluateAndTriggerAsync(req)).Fired);
@@ -340,15 +340,15 @@ public class SkillCompositionServiceTests
             new(actor, Region, DiscoveryType.Skill, "t", new[] { tag }, "Beam",
                 new[] { new BehaviorCount("RangedAttack", ranged) }, Persistence: 0);
 
-        // BREADTH: a brilliant session (score 600) in a style he has never touched. He still gets a
+        // BREADTH: a brilliant session (score 800) in a style he has never touched. He still gets a
         // COMMON. Excellence cannot buy its way to rarity in a place you have not been.
-        var breadth = await service.EvaluateAndTriggerAsync(Style("arcane", 300));
+        var breadth = await service.EvaluateAndTriggerAsync(Style("arcane", 400));
         Assert.True(breadth.Fired);
         Assert.Equal(Rarity.Common.ToString(), RarityOf(skills, breadth.DiscoveryId!.Value));
 
         // DEPTH: the same excellence, applied again and again to the SAME style, climbs — and each rung
         // costs exponentially more, so it climbs only as far as the play deserves.
-        for (int i = 0; i < 6; i++) await service.EvaluateAndTriggerAsync(Style("arcane", 300));
+        for (int i = 0; i < 6; i++) await service.EvaluateAndTriggerAsync(Style("arcane", 400));
 
         var deepest = skills.Skills
             .Select(sk => Enum.Parse<Rarity>(sk.IdempotencyKey!.Split(':').Last()))
@@ -380,14 +380,17 @@ public class SkillCompositionServiceTests
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
+        // "MeleeAttack", not "ChargedAttack": a charged shot is now a While:...@charged quality on the
+        // act stream (ADR 0009), not its own raw BehaviorKind — "ChargedAttack" is a dead key nothing
+        // emits any more (see FactorAndBehaviorVocabularyTests).
         var actor = Guid.NewGuid();
         var charging = await service.EvaluateAndTriggerAsync(
-            EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
+            EvalBehavior(actor, new BehaviorCount("MeleeAttack", 200)));
         var skirmishing = await service.EvaluateAndTriggerAsync(
             EvalBehavior(actor, new BehaviorCount("RangedAttack", 120), new BehaviorCount("Jump", 110)));
         // The same play again climbs its OWN ladder — it does not spill into the other one.
         var chargingAgain = await service.EvaluateAndTriggerAsync(
-            EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
+            EvalBehavior(actor, new BehaviorCount("MeleeAttack", 200)));
 
         Assert.True(charging.Fired);
         Assert.True(skirmishing.Fired);
@@ -408,9 +411,11 @@ public class SkillCompositionServiceTests
     public async Task Evaluate_VolatileCatalystTags_DoNotFragmentTheClaim()
     {
         // Regression: transient monster:* tags (a rolling kill window) and the player's own
-        // spell:* tags (a discovery feedback loop) shifted every flush window, so the claim
-        // key changed each time and a fresh "first discovery" was minted every ~5s — a
-        // stream of near-identical skills. The same essential combination must claim once.
+        // spell:* tags (a discovery feedback loop) used to shift every flush window, so the claim
+        // key changed each time and a fresh "first discovery" was minted every ~5s — a stream of
+        // near-identical skills. The fix (DiscoveryScarcity) goes further than filtering those two
+        // prefixes: ContextTags is not part of the style key AT ALL any more (see RegionKey), so no
+        // context tag — volatile or not — can ever fragment a claim.
         var discoveries = new FakeDiscoveryRepo();
         var skills = new FakeSkillRepo();
         using var metrics = new CompositionMetrics();
@@ -433,6 +438,122 @@ public class SkillCompositionServiceTests
     }
 
     [Fact]
+    public async Task Evaluate_EquippingADiscoveredWeapon_DoesNotOpenANewLadder()
+    {
+        // The bug this guards (Bug 2, discovery-scarcity): equipping a freshly discovered weapon
+        // used to add its own "spell:xxx" context tag to the loadout snapshot the claim key was
+        // built from — a brand-new key, a brand-new ladder, and the first rung of any ladder is a
+        // free Common. The fix keys on the BEHAVIOURS instead: using the pistol alone, before or
+        // after equipping (but not USING) a self-forged weapon, must land on the same ladder.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        EvaluateTriggerRequest Fire(IReadOnlyList<string> tags) => new(
+            actor, Region, DiscoveryType.Skill, "t", tags, "Projectile",
+            new[] { new BehaviorCount("Use:firearm", 1), new BehaviorCount("RangedAttack", 400) },
+            Persistence: 0);
+
+        // Before the discovery: loadout is just the pistol.
+        var before = await service.EvaluateAndTriggerAsync(Fire(new[] { "firearm" }));
+        // After equipping the freshly discovered weapon in the OTHER hand — its tag joins the
+        // context snapshot — but the player still only USED the pistol this window.
+        var after = await service.EvaluateAndTriggerAsync(Fire(new[] { "firearm", "spell:flame-lance" }));
+
+        Assert.True(before.Fired);
+        Assert.Single(skills.Skills.Select(StyleOf).Distinct()); // one ladder, not two
+    }
+
+    [Fact]
+    public async Task Evaluate_CarryingAnUnusedWeapon_DoesNotForkTheStyle()
+    {
+        // A catalyst sitting in the other hand, never fired, must not count. The evidence is what
+        // the BEHAVIOURS say happened — "Use:firearm" — not what ContextTags says was equipped.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        EvaluateTriggerRequest Fire(IReadOnlyList<string> tags) => new(
+            actor, Region, DiscoveryType.Skill, "t", tags, "Projectile",
+            new[] { new BehaviorCount("Use:firearm", 1), new BehaviorCount("RangedAttack", 400) },
+            Persistence: 0);
+
+        // Bare pistol, then pistol + an UNUSED catalyst in the other hand (never wove it in).
+        var pistolOnly = await service.EvaluateAndTriggerAsync(Fire(new[] { "firearm" }));
+        var withUnusedCatalyst = await service.EvaluateAndTriggerAsync(Fire(new[] { "firearm", "arcane" }));
+
+        Assert.True(pistolOnly.Fired);
+        Assert.Single(skills.Skills.Select(StyleOf).Distinct()); // carrying it changed nothing
+    }
+
+    [Fact]
+    public async Task Evaluate_SamePlayInADifferentRegion_IsADifferentLadder()
+    {
+        // ADR 0011 §3: the region is part of the style. Unlike the loadout snapshot, this dimension
+        // is meant to fork — the same play at the waterfall and in the crystal desert must not share
+        // a ladder (discovery.md: "환경이 발견을 다르게 만든다").
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+        var otherRegion = Guid.NewGuid();
+
+        EvaluateTriggerRequest Fire(Guid region) => new(
+            actor, region, DiscoveryType.Skill, "t", Array.Empty<string>(), "Projectile",
+            new[] { new BehaviorCount("Use:firearm", 1), new BehaviorCount("RangedAttack", 400) },
+            Persistence: 0);
+
+        var here = await service.EvaluateAndTriggerAsync(Fire(Region));
+        var there = await service.EvaluateAndTriggerAsync(Fire(otherRegion));
+
+        Assert.True(here.Fired);
+        Assert.True(there.Fired);
+        Assert.Equal(2, skills.Skills.Select(StyleOf).Distinct().Count()); // two ladders, one per region
+    }
+
+    [Fact]
+    public async Task Evaluate_SustainedPlayInOneStyle_YieldsABoundedExponentiallySlowingStream()
+    {
+        // The property ADR 0010 exists to guarantee: repeating the SAME play in ONE style does not
+        // yield a discovery every window — it yields a handful (at most one per rarity rung, five
+        // total), each harder to reach than the last, and then NOTHING, however long you keep at it.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        // A single, FIXED "session" repeated many times — no escalation, exactly what grinding is. A
+        // strong, sustained window (well above the first rung), never varied or improved upon.
+        EvaluateTriggerRequest OneWindow() => new(
+            actor, Region, DiscoveryType.Skill, "t", Array.Empty<string>(), "Projectile",
+            new[]
+            {
+                new BehaviorCount("Use:firearm", 1),
+                new BehaviorCount("RangedAttack", 300),
+                new BehaviorCount("Chain:firearm", 3),
+            },
+            Persistence: 1);
+
+        int fires = 0;
+        for (int window = 0; window < 40; window++)
+            if ((await service.EvaluateAndTriggerAsync(OneWindow())).Fired) fires++;
+
+        // Bounded: never more than one discovery per rarity rung, however many windows of identical
+        // play are thrown at it — and strictly fewer than the 40 windows played, so it is not one
+        // discovery per window either.
+        Assert.True(fires >= 1, "a strong sustained window should earn at least the first rung");
+        Assert.True(fires <= Enum.GetValues<Rarity>().Length, $"grinding one style fired {fires} times");
+        Assert.True(fires < 40, "grinding must exhaust itself, not fire every window");
+        Assert.Single(skills.Skills.Select(StyleOf).Distinct()); // all on the SAME ladder
+    }
+
+    [Fact]
     public async Task Evaluate_RecordsLineageFromPriorKnowledge()
     {
         var discoveries = new FakeDiscoveryRepo();
@@ -444,9 +565,9 @@ public class SkillCompositionServiceTests
         var actor = Guid.NewGuid();
 
         // First discovery in the "fire" space — no prior knowledge, so no parents.
-        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 200));
+        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 400));
         // Second in the same space (shares "fire") — builds on the first.
-        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 200));
+        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 400));
 
         Assert.True(first.Fired);
         Assert.True(second.Fired);
@@ -468,8 +589,8 @@ public class SkillCompositionServiceTests
         var service = Service(discoveries, skills, knowledge, metrics, lineage);
         var actor = Guid.NewGuid();
 
-        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 200));
-        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 200));
+        var first = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire" }, 400));
+        var second = await service.EvaluateAndTriggerAsync(EvalCtx(actor, new[] { "fire", "compression" }, 400));
 
         var result = await service.GetLineageAsync(second.DiscoveryId!.Value);
 
