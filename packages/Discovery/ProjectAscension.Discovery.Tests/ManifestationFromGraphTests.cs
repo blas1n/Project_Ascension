@@ -41,12 +41,21 @@ public class ManifestationFromGraphTests
     }
 
     [Fact]
-    public void AWeaponIsBornOfASYNTHESIS_NotOfCarryingACatalyst()
+    public void AWeaponIsBornOfASYNTHESIS_OfMagicIntoMagic()
     {
-        // Making a weapon is how the game expresses MAGIC SYNTHESIS ("화기 + 술식 → 마력 탄환"), so it takes
-        // an actual fusion — two hands woven into one act, one of them magic (ADR 0011).
-        Assert.True(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:arcane>firearm" }));
-        Assert.True(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:melee>arcane" }));
+        // Making a weapon is how the game expresses MAGIC SYNTHESIS ("화기 + 술식 → 마력 탄환") — TWO magics
+        // woven into one new thing, not one magic hand riding an ordinary weapon (ADR 0011).
+        Assert.True(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:arcane>spell:emberbrand" }));
+        Assert.True(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:spell:frostbolt>arcane" }));
+    }
+
+    [Fact]
+    public void ASingleMagicHandFusedIntoAnOrdinaryWeapon_IsATechniqueYouInvoke_NotAForge()
+    {
+        // The bug this guards: a pistol (firearm) wreathed in one spell is not "magic + anything" — it
+        // is one magic invoked through an ordinary weapon. Still just a Command, however fierce.
+        Assert.False(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:arcane>firearm" }));
+        Assert.False(ManifestationFromGraph.IsMagicFusion(new[] { "Fuse:melee>arcane" }));
     }
 
     [Fact]

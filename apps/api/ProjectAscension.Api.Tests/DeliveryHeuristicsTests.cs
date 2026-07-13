@@ -14,8 +14,8 @@ public class DeliveryHeuristicsTests
     [Fact]
     public void ChargedStanding_IsBeam_ChargedMobile_IsNova()
     {
-        Assert.Equal("beam", DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 60) }));
-        Assert.Equal("nova", DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 40), B("Jump", 30) }));
+        Assert.Equal("beam", DeliveryHeuristics.ForBehavior(new[] { B("While:firearm@charged", 60) }));
+        Assert.Equal("nova", DeliveryHeuristics.ForBehavior(new[] { B("While:firearm@charged", 40), B("Jump", 30) }));
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class DeliveryHeuristicsTests
     {
         var styles = new[]
         {
-            DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 60) }),                 // beam
-            DeliveryHeuristics.ForBehavior(new[] { B("ChargedAttack", 40), B("Jump", 40) }),  // nova
+            DeliveryHeuristics.ForBehavior(new[] { B("While:firearm@charged", 60) }),                 // beam
+            DeliveryHeuristics.ForBehavior(new[] { B("While:firearm@charged", 40), B("Jump", 40) }),  // nova
             DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 60) }),                  // projectile
             DeliveryHeuristics.ForBehavior(new[] { B("RangedAttack", 40), B("Jump", 40) }),   // arc
             DeliveryHeuristics.ForBehavior(new[] { B("MeleeAttack", 60) }),                   // burst

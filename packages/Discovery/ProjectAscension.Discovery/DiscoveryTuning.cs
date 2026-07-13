@@ -42,11 +42,15 @@ public sealed record DiscoveryTuning(
     public static DiscoveryTuning Default { get; } = new(
         new Dictionary<string, int>
         {
+            // Raw verbs only (BehaviorKind) — composites (Fuse:/Seq:/While:/Chain:) are scored by
+            // PREFIX (ADR 0009), never by a dictionary row. "ChargeAttack"/"ChargedAttack" used to be
+            // seeded here, but a charged shot is now a While:...@charged quality on the act stream, not
+            // its own BehaviorKind — those two rows were leftovers from before the grammar refactor and
+            // could never be hit. Removed from the DB by the CompositionGrammar migration; removed here
+            // to match (this dictionary mirrors the DB seed).
             ["Jump"] = 1,
             ["MeleeAttack"] = 2,
             ["RangedAttack"] = 2,
-            ["ChargeAttack"] = 3,
-            ["ChargedAttack"] = 3, // a deliberate held shot — drives charge discoveries
         },
         new Dictionary<string, int>
         {
@@ -56,10 +60,14 @@ public sealed record DiscoveryTuning(
             ["ice_wall"] = 10,
             ["crystal_desert"] = 12,
             ["jungle"] = 8,
-            ["sword"] = 4,
+            // Equipment-category tags EquipmentTags/SkillBinding actually emit (ADR 0005/0011), not the
+            // starter weapon names ("sword"/"pistol"/"catalyst") that used to be seeded here and never
+            // matched anything the game sends. Weights carried over 1:1 (Sword→melee, Pistol→firearm,
+            // Catalyst→arcane); Bow already matched.
+            ["melee"] = 4,
             ["bow"] = 4,
-            ["pistol"] = 4,
-            ["catalyst"] = 6,
+            ["firearm"] = 4,
+            ["arcane"] = 6,
             ["fire"] = 8,
             ["compression"] = 8,
             ["wind"] = 8,
@@ -72,18 +80,27 @@ public sealed record DiscoveryTuning(
         DefaultFactorWeight: 0,
         KnowledgeDepthWeight: 12,
         PersistenceWeight: 5,
-        CombinationSynergy: 15,
+        // Trimmed from 15 (DiscoveryScarcity, ADR 0010): merely touching a few distinct behaviour/
+        // factor KINDS in one window (an attack, a fuse, a chain — three "kinds" from one brief burst
+        // of play) was worth as much as the fuse itself. Variety still pays; it no longer dominates.
+        CombinationSynergy: 10,
         FuseWeight: 25,
         SequenceWeight: 15,
         ConcurrencyWeight: 12,
         ChainWeight: 6,
-        FireThreshold: 100,
+        // Raised from 100 (DiscoveryScarcity, ADR 0010): one spell cast fused into a short mag-dump —
+        // "한번 썼는데 발견이 쏟아진다" — scored ~100-120 under the old numbers, right at or over the old
+        // threshold. 200 puts that same brief burst at roughly half of what a Common now costs, so the
+        // first rung is earned by sustained play (still reachable by grinding, per ADR 0010 §1-c), not
+        // handed out by one twitch.
+        FireThreshold: 200,
         BudgetBase: 6,
         BudgetGrowth: 2.4,
         BudgetMin: 10,
         BudgetMax: 40, // a full 8-effect graph — significance buys BREADTH, and then saturates
-        UncommonScore: 150,
-        RareScore: 225,
-        EpicScore: 338,
-        LegendaryScore: 506);
+                       // Same ×1.5 exponential spacing as before (ADR 0010 §1-a), rebased off the new FireThreshold.
+        UncommonScore: 300,
+        RareScore: 450,
+        EpicScore: 675,
+        LegendaryScore: 1013);
 }

@@ -29,7 +29,8 @@ public class TriggerEvaluatorTests
     [Fact]
     public void CrossingThreshold_Fires()
     {
-        Assert.True(TriggerEvaluator.Evaluate(Sig(0, ("Jump", 100)), Tuning).Fires);
+        // DiscoveryScarcity raised FireThreshold to 200 (from 100) — Jump×200 clears it exactly.
+        Assert.True(TriggerEvaluator.Evaluate(Sig(0, ("Jump", 200)), Tuning).Fires);
     }
 
     [Fact]
@@ -43,18 +44,19 @@ public class TriggerEvaluatorTests
     [Fact]
     public void CombiningBehaviors_AddsSynergy()
     {
-        // Jump×50 alone = 50; Jump×50 + MeleeAttack×25 = 50 + 50 + 15 synergy = 115.
+        // Jump×50 alone = 50; Jump×50 + MeleeAttack×25 = 50 + 50 + 10 synergy = 110
+        // (DiscoveryScarcity trimmed CombinationSynergy to 10, from 15).
         var solo = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 50)), Tuning);
         var combo = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 50), ("MeleeAttack", 25)), Tuning);
         Assert.Equal(50, solo.Score);
-        Assert.Equal(115, combo.Score);
+        Assert.Equal(110, combo.Score);
     }
 
     [Fact]
     public void HigherScore_RaisesRarity()
     {
-        var low = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 125)), Tuning);          // 125 → Uncommon
-        var high = TriggerEvaluator.Evaluate(Sig(0, ("RangedAttack", 130)), Tuning); // 260 → Legendary
+        var low = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 100)), Tuning);          // 100 → Common
+        var high = TriggerEvaluator.Evaluate(Sig(0, ("RangedAttack", 300)), Tuning); // 600 → Rare
         Assert.True(high.Rarity > low.Rarity);
     }
 
@@ -76,11 +78,12 @@ public class TriggerEvaluatorTests
     public void ContextFactors_AddSignificanceAndSynergy()
     {
         // Same behavior, no factors vs at a waterfall (weight 10):
-        // bare = 50; with factor = 50 + 10 + (2 distinct − 1) × 15 synergy = 75.
+        // bare = 50; with factor = 50 + 10 + (2 distinct − 1) × 10 synergy = 70
+        // (DiscoveryScarcity trimmed CombinationSynergy to 10, from 15).
         var bare = TriggerEvaluator.Evaluate(Sig(0, ("Jump", 50)), Tuning);
         var withFactor = TriggerEvaluator.Evaluate(SigF(new[] { "waterfall" }, ("Jump", 50)), Tuning);
         Assert.Equal(50, bare.Score);
-        Assert.Equal(75, withFactor.Score);
+        Assert.Equal(70, withFactor.Score);
     }
 
     [Fact]
@@ -95,8 +98,11 @@ public class TriggerEvaluatorTests
     [Fact]
     public void UnknownFactor_DoesNotAffectScore()
     {
-        // "arcane" is not a weighted factor → no score change, no synergy.
-        Assert.Equal(50, TriggerEvaluator.Evaluate(SigF(new[] { "arcane" }, ("Jump", 50)), Tuning).Score);
+        // "arcane" used to be this test's example — but it is now a real, weighted Equipment factor
+        // (DiscoveryScarcity: the seeded key was fixed from "catalyst", which the game never emitted,
+        // to "arcane", which EquipmentTags/SkillBinding actually send). Use a string genuinely outside
+        // the vocabulary instead → no score change, no synergy.
+        Assert.Equal(50, TriggerEvaluator.Evaluate(SigF(new[] { "nonexistent_factor" }, ("Jump", 50)), Tuning).Score);
     }
 
     [Fact]

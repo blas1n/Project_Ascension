@@ -6,6 +6,9 @@ using ProjectAscension.Domain.Entities;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Domain.Interfaces;
 using ProjectAscension.SkillForge;
+// Not `using`d wholesale: ProjectAscension.GameSimulation.Combat.ManifestationKind collides with
+// ProjectAscension.SkillForge.ManifestationKind (already in scope), so SkillBinding is referenced
+// by its full name at the one call site that needs it.
 
 namespace ProjectAscension.Api.Services;
 
@@ -294,27 +297,46 @@ public class SkillCompositionService : ISkillCompositionService
         return counts;
     }
 
-    // Tag prefixes that flavor a discovery but must NOT fragment its claim key. Transient
-    // catalysts (monster:* — a rolling kill window) and the player's OWN discovered-skill
-    // tags (spell:* — a feedback loop) shift every flush window; including them made each
-    // window mint a fresh "first discovery", a stream of near-identical skills.
-    private static readonly string[] VolatileTagPrefixes = { "monster:", "spell:" };
-
+    // The style key used to be built from ContextTags — the LOADOUT SNAPSHOT (what was in the
+    // player's hands), filtered of a couple of volatile prefixes. That is a SITUATION, not a STYLE:
+    // equipping a weapon you never swing, or a discovery you just made, changed the key even though
+    // nothing about how the player actually played had changed — a new ladder, and its first rung a
+    // free Common, every time the bag changed (the snowball this fixes, ADR 0011 §1/§3).
+    //
+    // The fix: derive the participating weapons from the BEHAVIOURS, exactly as SkillBinding already
+    // does to decide what a discovered skill BINDS to — the grammar names its instrument
+    // ("Fuse:arcane>firearm", "Use:melee"), so only a weapon that actually TOOK PART can appear here.
+    // A weapon merely carried, never used, contributes nothing.
+    //
+    // A discovered weapon's own "spell:xxx" token is, by construction, not one of SkillBinding's
+    // WeaponTags — so using ONE alone (with no other instrument in the same acts) yields the EMPTY
+    // weapon set, same bucket as bare-handed play. That is deliberate, not an oversight: a forged
+    // weapon has no base CATEGORY of its own to file under, and filing it under the discovery that
+    // made it would let a player equip their own finds and farm a fresh ladder per skill — the exact
+    // snowball this fixes. When it is fused WITH a real instrument ("Fuse:arcane>spell:emberbrand"),
+    // that instrument (here "arcane") still keys the style, because it genuinely took part.
+    //
+    // ContextTags and PrimaryBehavior are deliberately left OUT of the key entirely (not merely
+    // filtered): both are the client's read of the current LOADOUT — ContextTags is the equipment
+    // snapshot itself, and PrimaryBehavior (DiscoveryReporter.PrimaryBehavior) is picked from whatever
+    // is in the player's hand right now, not from anything they did. Keeping either would leave the
+    // exact same hole open under a different name: re-equip, without a single new act, and the key
+    // still changes. Delivery survives because — unlike those two — it is computed purely from the
+    // BEHAVIOUR COUNTS (DeliveryHeuristics.ForBehavior), so it can only change when play does.
     private static string RegionKey(EvaluateTriggerRequest r)
     {
-        // Keyed on the play STYLE — the delivery the play maps to (beam/projectile/arc/nova/
-        // burst), 5 buckets. Keeps the real variety (a still charge vs. a leaping one are
-        // different discoveries) yet is coarse enough that a stray jump or a rising
-        // score no longer fragments one play into a stream; the composer's retry loop then
-        // keeps the distinct claims mechanically unique.
-        var stable = r.ContextTags
-            .Where(t => !VolatileTagPrefixes.Any(p => t.StartsWith(p, StringComparison.Ordinal)))
-            .OrderBy(t => t, StringComparer.Ordinal)
+        var weapons = ProjectAscension.GameSimulation.Combat.SkillBinding
+            .RequiredEquipment(r.Behaviors.Select(b => b.Behavior).ToList())
+            .OrderBy(w => w, StringComparer.Ordinal)
             .ToList();
-        var tags = stable.Count == 0 ? "-" : string.Join(",", stable);
+        var weaponKey = weapons.Count == 0 ? "-" : string.Join(",", weapons);
+
         // The REGION is part of the style: "환경이 발견을 다르게 만든다" (discovery.md). The same play in
         // the crystal desert and at the waterfall is not the same discovery, and must not share a ladder.
-        return $"{r.ActorId}:{r.RegionId}:{r.PrimaryBehavior}:{tags}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
+        //
+        // Delivery (beam/projectile/arc/nova/burst) is kept too — it comes from the BEHAVIOUR COUNTS
+        // (attack/movement shape), never from equipment, so it cannot reopen the same hole.
+        return $"{r.ActorId}:{r.RegionId}:{weaponKey}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
     }
 
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)

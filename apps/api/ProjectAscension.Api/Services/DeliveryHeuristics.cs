@@ -11,7 +11,25 @@ namespace ProjectAscension.Api.Services;
 public static class DeliveryHeuristics
 {
     // The attack behaviors that define a skill's character (movement only flavors it).
-    private static readonly string[] AttackBehaviors = { "ChargedAttack", "RangedAttack", "MeleeAttack" };
+    private static readonly string[] AttackBehaviors = { "RangedAttack", "MeleeAttack" };
+
+    /// <summary>Charging is no longer a behaviour of its own — since ADR 0009 it is a QUALITY of the
+    /// act ("While:firearm@charged"). This branch used to test for a literal "ChargedAttack" that the
+    /// game stopped sending, so charged play could never reach beam or nova and the delivery variety
+    /// was quietly halved. Read the quality the grammar actually emits.</summary>
+    private const string ChargedQuality = "@charged";
+
+    /// <summary>The name of the derived charged signal — kept as the label the delivery grid speaks.</summary>
+    public const string ChargedAttack = "ChargedAttack";
+
+    private static int ChargedCount(IReadOnlyList<BehaviorCount> behaviors)
+    {
+        int charged = 0;
+        foreach (var b in behaviors)
+            if (b.Count > 0 && b.Behavior != null && b.Behavior.Contains(ChargedQuality, StringComparison.Ordinal))
+                charged += b.Count;
+        return charged;
+    }
 
     /// <summary>The dominant attack behavior, or "-" when the player didn't attack. Used both
     /// to derive the delivery and (indirectly) to keep the claim keyed on play style.</summary>
@@ -21,6 +39,10 @@ public static class DeliveryHeuristics
         foreach (var b in behaviors)
             if (b.Count > 0 && Array.IndexOf(AttackBehaviors, b.Behavior) >= 0 && (top is null || b.Count > top.Count))
                 top = b;
+
+        int charged = ChargedCount(behaviors);
+        if (charged > 0 && (top is null || charged > top.Count)) return ChargedAttack;
+
         return top?.Behavior ?? "-";
     }
 
@@ -35,7 +57,8 @@ public static class DeliveryHeuristics
         var attack = DominantAttack(behaviors);
         if (attack == "-") return "beam";
 
-        int mobility = 0, totalAttacks = 0, dominantCount = 0;
+        int charged = ChargedCount(behaviors);
+        int mobility = 0, totalAttacks = charged, dominantCount = attack == ChargedAttack ? charged : 0;
         foreach (var b in behaviors)
         {
             if (Array.IndexOf(Movement, b.Behavior) >= 0) mobility += b.Count;
@@ -51,7 +74,7 @@ public static class DeliveryHeuristics
         bool high = mobility * 2 >= dominantCount; // movement at least half the attack count
         return attack switch
         {
-            "ChargedAttack" => high ? "nova" : "beam",
+            ChargedAttack => high ? "nova" : "beam",
             "RangedAttack" => high ? "arc" : "projectile",
             _ => "beam",
         };

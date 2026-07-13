@@ -10,7 +10,7 @@ namespace ProjectAscension.SkillForge;
 /// <item>A movement trigger (OnJumpInAir/OnWallContact) → Passive (a movement capability).</item>
 /// <item>Continuous / OnHit → Passive (an always-on ward or an on-hit rider).</item>
 /// <item>OnCast (and default) → offensive-dominant becomes a Weapon only when magic-from-magic
-///   (ADR 0005), else a Command; control-dominant → Command; mobility/defensive → Passive.</item>
+///   (ADR 0011), else a Command; control-dominant → Command; mobility/defensive → Passive.</item>
 /// </list>
 /// Deterministic and server-authoritative (the AI chose structure, not the classification).
 /// Returns null when there is no graph — the caller falls back to the primitive classifier.
@@ -18,9 +18,13 @@ namespace ProjectAscension.SkillForge;
 public static class ManifestationFromGraph
 {
     /// <summary>
-    /// A WEAPON is not "you were carrying a catalyst". Making a weapon is how the game expresses MAGIC
-    /// SYNTHESIS — "화기 + 술식 → 마력 탄환" — so it takes an actual FUSION: two hands woven into one act,
-    /// one of them magic (ADR 0011). A single spell, however fierce, is a technique you invoke: a COMMAND.
+    /// A WEAPON is not "one hand happened to be magic". Making a weapon is how the game expresses MAGIC
+    /// SYNTHESIS — "화기 + 술식 → 마력 탄환" is not a spell wearing a gun, it is TWO magics fused into one
+    /// new thing. So a Fuse: only forges a weapon when BOTH sides are magic — the catalyst itself
+    /// (<c>arcane</c>) and/or an already-discovered spell-weapon's own token (<c>spell:...</c>) — and the
+    /// two sides differ. A pistol shot wreathed in one spell (`Fuse:arcane&gt;firearm`) is still a single
+    /// magic invoked through an ordinary weapon: a technique, a COMMAND, however fierce. Only weaving
+    /// magic into magic (`Fuse:arcane&gt;spell:emberbrand`) synthesises a new one (ADR 0011).
     ///
     /// Judged on what the player DID (ADR 0009's Fuse:), never on what they happened to be holding.
     /// </summary>
@@ -32,11 +36,17 @@ public static class ManifestationFromGraph
             if (b == null || !b.StartsWith("Fuse:", StringComparison.Ordinal)) continue;
             var pair = b.Substring("Fuse:".Length).Split('>');
             if (pair.Length != 2) continue;
-            // Two DIFFERENT hands, one of them magic: that is a synthesis, and a synthesis makes a thing.
-            if (pair[0] != pair[1] && (pair[0] == "arcane" || pair[1] == "arcane")) return true;
+            // Two DIFFERENT hands, BOTH magic: that is a synthesis of magic into magic, and only that
+            // makes a new thing. One magic hand fused into an ordinary weapon is a technique, not a forge.
+            if (pair[0] != pair[1] && IsMagic(pair[0]) && IsMagic(pair[1])) return true;
         }
         return false;
     }
+
+    // A "magic" side of a fusion: the catalyst itself, or an already-discovered spell-weapon's own
+    // token (a prior synthesis, now an instrument in its own right).
+    private static bool IsMagic(string token) =>
+        token == "arcane" || token.StartsWith("spell:", StringComparison.Ordinal);
 
     public static ManifestationKind? Classify(EffectNode? graph, bool magicFusion)
     {

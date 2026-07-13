@@ -10,6 +10,12 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <!-- Pins the version Npgsql.EntityFrameworkCore.PostgreSQL (via the Api ProjectReference) would
+         otherwise resolve on its own (9.0.1) up to what Api.csproj's own EntityFrameworkCore.Design
+         reference forces Api.dll to be built against (9.0.4). Without this, any test that references
+         a type whose public surface touches EF Core (e.g. an IEntityTypeConfiguration<T>) fails to
+         compile with CS1705 (assembly identity mismatch) — see FactorAndBehaviorVocabularyTests. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
