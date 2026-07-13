@@ -35,14 +35,49 @@ namespace ProjectAscension.Game
         private bool _busy;
         private CatalogApiClient _api;
 
-        private void OnEnable()
+        /// <summary>How close to the board you must stand for it to be readable.</summary>
+        private const float BoardReach = 4.5f;
+
+        private Transform _player;
+        private bool _atBoard;
+
+        // The city is a place now, so the hub is a THING YOU WALK UP TO — the board — not a panel that
+        // is simply always on screen. Standing at it frees the cursor to read it; stepping away locks
+        // the cursor back to the world so you can look around and move. (The NPC pass turns the rest of
+        // the panel — issuing, delegation — into conversations with the people who offer them.)
+        private void Update()
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            if (_player == null)
+            {
+                var go = GameObject.FindWithTag("Player");
+                if (go == null) return;
+                _player = go.transform;
+            }
+
+            var p = _player.position;
+            var board = CityBlockout.BoardSpot;
+            bool near = (new Vector2(p.x - board.x, p.z - board.z)).magnitude <= BoardReach;
+            if (near == _atBoard) return;
+
+            _atBoard = near;
+            Cursor.lockState = _atBoard ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = _atBoard;
         }
 
         private void OnGUI()
         {
+            // Away from the board there is nothing to read — just a hint of where to go.
+            if (!_atBoard)
+            {
+                if (_player != null)
+                {
+                    var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
+                    GUI.Label(new Rect((Screen.width - 400f) * 0.5f, Screen.height - 92f, 400f, 20f),
+                        "The contract board is in the square.", style);
+                }
+                return;
+            }
+
             var session = GameSession.Instance;
             if (session == null)
             {
