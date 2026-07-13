@@ -304,6 +304,42 @@ public class SkillCompositionServiceTests
     }
 
     [Fact]
+    public async Task Evaluate_WithinAStyle_OnlyBeatingYourBest_Discovers()
+    {
+        // SCARCITY (ADR 0010). The rungs used to be claimable in any order: reach Rare, and the
+        // Uncommon slot BELOW you was still open — so a weaker session filled it in behind you, every
+        // score wobble topped up another rung, and a style quietly accreted its full five skills.
+        //
+        // A discovery has to be RARE, or it is not a discovery — it is a drop. So the ladder is one-way.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        var actor = Guid.NewGuid();
+        EvaluateTriggerRequest Play(int rangedCount) =>
+            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
+                new[] { new BehaviorCount("RangedAttack", rangedCount) }, Persistence: 0);
+
+        var strong = await service.EvaluateAndTriggerAsync(Play(200)); // score 400 -> Epic
+        Assert.True(strong.Fired);
+
+        // A weaker session in the same style clears the bar — and discovers NOTHING, because it did
+        // not surpass what this player already holds here. The lower rung stays empty forever.
+        var weaker = await service.EvaluateAndTriggerAsync(Play(60));  // score 120 -> Common
+        Assert.False(weaker.Fired);
+
+        // Nor does merely equalling it.
+        Assert.False((await service.EvaluateAndTriggerAsync(Play(200))).Fired);
+
+        // Surpassing yourself is the only way forward.
+        var better = await service.EvaluateAndTriggerAsync(Play(300)); // score 600 -> Legendary
+        Assert.True(better.Fired);
+
+        Assert.Equal(2, discoveries.Discoveries.Count); // two rungs, climbed in order. Not five.
+    }
+
+    [Fact]
     public async Task Evaluate_SameCombinationFoughtDifferently_ClaimsADistinctDiscovery()
     {
         // The whole point of behavior-driven composition: the same equipment fought a
