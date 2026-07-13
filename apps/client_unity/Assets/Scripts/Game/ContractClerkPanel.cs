@@ -74,7 +74,7 @@ namespace ProjectAscension.Game
                 GUILayout.Label(_txMessage);
             GUILayout.EndArea();
 
-            DrawKnowledgeMarket(session, ps);
+            DrawKnowledgeMarket(session);
         }
 
         // 위임: your current contract, if it's stuck. The doc's stage 9 beat, offered right after
@@ -166,32 +166,40 @@ namespace ProjectAscension.Game
 
         // 지식 시장 (docs/02-systems/knowledge-economy.md): sell a discovered skill's usage license.
         // Price/reputation are server-computed (DB-driven tuning, ADR 0014) — the client shows no
-        // pre-sale estimate so it can never drift from the authoritative one.
-        private void DrawKnowledgeMarket(GameSession session, PlayerStateService ps)
+        // pre-sale estimate so it can never drift from the authoritative one. Licensed truth comes
+        // from the server's discovery/skill response (DiscoveredSkill.Licensed) — NOT a client-held
+        // "sold" set, so the button never offers a sale that can only 409.
+        private void DrawKnowledgeMarket(GameSession session)
         {
             var o = ModalOrigin(820f, 560f);
             GUILayout.BeginArea(new Rect(o.x + 440f, o.y, 380f, 400f), GUI.skin.box);
             GUILayout.Label("KNOWLEDGE MARKET (지식 거래)");
             bool marketOnline = !string.IsNullOrWhiteSpace(session.ServerUrl);
-            bool anySellable = false;
+            bool anyListed = false;
             _marketScroll = GUILayout.BeginScrollView(_marketScroll, GUILayout.Height(320));
             foreach (var discovered in session.DiscoveredSkills.All)
             {
-                if (ps.SoldKnowledge.Contains(discovered.Name)) continue;
                 if (discovered.DiscoveryId == System.Guid.Empty) continue; // no server-backed discovery to license
-                anySellable = true;
+                anyListed = true;
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{discovered.Name}", GUILayout.Width(150));
-                GUI.enabled = marketOnline && !_busy;
-                if (GUILayout.Button("License knowledge", GUILayout.Width(150)))
-                    StartCoroutine(DoLicense(session, discovered));
-                GUI.enabled = true;
+                if (discovered.Licensed)
+                {
+                    GUILayout.Label("Licensed", GUILayout.Width(150));
+                }
+                else
+                {
+                    GUI.enabled = marketOnline && !_busy;
+                    if (GUILayout.Button("License knowledge", GUILayout.Width(150)))
+                        StartCoroutine(DoLicense(session, discovered));
+                    GUI.enabled = true;
+                }
                 GUILayout.EndHorizontal();
             }
             if (!marketOnline)
                 GUILayout.Label("Offline — needs the server to license knowledge.");
-            else if (!anySellable)
-                GUILayout.Label("No unsold knowledge — discover skills to license.");
+            else if (!anyListed)
+                GUILayout.Label("No discovered knowledge yet — discover skills to license.");
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }
@@ -289,7 +297,10 @@ namespace ProjectAscension.Game
             if (response != null)
             {
                 session.ApplyPlayerState(response);
-                session.PlayerState.SoldKnowledge.Add(discovered.Name); // UI cache only — the server flag is authoritative
+                // A 200 here IS the server's confirmation the sale went through — flip the truth on
+                // the discovered skill itself (not a separate client-held "sold" set, ADR 0014) so
+                // the market reflects it immediately without a re-fetch.
+                session.DiscoveredSkills.MarkLicensed(discovered.DiscoveryId);
                 _txMessage = $"Licensed '{discovered.Name}' for +{response.currency - beforeCurrency}g +{response.reputation - beforeReputation}rep";
             }
             _busy = false;

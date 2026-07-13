@@ -45,9 +45,12 @@ namespace ProjectAscension.Game
             else if (!IsOpen && _focusHeld) { UiFocus.Pop(); _focusHeld = false; }
         }
 
-        // A caller destroyed while still holding focus (e.g. "Depart to Frontier" unloads the City
-        // scene from inside the equipment station's own OnGUI) must still release it — an unmatched
-        // Push leaves gameplay input disabled for the whole next scene.
+        // A caller destroyed while still holding focus must still release it — an unmatched Push
+        // leaves gameplay input disabled for the whole next scene. (Historical case: the old
+        // "Depart to Frontier" button lived inside the equipment station's own OnGUI and unloaded
+        // the City scene from within it, panel still open — DepartZone/CityBlockout's gate pad
+        // replaced that button so departure never happens from inside an open panel any more, but
+        // this defensive Pop stays as the general safety net for any panel destroyed while open.)
         protected virtual void OnDestroy()
         {
             if (_focusHeld) { UiFocus.Pop(); _focusHeld = false; }

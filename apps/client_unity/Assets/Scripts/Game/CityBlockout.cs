@@ -26,6 +26,9 @@ namespace ProjectAscension.Game
         private static readonly Color BoardWood = new Color(0.48f, 0.36f, 0.24f);
         private static readonly Color SafeLine = new Color(0.55f, 0.85f, 1f);
         private static readonly Color RackMetal = new Color(0.7f, 0.72f, 0.76f);
+        // A portal violet — distinct from the frontier's flat green return pad and from the pale
+        // cyan safe-line underfoot, so the departure gate reads as its own thing at a glance.
+        private static readonly Color PortalVeil = new Color(0.5f, 0.22f, 0.82f);
 
         /// <summary>Where the player should start — inside the safe zone, facing the board.</summary>
         public static readonly Vector3 PlayerSpawn = new Vector3(0f, 0f, -6f);
@@ -37,6 +40,20 @@ namespace ProjectAscension.Game
         /// <summary>The armoury rack (stage 3's "첫 장비 선택") — its own station, away from the
         /// board and the NPCs so a player walking the plaza can tell them apart at a glance.</summary>
         public static readonly Vector3 EquipmentSpot = new Vector3(6f, 0f, -6f);
+
+        /// <summary>Half the safe zone's side length — the wall ring's radius, shared by
+        /// <see cref="SafeZone"/> and <see cref="Gate"/> so the departure gate sits exactly at the
+        /// wall's own threshold gap, not a separately-guessed position.</summary>
+        private const float SafeZoneHalf = 22f;
+
+        /// <summary>The frontier gate — the city's south threshold (docs' "안전 구역" boundary). Where
+        /// you walk to depart, mirroring the frontier's physical return pad (ReturnZone); it is a
+        /// PLACE, not a button inside a panel.</summary>
+        public static readonly Vector3 GateSpot = new Vector3(0f, 0f, -SafeZoneHalf);
+
+        /// <summary>How close to the gate you must stand to press [F] — matches the armoury's
+        /// workbench-scale reach; you approach and interact, not merely pass through.</summary>
+        public const float GateReach = 3.5f;
 
         /// <summary>How close to the board you must stand to press [F] and read it — a board is
         /// legible from further away than a lootable, hence its own (larger) reach.</summary>
@@ -63,6 +80,7 @@ namespace ProjectAscension.Game
 
             Ground(root);
             SafeZone(root);
+            Gate(root);
             Quarter(root);
             Windmill(root, new Vector3(14f, 0f, 12f));
             Board(root);
@@ -83,17 +101,33 @@ namespace ProjectAscension.Game
         /// threshold. It should be legible at a glance that inside here nothing hunts you.</summary>
         private static void SafeZone(Transform root)
         {
-            const float half = 22f, h = 1.6f, t = 0.8f;
+            const float half = SafeZoneHalf, h = 1.6f, t = 0.8f;
             Box(root, "SafeWall_N", new Vector3(0f, h * 0.5f, half), new Vector3(half * 2f, h, t), Stone);
             Box(root, "SafeWall_S_L", new Vector3(-half * 0.6f, h * 0.5f, -half), new Vector3(half * 0.8f, h, t), Stone);
             Box(root, "SafeWall_S_R", new Vector3(half * 0.6f, h * 0.5f, -half), new Vector3(half * 0.8f, h, t), Stone);
             Box(root, "SafeWall_W", new Vector3(-half, h * 0.5f, 0f), new Vector3(t, h, half * 2f), Stone);
             Box(root, "SafeWall_E", new Vector3(half, h * 0.5f, 0f), new Vector3(t, h, half * 2f), Stone);
 
-            // The gate threshold — the line you cross to leave safety.
+            // The safe-line threshold marks where you leave safety underfoot; the actual departure
+            // now happens at the portal built in Gate(), right behind this line.
             Box(root, "GateLine", new Vector3(0f, 0.02f, -half), new Vector3(6f, 0.04f, 1.2f), SafeLine);
-            Box(root, "GatePost_L", new Vector3(-3.2f, 1.4f, -half), new Vector3(0.6f, 2.8f, 0.9f), StoneDark);
-            Box(root, "GatePost_R", new Vector3(3.2f, 1.4f, -half), new Vector3(0.6f, 2.8f, 0.9f), StoneDark);
+        }
+
+        /// <summary>The frontier gate (stage's "leave the city") — a portal you walk to and press [F]
+        /// on, at the south wall's own threshold gap, mirroring the frontier's ReturnZone pad. Reads
+        /// as a portal (an arch framing a glowing veil) — deliberately NOT the return pad's flat green
+        /// square, so the two are never confused. This replaces the old "Depart to Frontier" button
+        /// that lived inside the equipment station panel: a place you walk to, not a menu item, and it
+        /// can never leave the UiFocus gate held across the scene load the way the button could (a pad
+        /// never opens a panel, so there is no focus to release).</summary>
+        private static void Gate(Transform root)
+        {
+            Box(root, "Gate_Pillar_L", GateSpot + new Vector3(-3.6f, 2.2f, 0f), new Vector3(0.9f, 4.4f, 0.9f), StoneDark);
+            Box(root, "Gate_Pillar_R", GateSpot + new Vector3(3.6f, 2.2f, 0f), new Vector3(0.9f, 4.4f, 0.9f), StoneDark);
+            Box(root, "Gate_Lintel", GateSpot + new Vector3(0f, 4.6f, 0f), new Vector3(8.4f, 0.8f, 1.1f), Stone);
+            var veil = Box(root, "Gate_Veil", GateSpot + new Vector3(0f, 2.2f, 0f), new Vector3(5.6f, 4.0f, 0.15f), PortalVeil);
+
+            veil.AddComponent<DepartZone>();
         }
 
         /// <summary>Stone masonry with pitched slate roofs — the civilisation's silhouette. Placed by a

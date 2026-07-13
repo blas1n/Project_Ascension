@@ -61,6 +61,7 @@ namespace ProjectAscension.Net
         public string[] behaviors;       // behaviors that discovered it (recorded)
         public string delivery;          // AI-composed manifestation style: "projectile"|"beam"|"burst" ("" → derive)
         public string effectGraph;       // ADR 0007 effect-graph JSON the runtime interprets (null until composed)
+        public bool licensed;            // server-authoritative: already sold on the knowledge market (ADR 0014)
     }
 
     /// <summary>

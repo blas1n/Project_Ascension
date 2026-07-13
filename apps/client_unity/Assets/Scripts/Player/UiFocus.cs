@@ -23,8 +23,10 @@ namespace ProjectAscension.Player
     /// the cursor asks this class, and this class answers with whether a panel is open.
     ///
     /// A caller that might be destroyed while still holding focus (e.g. a scene unload mid-panel)
-    /// MUST Pop in OnDestroy — see CityStationPanel, whose equipment station panel is up for the
-    /// "Depart to Frontier" button that ends the scene. An unmatched Push leaves gameplay input
+    /// MUST Pop in OnDestroy — see CityStationPanel's defensive Pop, which exists because the old
+    /// "Depart to Frontier" button used to end the scene from inside its own open equipment station
+    /// panel. Departure is a world pad now (DepartZone), never a button inside a panel, but the
+    /// defensive Pop remains the general safety net. An unmatched Push leaves gameplay input
     /// permanently disabled.
     /// </summary>
     public static class UiFocus

@@ -31,7 +31,9 @@ namespace ProjectAscension.GameSimulation.Combat
             IReadOnlyList<string>? behaviors = null,
             // The server's discovery id — the handle knowledge licensing (ADR 0014) sells BY.
             // Optional/unparseable → Guid.Empty (a legacy/offline skill can't be licensed).
-            string? discoveryId = null)
+            string? discoveryId = null,
+            // Whether the knowledge license is already sold — server-authoritative (ADR 0014).
+            bool licensed = false)
         {
             if (!string.Equals(status, "Ready", StringComparison.OrdinalIgnoreCase)) return null;
 
@@ -47,7 +49,7 @@ namespace ProjectAscension.GameSimulation.Combat
                 : EffectGraphReader.Parse(effectGraph!) ?? PrimitiveGraphTranslator.Translate(skill);
 
             Guid.TryParse(discoveryId, out var id);
-            return new DiscoveredSkill(skill.Name, kind, skill, contextTags, behaviors, description, graph, id);
+            return new DiscoveredSkill(skill.Name, kind, skill, contextTags, behaviors, description, graph, id, licensed);
         }
     }
 }
