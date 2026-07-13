@@ -13,9 +13,14 @@ namespace ProjectAscension.Player
     /// <see cref="IsFocused"/> (or the <see cref="Changed"/> event) instead of polling ad hoc.
     ///
     /// A counter, not a bool: two panels can overlap (in principle) without one's close
-    /// prematurely re-enabling gameplay while the other is still up. The cursor's lock state is
-    /// captured on the FIRST Push and restored on the LAST Pop, so a panel never has to guess what
-    /// "normal" looks like — it gets back exactly what was there before it opened.
+    /// prematurely re-enabling gameplay while the other is still up.
+    ///
+    /// This is the ONE OWNER of the cursor. It does not save and restore what it found, it DICTATES:
+    /// a panel is up, so the cursor is free; no panel is up, so the cursor belongs to the camera.
+    /// Saving-and-restoring was the bug — the character-creation form is already open when the city
+    /// scene loads, and PlayerController.Start() then locked the cursor out from under it, so the
+    /// name field could not be clicked and the player could not type their own name. Anyone who wants
+    /// the cursor asks this class, and this class answers with whether a panel is open.
     ///
     /// A caller that might be destroyed while still holding focus (e.g. a scene unload mid-panel)
     /// MUST Pop in OnDestroy — see CityStationPanel, whose equipment station panel is up for the
@@ -25,10 +30,17 @@ namespace ProjectAscension.Player
     public static class UiFocus
     {
         private static int _count;
-        private static CursorLockMode _savedLockState;
-        private static bool _savedVisible;
 
         public static bool IsFocused => _count > 0;
+
+        /// <summary>Put the cursor where the current focus says it belongs. Anything that thinks it
+        /// wants to grab the cursor (PlayerController on spawn, a scene load) calls THIS instead of
+        /// setting Cursor itself — so it cannot steal the cursor from an open panel.</summary>
+        public static void ApplyCursor()
+        {
+            Cursor.lockState = IsFocused ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = IsFocused;
+        }
 
         /// <summary>Raised when focus transitions 0→1 (true) or 1→0 (false) — PlayerInputHandler
         /// disables/enables the "Player" action map on this; anything polling raw input directly
@@ -37,15 +49,12 @@ namespace ProjectAscension.Player
 
         public static void Push()
         {
-            if (_count == 0)
+            _count++;
+            if (_count == 1)
             {
-                _savedLockState = Cursor.lockState;
-                _savedVisible = Cursor.visible;
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                ApplyCursor();
                 Changed?.Invoke(true);
             }
-            _count++;
         }
 
         public static void Pop()
@@ -54,8 +63,7 @@ namespace ProjectAscension.Player
             _count--;
             if (_count == 0)
             {
-                Cursor.lockState = _savedLockState;
-                Cursor.visible = _savedVisible;
+                ApplyCursor();
                 Changed?.Invoke(false);
             }
         }

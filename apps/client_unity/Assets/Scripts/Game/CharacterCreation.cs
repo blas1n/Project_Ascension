@@ -40,7 +40,8 @@ namespace ProjectAscension.Game
         private string _name = "";
         private int _look;
         private bool _done;
-        private bool _focusHeld; // whether WE currently hold the UiFocus gate (Push/Pop exactly once)
+        private bool _focusHeld;    // whether WE currently hold the UiFocus gate (Push/Pop exactly once)
+        private bool _fieldFocused; // the caret has been placed in the name field once
 
         private bool Active =>
             !_done && TutorialRunner.Instance != null &&
@@ -86,6 +87,15 @@ namespace ProjectAscension.Game
             GUILayout.Label("Name");
             GUI.SetNextControlName("name");
             _name = GUILayout.TextField(_name ?? "", 20);
+
+            // Type first, click never. The form asks you a question, so the caret is already waiting
+            // in the answer — and a name field you must hunt for with the mouse is one keyboard-focus
+            // bug away from being a name field you cannot use at all.
+            if (!_fieldFocused && Event.current.type == EventType.Repaint)
+            {
+                GUI.FocusControl("name");
+                _fieldFocused = true;
+            }
 
             GUILayout.Space(10f);
             GUILayout.Label("Bearing");
