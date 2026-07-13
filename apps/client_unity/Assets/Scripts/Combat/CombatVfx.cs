@@ -13,11 +13,19 @@ namespace ProjectAscension.Combat
     {
         private const float HdrBoost = 1.5f; // push the core past 1.0 so URP bloom catches it
 
-        /// <summary>A bright unlit material (URP-safe, HDR) for bolts / trails / tracers.</summary>
+        // One material per colour, not one per SHOT. Minting a Material (and hunting the shader) on
+        // every trigger pull is a per-shot allocation whose first hitch is measured in tenths of a
+        // second — and a frame that long is how a projectile ends up teleporting into a wall.
+        private static readonly System.Collections.Generic.Dictionary<Color, Material> Materials = new();
+
+        /// <summary>A bright unlit material (URP-safe, HDR) for bolts / trails / tracers. Cached per colour.</summary>
         public static Material Glow(Color color)
         {
+            if (Materials.TryGetValue(color, out var cached) && cached != null) return cached;
+
             var mat = new Material(Shader.Find("Sprites/Default"));
             mat.color = new Color(color.r * HdrBoost, color.g * HdrBoost, color.b * HdrBoost, color.a);
+            Materials[color] = mat;
             return mat;
         }
 
