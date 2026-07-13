@@ -255,19 +255,26 @@ public class SkillCompositionServiceTests
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
-        var req = Eval(jumpCount: 200); // well past the fire threshold
+        var req = Eval(jumpCount: 200); // score 200
 
+        // However well you played, a style you have never touched starts at COMMON (ADR 0010) — that is
+        // what makes breadth pay in quantity and depth pay in rarity.
         var first = await service.EvaluateAndTriggerAsync(req);
-        var again = await service.EvaluateAndTriggerAsync(req); // same region → claimed once
-
         Assert.True(first.Fired);
         Assert.NotNull(first.DiscoveryId);
-        // The re-evaluation hits the same claim, so it does NOT fire again — reporting it as
-        // fired made the client re-process the same discovery and mint duplicate skills.
-        Assert.False(again.Fired);
-        Assert.Null(again.DiscoveryId);
-        Assert.Single(discoveries.Discoveries);
-        Assert.Single(skills.Skills);
+
+        // The same play again climbs at most ONE rung, and only if it is worth it (Uncommon needs 150).
+        var second = await service.EvaluateAndTriggerAsync(req);
+        Assert.True(second.Fired);
+
+        // And then it STALLS: Rare demands 225, and repeating yourself will never get there. The only
+        // way on is to play better.
+        Assert.False((await service.EvaluateAndTriggerAsync(req)).Fired);
+        Assert.False((await service.EvaluateAndTriggerAsync(req)).Fired);
+
+        // Two rungs, earned in order — not an endless stream of near-identical skills.
+        Assert.Equal(2, discoveries.Discoveries.Count);
+        Assert.Equal(2, skills.Skills.Count);
     }
 
     private static EvaluateTriggerRequest EvalCtx(Guid actor, string[] contextTags, int jumpCount)
@@ -298,46 +305,60 @@ public class SkillCompositionServiceTests
         var withDodge = await service.EvaluateAndTriggerAsync(Ranged(12, new BehaviorCount("Dodge", 50)));
 
         Assert.True(plain.Fired);
-        Assert.False(withJump.Fired);   // still rapid-ranged → same claim, despite the jump + higher score
-        Assert.False(withDodge.Fired);  // still rapid-ranged → same claim
-        Assert.Single(discoveries.Discoveries);
+
+        // A stray jump or dodge must not fragment one play into a second ladder. The variants may climb
+        // the ladder (that is the progression), but they climb THE SAME ONE.
+        Assert.Single(skills.Skills.Select(StyleOf).Distinct());
     }
 
     [Fact]
-    public async Task Evaluate_WithinAStyle_OnlyBeatingYourBest_Discovers()
+    public async Task Evaluate_BreadthPaysInQuantity_DepthPaysInRarity()
     {
-        // SCARCITY (ADR 0010). The rungs used to be claimable in any order: reach Rare, and the
-        // Uncommon slot BELOW you was still open — so a weaker session filled it in behind you, every
-        // score wobble topped up another rung, and a style quietly accreted its full five skills.
+        // The bargain (ADR 0010). A player who spreads across many styles must end up with MANY
+        // ORDINARY skills; a player who stays with one must end up with FEW RARE ones. Neither is
+        // cheated — but they must not be able to have both.
         //
-        // A discovery has to be RARE, or it is not a discovery — it is a drop. So the ladder is one-way.
+        // The mechanism: a fresh style starts at COMMON however brilliantly you played, and you climb
+        // ONE rung at a time, each demanding exponentially more.
         var discoveries = new FakeDiscoveryRepo();
         var skills = new FakeSkillRepo();
         using var metrics = new CompositionMetrics();
         var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
 
         var actor = Guid.NewGuid();
-        EvaluateTriggerRequest Play(int rangedCount) =>
-            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
-                new[] { new BehaviorCount("RangedAttack", rangedCount) }, Persistence: 0);
+        EvaluateTriggerRequest Style(string tag, int ranged) =>
+            new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { tag }, "Beam",
+                new[] { new BehaviorCount("RangedAttack", ranged) }, Persistence: 0);
 
-        var strong = await service.EvaluateAndTriggerAsync(Play(200)); // score 400 -> Epic
-        Assert.True(strong.Fired);
+        // BREADTH: a brilliant session (score 600) in a style he has never touched. He still gets a
+        // COMMON. Excellence cannot buy its way to rarity in a place you have not been.
+        var breadth = await service.EvaluateAndTriggerAsync(Style("arcane", 300));
+        Assert.True(breadth.Fired);
+        Assert.Equal(Rarity.Common.ToString(), RarityOf(skills, breadth.DiscoveryId!.Value));
 
-        // A weaker session in the same style clears the bar — and discovers NOTHING, because it did
-        // not surpass what this player already holds here. The lower rung stays empty forever.
-        var weaker = await service.EvaluateAndTriggerAsync(Play(60));  // score 120 -> Common
-        Assert.False(weaker.Fired);
+        // DEPTH: the same excellence, applied again and again to the SAME style, climbs — and each rung
+        // costs exponentially more, so it climbs only as far as the play deserves.
+        for (int i = 0; i < 6; i++) await service.EvaluateAndTriggerAsync(Style("arcane", 300));
 
-        // Nor does merely equalling it.
-        Assert.False((await service.EvaluateAndTriggerAsync(Play(200))).Fired);
+        var deepest = skills.Skills
+            .Select(sk => Enum.Parse<Rarity>(sk.IdempotencyKey!.Split(':').Last()))
+            .Max();
+        Assert.True(deepest >= Rarity.Epic, $"staying with one style must reach rarity; got {deepest}");
 
-        // Surpassing yourself is the only way forward.
-        var better = await service.EvaluateAndTriggerAsync(Play(300)); // score 600 -> Legendary
-        Assert.True(better.Fired);
-
-        Assert.Equal(2, discoveries.Discoveries.Count); // two rungs, climbed in order. Not five.
+        // And a WEAK session in that style now discovers nothing at all — not a lesser skill, not a
+        // consolation. The lower rungs are behind him and the next one is out of reach.
+        Assert.False((await service.EvaluateAndTriggerAsync(Style("arcane", 60))).Fired);
     }
+
+    /// <summary>The style ladder a skill was claimed on — the claim key minus its rarity rung.</summary>
+    private static string StyleOf(DiscoverySkill s)
+    {
+        var k = s.IdempotencyKey!;
+        return k[..k.LastIndexOf(':')];
+    }
+
+    private static string RarityOf(FakeSkillRepo skills, Guid discoveryId)
+        => skills.Skills.First(s => s.DiscoveryId == discoveryId).IdempotencyKey!.Split(':').Last();
 
     [Fact]
     public async Task Evaluate_SameCombinationFoughtDifferently_ClaimsADistinctDiscovery()
@@ -354,14 +375,23 @@ public class SkillCompositionServiceTests
             EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
         var skirmishing = await service.EvaluateAndTriggerAsync(
             EvalBehavior(actor, new BehaviorCount("RangedAttack", 120), new BehaviorCount("Dodge", 110)));
-        // Same play again → no new claim (idempotent), so it's spacing not spam.
+        // The same play again climbs its OWN ladder — it does not spill into the other one.
         var chargingAgain = await service.EvaluateAndTriggerAsync(
             EvalBehavior(actor, new BehaviorCount("ChargedAttack", 200)));
 
         Assert.True(charging.Fired);
-        Assert.True(skirmishing.Fired);          // different play style → distinct discovery
-        Assert.False(chargingAgain.Fired);       // same play style → same claim
-        Assert.Equal(2, discoveries.Discoveries.Count);
+        Assert.True(skirmishing.Fired);
+
+        // The point, stated exactly: fighting the same combination a DIFFERENT way lands on a DIFFERENT
+        // ladder. (Climbing within a ladder is the progression; forking between them is the variety.)
+        var chargingStyle = StyleOf(skills.Skills.First(k => k.DiscoveryId == charging.DiscoveryId));
+        var skirmishStyle = StyleOf(skills.Skills.First(k => k.DiscoveryId == skirmishing.DiscoveryId));
+        Assert.NotEqual(chargingStyle, skirmishStyle);          // different play style → distinct discovery
+
+        // Two ladders, and the charging one has climbed a rung on its repeat — progression within a
+        // style, variety across styles. Both, and neither at the other's expense.
+        Assert.Equal(2, skills.Skills.Select(StyleOf).Distinct().Count());
+        Assert.Equal(3, discoveries.Discoveries.Count);
     }
 
     [Fact]
@@ -385,10 +415,11 @@ public class SkillCompositionServiceTests
         var withDifferentCatalysts = await service.EvaluateAndTriggerAsync(
             EvalCtx(actor, new[] { "arcane", "monster:melee", "spell:flame-bullet" }, jumpCount: 400));
 
-        Assert.True(first.Fired);                    // claims arcane+Projectile once
-        Assert.False(withDifferentCatalysts.Fired);  // only the volatile tags differ → no re-fire
-        Assert.Single(discoveries.Discoveries);
-        Assert.Single(skills.Skills);
+        Assert.True(first.Fired);
+
+        // The volatile tags must not open a SECOND ladder. Whatever happens next (it may climb a rung),
+        // it happens on the SAME style — the essential combination is unchanged.
+        Assert.Single(skills.Skills.Select(StyleOf).Distinct());
     }
 
     [Fact]

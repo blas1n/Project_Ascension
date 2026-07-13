@@ -107,6 +107,17 @@ public static class TriggerEvaluator
         return null;
     }
 
+    /// <summary>What a given rung demands. The rungs are spaced exponentially (ADR 0010), so each step
+    /// up costs far more play than the last.</summary>
+    public static int RungScore(Rarity rarity, DiscoveryTuning t) => rarity switch
+    {
+        Rarity.Legendary => t.LegendaryScore,
+        Rarity.Epic => t.EpicScore,
+        Rarity.Rare => t.RareScore,
+        Rarity.Uncommon => t.UncommonScore,
+        _ => t.FireThreshold,
+    };
+
     /// <summary>The rungs of the ladder. Seeded with EXPONENTIAL spacing (ADR 0010), which is what makes
     /// the next discovery in a style cost exponentially more play than the last.</summary>
     private static Rarity RarityFor(int score, DiscoveryTuning t) =>
