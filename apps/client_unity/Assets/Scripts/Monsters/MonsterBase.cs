@@ -35,8 +35,8 @@ namespace ProjectAscension.Monsters
         // The attack tell (rendering only): the monster flashes hot and swells as it winds up, so the
         // player can read + dodge the incoming strike. A code-driven placeholder until real anim/VFX.
         private static readonly Color TelegraphColor = new Color(1f, 0.92f, 0.6f); // hot flash, contrasts all bodies
-        private Renderer _renderer;
-        private Color _baseColor;
+        private Renderer[] _renderers;   // the body is a composite silhouette (MonsterBody), not one capsule
+        private Color[] _baseColors;
         private Vector3 _baseScale;
         private bool _telegraphing;
 
@@ -66,14 +66,16 @@ namespace ProjectAscension.Monsters
         {
             _health = GetComponent<HitReceiver>();
             _health.Died += OnDied;
-            _renderer = GetComponent<Renderer>();
         }
 
         private void Start()
         {
-            // Capture the tell's rest state now — the factory sets the body colour/scale before the
-            // first frame, so this sees the final look to flash from and restore to.
-            if (_renderer != null) _baseColor = _renderer.material.color;
+            // Capture the tell's rest state now — the factory builds the body before the first frame, so
+            // this sees the final look to flash from and restore to. Every part of the silhouette
+            // flashes, or the tell reads on a shoulder and nowhere else.
+            _renderers = GetComponentsInChildren<Renderer>();
+            _baseColors = new Color[_renderers.Length];
+            for (int i = 0; i < _renderers.Length; i++) _baseColors[i] = _renderers[i].material.color;
             _baseScale = transform.localScale;
 
             var playerGo = GameObject.FindWithTag("Player");
@@ -116,16 +118,25 @@ namespace ProjectAscension.Monsters
                 float progress = _attackWindup > 0f
                     ? Mathf.Clamp01(1f - (_windupEndTime - time) / _attackWindup)
                     : 1f;
-                if (_renderer != null)
-                    _renderer.material.color = Color.Lerp(_baseColor, TelegraphColor, 0.65f * progress);
+                Tint(t => Color.Lerp(t.baseColor, TelegraphColor, 0.65f * progress));
                 transform.localScale = _baseScale * (1f + 0.12f * progress);
                 _telegraphing = true;
             }
             else if (_telegraphing)
             {
-                if (_renderer != null) _renderer.material.color = _baseColor;
+                Tint(t => t.baseColor);
                 transform.localScale = _baseScale;
                 _telegraphing = false;
+            }
+        }
+
+        private void Tint(System.Func<(Renderer renderer, Color baseColor), Color> pick)
+        {
+            if (_renderers == null) return;
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] == null) continue;
+                _renderers[i].material.color = pick((_renderers[i], _baseColors[i]));
             }
         }
 
