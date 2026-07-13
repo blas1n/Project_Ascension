@@ -9,6 +9,9 @@ namespace ProjectAscension.Game
     /// </summary>
     public sealed class PlayerStateService
     {
+        /// <summary>What the player called themselves (stage 0). Empty until they do.</summary>
+        public string CharacterName = "";
+
         public int Currency;
         public int Reputation; // 명성 — standing earned from contracts; gates higher-tier ones
 
