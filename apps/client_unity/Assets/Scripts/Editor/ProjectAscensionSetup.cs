@@ -358,9 +358,9 @@ namespace ProjectAscension.Editor
             ground.name = "Ground";
             ground.transform.localScale = new Vector3(5f, 1f, 5f);
 
-            // A couple of blocks so movement/camera are visibly readable.
-            CreateBlock("Block_A", new Vector3(4f, 1f, 6f));
-            CreateBlock("Block_B", new Vector3(-5f, 1f, 3f));
+            // The frontier is two worlds: the OUTSKIRTS you are sent to survey, and the DEEP frontier
+            // past a threshold you cannot find without the chart. Built procedurally at load.
+            new GameObject("FrontierBlockout").AddComponent<FrontierBlockout>();
 
             BuildPlayerStack(Vector3.zero);
             // Monsters: spawner drops the 3 types around the origin on play.
@@ -386,7 +386,9 @@ namespace ProjectAscension.Editor
             CreateTrigger("Collectible_1", PrimitiveType.Sphere, new Vector3(6f, 1f, 2f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
             CreateTrigger("Collectible_2", PrimitiveType.Sphere, new Vector3(-4f, 1f, 7f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
             CreateTrigger("Collectible_3", PrimitiveType.Sphere, new Vector3(7f, 1f, -3f), Vector3.one * 0.6f, sample).AddComponent<Collectible>();
-            CreateTrigger("SurveyPoint", PrimitiveType.Cylinder, new Vector3(0f, 1.5f, 12f), new Vector3(1f, 1.5f, 1f), new Color(0.3f, 0.6f, 1f)).AddComponent<SurveyPoint>();
+            CreateTrigger("SurveyPoint", PrimitiveType.Cylinder,
+                FrontierBlockout.SurveyMarker + new Vector3(0f, 1.5f, 0f),
+                new Vector3(1f, 1.5f, 1f), new Color(0.3f, 0.6f, 1f)).AddComponent<SurveyPoint>();
             CreateTrigger("ReturnPad", PrimitiveType.Cube, new Vector3(0f, 0.1f, -5f), new Vector3(3f, 0.2f, 3f), new Color(0.2f, 0.9f, 0.3f)).AddComponent<ReturnZone>();
 
             // VContainer scope for the player stack.
