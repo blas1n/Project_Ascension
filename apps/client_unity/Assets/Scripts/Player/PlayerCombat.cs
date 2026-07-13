@@ -34,6 +34,11 @@ namespace ProjectAscension.Player
             _input.AttackReleased += OnLeftRelease;
             _input.AttackLeftPressed += OnRightClick;
             _input.AttackLeftReleased += OnRightRelease;
+
+            // A shield defends only while its hand is HELD down. Tell the player's HitReceiver how to
+            // ask; BlockRules decides what a raised shield is worth against a given blow.
+            if (TryGetComponent<HitReceiver>(out var hitReceiver))
+                hitReceiver.Blocking = () => (loadout?.LeftSlot?.Current as ShieldWeapon)?.IsBlocking ?? false;
         }
 
         private void OnDestroy()

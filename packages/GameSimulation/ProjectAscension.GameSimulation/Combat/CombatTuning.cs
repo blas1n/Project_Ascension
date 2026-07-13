@@ -40,7 +40,11 @@ namespace ProjectAscension.GameSimulation.Combat
         float DeliveryProjectileGravity,
         float DeliveryRange,        // how far a discovered weapon reaches
         float DeliveryAreaRadius,   // resolve radius for an Area delivery
-        float DeliveryHitscanRadius)// resolve catch radius for a projectile/hitscan
+        float DeliveryHitscanRadius,// resolve catch radius for a projectile/hitscan
+                                    // Active block (shield). Held, not passive — and only the FRONT is
+                                    // covered, so being flanked bypasses the shield entirely.
+        float BlockReduction = 0.75f,   // fraction of a blocked blow absorbed
+        float BlockFrontArcDot = 0.35f) // dot(forward, toAttacker) needed to count as "in front"
     {
         /// <summary>A baseline used by tests and as a safe fallback when the DB has no
         /// combat-tuning row yet. Mirrors the seeded defaults.</summary>

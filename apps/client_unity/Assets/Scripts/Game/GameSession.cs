@@ -300,6 +300,7 @@ namespace ProjectAscension.Game
             d.passiveLeech, d.focusCostPerPoint,
             d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold,
             d.deliveryProjectileSpeed, d.deliveryProjectileGravity, d.deliveryRange,
-            d.deliveryAreaRadius, d.deliveryHitscanRadius);
+            d.deliveryAreaRadius, d.deliveryHitscanRadius,
+            d.blockReduction, d.blockFrontArcDot);
     }
 }

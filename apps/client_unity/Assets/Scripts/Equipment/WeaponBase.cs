@@ -45,8 +45,9 @@ namespace ProjectAscension.Equipment
         public virtual void OnUnequip() => gameObject.SetActive(false);
 
         /// <summary>Primary input pressed. An instant weapon fires now (returns true);
-        /// a charge weapon (e.g. a bow) starts charging and fires on release.</summary>
-        public bool PrimaryDown(AttackContext ctx)
+        /// a charge weapon (e.g. a bow) starts charging and fires on release. Virtual because not
+        /// every off-hand piece attacks — a shield uses the HELD input to raise a block instead.</summary>
+        public virtual bool PrimaryDown(AttackContext ctx)
         {
             if (_data == null) return false;
             if (_data.IsCharged) { _chargeStart = Time.time; return false; }
@@ -55,7 +56,7 @@ namespace ProjectAscension.Equipment
 
         /// <summary>Primary input released. A charge weapon fires scaled by how long it
         /// was held; an instant weapon does nothing. Returns true if it fired.</summary>
-        public bool PrimaryUp(AttackContext ctx)
+        public virtual bool PrimaryUp(AttackContext ctx)
         {
             if (_data == null || !_data.IsCharged || _chargeStart < 0f) return false;
             float charge = WeaponFireRules.ChargeFraction(_chargeStart, Time.time, _data.ChargeTime);

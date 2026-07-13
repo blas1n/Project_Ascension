@@ -26,5 +26,7 @@ namespace ProjectAscension.Contracts.Responses
         float DeliveryProjectileGravity,
         float DeliveryRange,
         float DeliveryAreaRadius,
-        float DeliveryHitscanRadius);
+        float DeliveryHitscanRadius,
+        float BlockReduction,
+        float BlockFrontArcDot);
 }

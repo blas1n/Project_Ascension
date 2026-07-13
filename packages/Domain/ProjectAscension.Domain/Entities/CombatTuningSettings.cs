@@ -48,5 +48,9 @@ namespace ProjectAscension.Domain.Entities
         public float DeliveryRange { get; set; }
         public float DeliveryAreaRadius { get; set; }
         public float DeliveryHitscanRadius { get; set; }
+
+        // Active block (shield): held, not passive, and only covering the front arc.
+        public float BlockReduction { get; set; }
+        public float BlockFrontArcDot { get; set; }
     }
 }
