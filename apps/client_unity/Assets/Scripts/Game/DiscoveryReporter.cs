@@ -32,9 +32,10 @@ namespace ProjectAscension.Game
         private readonly BehaviorAccumulator _accumulator = new();
         // The COMPOSITE behaviours (dodge-attack / air-attack / repeated jump) are derived by a rule,
         // not by this glue — what counts as "out of a dodge" is one tested answer (BehaviorDeriver).
-        private readonly BehaviorDeriver _deriver = new();
-        // Fusing the two hands is the seed of a synthesis skill — observed, never inferred (ADR 0008).
-        private readonly SynthesisDeriver _synthesis = new();
+        // ONE grammar (ADR 0009) instead of five bespoke observers. It knows nothing about catalysts,
+        // dodges or jumps — it composes whatever acts arrive, so a new act needs no new observer.
+        private readonly CompositionDeriver _grammar = new();
+        private readonly List<string> _composites = new();
         private readonly Dictionary<string, float> _recentMonsters = new(); // tag -> expiry time
         private DiscoveryApiClient _api;
         private Loadout _loadout;
@@ -56,9 +57,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped += OnJumped;
             GameplayEvents.Dodged += OnDodged;
             GameplayEvents.Attacked += OnAttacked;
-            GameplayEvents.ChargedAttacked += OnChargedAttacked;
-            GameplayEvents.AirAttacked += OnAirAttacked;
-            GameplayEvents.WeaponUsed += OnWeaponUsed;
+            GameplayEvents.ActPerformed += OnActPerformed;
             GameplayEvents.MonsterKilled += OnMonsterKilled;
         }
 
@@ -67,42 +66,22 @@ namespace ProjectAscension.Game
             GameplayEvents.Jumped -= OnJumped;
             GameplayEvents.Dodged -= OnDodged;
             GameplayEvents.Attacked -= OnAttacked;
-            GameplayEvents.ChargedAttacked -= OnChargedAttacked;
-            GameplayEvents.AirAttacked -= OnAirAttacked;
-            GameplayEvents.WeaponUsed -= OnWeaponUsed;
+            GameplayEvents.ActPerformed -= OnActPerformed;
             GameplayEvents.MonsterKilled -= OnMonsterKilled;
         }
 
-        private void OnJumped()
-        {
-            _accumulator.Record(BehaviorKind.Jump);
-            // A deliberate chain of jumps is a behaviour in its own right (반복 점프).
-            if (_deriver.Jumped(Time.time)) _accumulator.Record(BehaviorKind.RepeatedJump);
-        }
-
-        private void OnDodged()
-        {
-            _accumulator.Record(BehaviorKind.Dodge);
-            _deriver.Dodged(Time.time);
-        }
-
-        private void OnAttacked(bool isMelee)
-        {
+        // The RAW counts stay raw: what, and how many times. Everything compositional — fusions,
+        // dodge-attacks, air attacks, chains — is the grammar's business now (ADR 0009).
+        private void OnJumped() => _accumulator.Record(BehaviorKind.Jump);
+        private void OnDodged() => _accumulator.Record(BehaviorKind.Dodge);
+        private void OnAttacked(bool isMelee) =>
             _accumulator.Record(isMelee ? BehaviorKind.MeleeAttack : BehaviorKind.RangedAttack);
-            // Attacking out of a dodge (회피 직후 공격). This weight was SEEDED in the DB but nothing
-            // ever produced the behaviour — the signal was dead until now.
-            if (_deriver.IsDodgeAttack(Time.time)) _accumulator.Record(BehaviorKind.DodgeAttack);
-        }
 
-        private void OnChargedAttacked() => _accumulator.Record(BehaviorKind.ChargedAttack);
-        private void OnAirAttacked() => _accumulator.Record(BehaviorKind.AirAttack);
-
-        // Catalyst then gunshot, near enough to be one act: the shot carries the arcane. The ORDER is
-        // part of the signal — the reverse is a different act, and must be a different discovery.
-        private void OnWeaponUsed(string contextTag)
+        private void OnActPerformed(Act act)
         {
-            var fusion = _synthesis.Used(contextTag, Time.time);
-            if (fusion != null) _accumulator.Record(fusion);
+            _composites.Clear();
+            _grammar.Observe(act, _composites);
+            foreach (var composite in _composites) _accumulator.Record(composite);
         }
 
         // A defeated monster flavors the discovery context for a window (몬스터는 발견의 촉매).

@@ -327,6 +327,11 @@ namespace ProjectAscension.Editor
             SetObjectField(playerCombat, "loadout", loadout);
             SetObjectField(playerCombat, "aimSource", pivot.transform);
 
+            // The act stream (ADR 0009): one observer that knows the player's state (airborne? shield up?
+            // was that shot drawn?) and reports what they DID. The discovery grammar composes the rest.
+            var acts = player.AddComponent<ActRecorder>();
+            SetObjectField(acts, "loadout", loadout);
+
             // Focus (the resource discovered skills spend).
             player.AddComponent<FocusPool>();
 

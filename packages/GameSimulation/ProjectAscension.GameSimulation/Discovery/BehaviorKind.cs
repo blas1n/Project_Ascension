@@ -3,13 +3,13 @@ namespace ProjectAscension.GameSimulation.Discovery
     /// <summary>Trackable player behaviors that can drive discoveries.</summary>
     public enum BehaviorKind
     {
+        // The RAW verbs only: what was done, and how many times. Every composite — a dodge-attack, an
+        // air attack, a chained jump, a weapon fusion — used to be a member here, and each one needed a
+        // bespoke observer to produce it. They are now sentences in the composition grammar (ADR 0009),
+        // which means combinations nobody enumerated still come out.
         Jump,
         Dodge,
         MeleeAttack,
         RangedAttack,
-        DodgeAttack,
-        ChargedAttack, // a held/charged shot (e.g. a full bow draw) — drives charge discoveries
-        AirAttack,     // struck while airborne — the doc's training example (공중 공격)
-        RepeatedJump,  // a deliberate chain of jumps (반복 점프)
     }
 }

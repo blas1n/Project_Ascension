@@ -79,27 +79,17 @@ namespace ProjectAscension.Player
         // not a thing to be guessed at from the loadout (ADR 0008).
         private void Announce(WeaponBase weapon)
         {
+            // The coarse fact (for the tutorial/contracts) and the precise one (what it was made WITH).
+            // Airborne/charged/blocking are QUALITIES of the act, gathered by ActRecorder — not five
+            // separate events (ADR 0009).
             GameplayEvents.RaiseAttacked(weapon.Data.IsMelee);
             GameplayEvents.RaiseWeaponUsed(EquipmentTags.For(weapon.Data));
-            AnnounceIfAirborne();
-        }
-
-        // Striking from the air is its own fact (공중 공격) — one of the doc's training discoveries.
-        // Whether that MEANS anything is the discovery engine's call; this only reports it.
-        private void AnnounceIfAirborne()
-        {
-            if (TryGetComponent<CharacterController>(out var cc) && !cc.isGrounded)
-                GameplayEvents.RaiseAirAttacked();
         }
 
         private void FireUp(EquipmentSlot slot)
         {
             if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx)) return;
             Announce(weapon);
-            // A held/charged shot is its own discovery signal (e.g. 긴 차징 → 화염포). The
-            // threshold is DB-driven (CombatTuning), so it can be retuned without a rebuild.
-            if (weapon.LastCharge >= GameSimulation.Combat.CombatTuningCatalog.Current.ChargedAttackThreshold)
-                GameplayEvents.RaiseChargedAttacked();
         }
 
         private bool TryWeapon(EquipmentSlot slot, out WeaponBase weapon, out AttackContext ctx)
