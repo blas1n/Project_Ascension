@@ -28,9 +28,9 @@ namespace ProjectAscension.Monsters
             monster.Configure(stats.MoveSpeed, stats.AggroRange, stats.AttackRange,
                 stats.AttackCooldown, stats.AttackWindup, stats.Damage, stats.ProjectileSpeed);
 
-            var renderer = go.GetComponent<Renderer>();
-            if (renderer != null)
-                renderer.material.color = ColorFor(type);
+            // A silhouette, not a tinted capsule — you have to recognise what is coming at you before
+            // it is close enough to read a colour (docs/05-art/art-direction.md).
+            MonsterBody.Build(go, type, ColorFor(type));
 
             monster.DiscoveryTag = "monster:" + type.ToString().ToLowerInvariant(); // discovery catalyst
             monster.DropItemKey = stats.DropItemKey;
