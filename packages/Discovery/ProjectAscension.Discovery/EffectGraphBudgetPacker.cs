@@ -20,19 +20,16 @@ public static class EffectGraphBudgetPacker
 
         var steps = trigger.Child is Sequence seq ? seq.Steps.ToList() : new List<EffectNode> { trigger.Child };
 
-        int guard = 64; // bounded: tiers are 0..MaxTier over <=8 nodes
-        while (Cost(steps) > budget.Total && guard-- > 0)
+        // An over-budget skill loses an EFFECT, never a number (ADR 0010). The old packer shaved tiers
+        // first, which meant a skill you couldn't afford simply hit softer — magnitude was the currency.
+        // But the numbers were never supposed to be for sale: what a modest discovery gives up is what it
+        // can DO, not how hard it hits. So drop the most expensive effect and keep the rest whole.
+        int guard = EffectGraph.MaxNodes + 1;
+        while (Cost(steps) > budget.Total && steps.Count > 1 && guard-- > 0)
         {
             int idx = IndexOfCostliest(steps);
             if (idx < 0) break;
-
-            var lower = LowerTier(steps[idx]);
-            if (lower is not null)
-                steps[idx] = lower;
-            else if (steps.Count > 1)
-                steps.RemoveAt(idx); // already tier 0 — drop it, but never empty the effect
-            else
-                break; // one tier-0 node left; can't shrink further
+            steps.RemoveAt(idx);
         }
 
         EffectNode child = steps.Count == 1 ? steps[0] : new Sequence(steps);
@@ -59,16 +56,4 @@ public static class EffectGraphBudgetPacker
 
     // A copy of the node one tier lower, or null when it is already at tier 0 (structural nodes
     // like a nested Sequence aren't lowered — they shouldn't appear as steps).
-    private static EffectNode? LowerTier(EffectNode node) => node switch
-    {
-        Emit e when e.Tier > 0 => new Emit(e.Delivery, e.Tier - 1),
-        Impulse i when i.Tier > 0 => new Impulse(i.Direction, i.Tier - 1),
-        Damage d when d.Tier > 0 => new Damage(d.Tier - 1),
-        Control c when c.Tier > 0 => new Control(c.Effect, c.Tier - 1),
-        Ward w when w.Tier > 0 => new Ward(w.Effect, w.Tier - 1),
-        Dot dot when dot.Tier > 0 => new Dot(dot.Tier - 1, dot.Duration),
-        Spread sp when sp.Tier > 0 => new Spread(sp.Tier - 1),
-        Homing h when h.Tier > 0 => new Homing(h.Tier - 1),
-        _ => null,
-    };
 }

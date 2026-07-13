@@ -56,20 +56,32 @@ public static class EffectGraph
         _ => 1,
     };
 
-    /// <summary>Deterministic power cost (tier-weighted). The engine owns these weights, not the
-    /// AI — the AI only chooses tiers/structure (ADR 0002). A Trigger is structural (no cost).</summary>
+    /// <summary>
+    /// The cost of a skill is STRUCTURAL, not numeric (ADR 0010). It counts what the skill DOES —
+    /// how many effects, and how expressive each is — and deliberately ignores Tier.
+    ///
+    /// This is the doc, made mechanical. progression-model.md: "신규 플레이어와 100시간 플레이어의 차이는
+    /// 숫자가 아니다… 성장은 강함이 아니라 세계 속 위치의 변화이다." And discovery.md: the power budget's
+    /// job is that "수치가 클램프된다" — to CLAMP the numbers, not to sell them.
+    ///
+    /// So magnitude is not for sale. It is bounded flat by <see cref="MaxTier"/> and costs nothing, which
+    /// means a significant discovery cannot buy a bigger number — it can only buy a more INTERESTING one.
+    /// A legendary skill and a common one hit about as hard. They differ in what they do to you.
+    ///
+    /// The engine owns these weights, never the AI (ADR 0002). A Trigger is structural (no cost).
+    /// </summary>
     public static int Cost(EffectNode node) => node switch
     {
         null => 0,
         Trigger t => Cost(t.Child),
         Sequence s => Sum(s.Steps, Cost),
-        Emit e => (e.Tier + 1) * 3,
-        Impulse i => (i.Tier + 1) * 4,
-        Damage d => (d.Tier + 1) * 3,
-        Control c => (c.Tier + 1) * 5,
-        Ward w => (w.Tier + 1) * 4,
-        Dot dot => (dot.Tier + 1) * 3,
-        Spread sp => (sp.Tier + 1) * 2,
+        Emit => 3,
+        Impulse => 4,
+        Damage => 3,
+        Control => 5,  // bending what an enemy can DO is the most expressive thing a skill can hold
+        Ward => 4,
+        Dot => 4,
+        Spread => 3,
         Homing => 2,
         _ => 0,
     };

@@ -22,7 +22,9 @@ namespace ProjectAscension.Domain.Entities
 
         // Power budget curve (continuous in score).
         public int BudgetBase { get; set; }
-        public double BudgetPerScore { get; set; }
+        // Anti-inflation (ADR 0010): the next discovery in a space costs exponentially more, while
+        // the power it buys grows logarithmically.
+        public double BudgetGrowth { get; set; }
         public int BudgetMin { get; set; }
         public int BudgetMax { get; set; }
 

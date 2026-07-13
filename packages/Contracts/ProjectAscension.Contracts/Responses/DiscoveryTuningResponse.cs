@@ -15,7 +15,7 @@ namespace ProjectAscension.Contracts.Responses
         int CombinationSynergy,
         int FireThreshold,
         int BudgetBase,
-        double BudgetPerScore,
+        double BudgetGrowth,
         int BudgetMin,
         int BudgetMax,
         int UncommonScore,

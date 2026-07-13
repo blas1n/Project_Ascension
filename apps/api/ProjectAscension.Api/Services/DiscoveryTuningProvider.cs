@@ -37,7 +37,7 @@ public class DiscoveryTuningProvider : IDiscoveryTuningProvider
             settings.ChainWeight,
             settings.FireThreshold,
             settings.BudgetBase,
-            settings.BudgetPerScore,
+            settings.BudgetGrowth,
             settings.BudgetMin,
             settings.BudgetMax,
             settings.UncommonScore,

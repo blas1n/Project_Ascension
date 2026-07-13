@@ -21,11 +21,19 @@ public enum Rarity
 /// </summary>
 public static class BudgetRules
 {
-    /// <summary>Continuous budget from a significance score, clamped to the tuned
-    /// range. Higher score → bigger budget → better skill.</summary>
+    /// <summary>
+    /// Budget from a significance score — LOGARITHMIC, deliberately (ADR 0010). A stronger pattern
+    /// still yields a richer skill, but a 60x score buys roughly a 1.6x budget.
+    ///
+    /// This is the other half of the anti-inflation pair: the COST of the next discovery in a space
+    /// grows exponentially, while the POWER it buys grows logarithmically. Getting stronger is never
+    /// forbidden — it is only made steadily, and then punishingly, more expensive. A player who only
+    /// repeats themselves does not hit a wall; they hit a curve, and feel it long before it stops them.
+    /// </summary>
     public static PowerBudget FromScore(int score, DiscoveryTuning tuning)
     {
-        int budget = tuning.BudgetBase + (int)Math.Round(score * tuning.BudgetPerScore);
+        double magnitude = Math.Log2(1 + Math.Max(0, score));
+        int budget = tuning.BudgetBase + (int)Math.Round(tuning.BudgetGrowth * magnitude);
         return new PowerBudget(Math.Clamp(budget, tuning.BudgetMin, tuning.BudgetMax));
     }
 
