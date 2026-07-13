@@ -363,6 +363,12 @@ namespace ProjectAscension.Editor
             new GameObject("FrontierBlockout").AddComponent<FrontierBlockout>();
 
             BuildPlayerStack(Vector3.zero);
+            // The guardian: PLACED, not spawned, in the deep arena. Stage 8 is authored — the player
+            // walks in, meets it, and dies. A roamer could be missed; a set-piece cannot.
+            var guardianGo = new GameObject("DeepGuardianSpawner");
+            guardianGo.transform.position = FrontierBlockout.DeepArena;
+            guardianGo.AddComponent<DeepGuardianSpawner>();
+
             // Monsters: spawner drops the 3 types around the origin on play.
             var spawnerGo = new GameObject("MonsterSpawner");
             spawnerGo.transform.position = Vector3.zero;

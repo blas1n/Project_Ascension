@@ -23,6 +23,7 @@ namespace ProjectAscension.Monsters
             {
                 MonsterType.Ranged => go.AddComponent<RangedMonster>(),
                 MonsterType.Elite => go.AddComponent<EliteMonster>(),
+                MonsterType.Guardian => go.AddComponent<EliteMonster>(), // same behaviour, far worse numbers
                 _ => go.AddComponent<MeleeMonster>(),
             };
             monster.Configure(stats.MoveSpeed, stats.AggroRange, stats.AttackRange,
@@ -47,6 +48,7 @@ namespace ProjectAscension.Monsters
             //                        hp     spd   aggro  atkRng  cd   windup dmg  projSpd scale  drop
             MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 0.5f, 6f, 18f, 1f, "feather", 2),
             MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 0.65f, 14f, 24f, 1.6f, "core", 1),
+            MonsterType.Guardian => new(600f, 3.2f, 45f, 20f, 1.4f, 0.9f, 45f, 26f, 2.6f, "core", 3),
             _ => new(40f, 3.5f, 25f, 2f, 1f, 0.35f, 8f, 0f, 1f, "hide", 2), // Melee
         };
 
@@ -54,6 +56,7 @@ namespace ProjectAscension.Monsters
         {
             MonsterType.Ranged => new Color(1f, 0.5f, 0.2f),
             MonsterType.Elite => new Color(0.7f, 0.2f, 0.9f),
+            MonsterType.Guardian => new Color(0.32f, 0.12f, 0.42f), // near-black violet — it drinks the light
             _ => new Color(0.85f, 0.2f, 0.2f),
         };
     }

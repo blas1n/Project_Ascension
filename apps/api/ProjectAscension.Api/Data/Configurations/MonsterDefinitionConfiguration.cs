@@ -57,6 +57,24 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 Scale = 1.6f,
                 DropItemKey = "core",
                 DropAmount = 1,
+            },
+            // The thing in the deep. It is not balanced to be beaten by a starter loadout — it is
+            // balanced to TEACH (stage 8). The long wind-up is deliberate: the blow is readable, and
+            // the player will still take it, because readable is not the same as survivable.
+            new MonsterDefinition
+            {
+                Key = "guardian",
+                MaxHealth = 600f,
+                MoveSpeed = 3.2f,
+                AggroRange = 45f,
+                AttackRange = 20f,
+                AttackCooldown = 1.4f,
+                AttackWindup = 0.9f,
+                Damage = 45f,
+                ProjectileSpeed = 26f,
+                Scale = 2.6f,
+                DropItemKey = "core",
+                DropAmount = 3,
             });
     }
 }
