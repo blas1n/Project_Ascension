@@ -130,11 +130,21 @@ namespace ProjectAscension.Game
                 if (c.IsComplete)
                 {
                     string rep = c.RewardReputation > 0 ? $", +{c.RewardReputation} rep" : "";
-                    if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g{rep})", GUILayout.Height(28)))
+                    string item = c.RewardItemAmount > 0 && !string.IsNullOrEmpty(c.RewardItemKey)
+                        ? $", {c.RewardItemKey}" : "";
+                    if (GUILayout.Button($"Turn In  (+{c.RewardCurrency}g{rep}{item})", GUILayout.Height(28)))
                     {
                         var r = contracts.TurnIn();
                         ps.Currency += r.Currency;
                         ps.Reputation += r.Reputation;
+
+                        // An item reward is a POSSESSION, not a payout — the survey hands over a map.
+                        if (r.ItemAmount > 0 && !string.IsNullOrEmpty(r.ItemKey))
+                        {
+                            ps.Inventory.Add(r.ItemKey, r.ItemAmount);
+                            if (TutorialRunner.Instance != null)
+                                TutorialRunner.Instance.Signal(GameSimulation.Tutorial.TutorialSignal.MapReceived);
+                        }
                     }
                 }
                 else
@@ -476,7 +486,8 @@ namespace ProjectAscension.Game
                 session.Contracts.AddIssued(ContractMapping.FromFields(
                     dto.purpose, dto.title, dto.description, dto.targetCount, dto.rewardCurrency, dto.target,
                     dto.issuer, dto.delegationAllowed, dto.rewardReputation, dto.minReputation,
-                    dto.timeLimitSeconds, dto.failOnTimeout, dto.failOnDeath));
+                    dto.timeLimitSeconds, dto.failOnTimeout, dto.failOnDeath,
+                    dto.rewardItemKey, dto.rewardItemAmount));
                 ps.Currency = Mathf.Max(0, ps.Currency - dto.rewardCurrency); // escrow the reward
                 _quote = null;
             });

@@ -161,7 +161,8 @@ public class ContractService : IContractService
             ReadInt(c.RewardJson, "reputation", 0), ReadInt(c.ConditionsJson, "minReputation", 0),
             ReadInt(c.ConditionsJson, "timeLimitSeconds", 0),
             FailOnHas(c.ConditionsJson, "timeout"), FailOnHas(c.ConditionsJson, "death"),
-            ReadString(c.ConditionsJson, "issuer") ?? "");
+            ReadString(c.ConditionsJson, "issuer") ?? "",
+            ReadString(c.RewardJson, "itemKey") ?? "", ReadInt(c.RewardJson, "itemAmount", 0));
 
     // The slice's objective/reward are simple values in the Conditions/Reward JSON.
     private static int ReadInt(string json, string property, int fallback)

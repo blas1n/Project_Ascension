@@ -98,12 +98,22 @@ namespace ProjectAscension.Game
             }
         }
 
-        /// <summary>The payout of a completed contract — currency and standing (명성).</summary>
+        /// <summary>The payout of a completed contract — currency, standing (명성), and possibly an ITEM
+        /// (the first hour's survey pays in a map). An empty ItemKey means no item was owed.</summary>
         public readonly struct Reward
         {
             public readonly int Currency;
             public readonly int Reputation;
-            public Reward(int currency, int reputation) { Currency = currency; Reputation = reputation; }
+            public readonly string ItemKey;
+            public readonly int ItemAmount;
+
+            public Reward(int currency, int reputation, string itemKey = "", int itemAmount = 0)
+            {
+                Currency = currency;
+                Reputation = reputation;
+                ItemKey = itemKey ?? "";
+                ItemAmount = itemAmount;
+            }
         }
 
         /// <summary>Whether the player's standing meets the contract's requirement.</summary>
@@ -143,7 +153,8 @@ namespace ProjectAscension.Game
         public Reward TurnIn()
         {
             if (Active == null || !Active.IsComplete) return default;
-            var reward = new Reward(Active.RewardCurrency, Active.RewardReputation);
+            var reward = new Reward(Active.RewardCurrency, Active.RewardReputation,
+                Active.RewardItemKey, Active.RewardItemAmount);
             Active = null;
             return reward;
         }

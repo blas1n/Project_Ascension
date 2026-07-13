@@ -16,6 +16,11 @@ namespace ProjectAscension.Game
         /// shop, contract collection, and settlement supply.</summary>
         public readonly Dictionary<string, int> Resources = new();
 
+        /// <summary>Items the player OWNS — possessions, not materials. The first hour's survey pays in
+        /// a map, and "지도는 UI가 아니라 아이템이다": you hold it, you can lose it, you can trade it.
+        /// Rules live in GameSimulation (ADR: Unity is a shell).</summary>
+        public readonly GameSimulation.Items.Inventory Inventory = new();
+
         /// <summary>Discovered skills whose knowledge license has been sold (by name) — each
         /// sells once. The discovery itself is kept (first-discoverer is permanent).</summary>
         public readonly HashSet<string> SoldKnowledge = new();

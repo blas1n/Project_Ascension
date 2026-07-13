@@ -60,6 +60,21 @@ namespace ProjectAscension.GameSimulation.Tests.Contracts
         }
 
         [Fact]
+        public void ItemReward_IsCarried_AndAbsenceIsHarmless()
+        {
+            // The first hour's survey pays in a map, not gold.
+            var withMap = ContractMapping.FromFields("Survey", "Map the Frontier", "d", 1, 20, null, "office",
+                false, 4, 0, 0, false, false, rewardItemKey: "frontier_map", rewardItemAmount: 1);
+            Assert.Equal("frontier_map", withMap.RewardItemKey);
+            Assert.Equal(1, withMap.RewardItemAmount);
+
+            // A contract with no item reward carries an empty key, never a phantom item.
+            var goldOnly = Map();
+            Assert.Equal("", goldOnly.RewardItemKey);
+            Assert.Equal(0, goldOnly.RewardItemAmount);
+        }
+
+        [Fact]
         public void CarriesTheFullTerms()
         {
             var c = Map(rewardReputation: 5, minReputation: 10, timeLimitSeconds: 120,
