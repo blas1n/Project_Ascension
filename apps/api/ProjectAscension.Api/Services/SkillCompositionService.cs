@@ -76,14 +76,27 @@ public class SkillCompositionService : ISkillCompositionService
         // Budget scales with the score, so a stronger pattern yields a richer skill.
         var budget = BudgetRules.FromScore(outcome.Score, tuning);
 
-        // Claim key = play STYLE (the delivery it maps to: beam/projectile/arc/nova/burst) +
-        // RARITY TIER. The style keeps the variety without fragmenting on stray movement; the
-        // rarity turns "the same play, harder" into a PROGRESSION, not a duplicate — a higher
-        // score yields a rarer, richer discovery (bigger budget) built on the weaker one via
-        // the lineage and kept mechanically DISTINCT by the retry-on-duplicate loop (the
-        // earlier rarity attempt looked like duplicates only because the tiers were identical).
-        // Bounded by the ~5 rarity tiers — it climbs to Legendary and stops.
-        var claimKey = $"{RegionKey(request)}:{outcome.Rarity}";
+        // Claim key = play STYLE (the delivery it maps to) + RARITY. The style keeps the real variety
+        // without fragmenting on a stray jump; the rarity makes "the same play, done better" a
+        // PROGRESSION rather than a duplicate.
+        //
+        // SCARCITY (ADR 0010). Within a lineage, a discovery only happens if it BEATS your best there.
+        //
+        // The rungs used to be claimable in any order: reach Rare, and the Uncommon slot below you was
+        // still open — so a weaker session filled it in behind you. Every wobble in the score topped up
+        // another rung, and a style quietly accreted its full five skills. That is saturation, and it
+        // costs the thing the whole system exists to protect: a discovery has to be RARE, or it is not
+        // a discovery, it is a drop.
+        //
+        // So the ladder is one-way. You either surpass yourself in this style, or nothing happens.
+        var styleKey = RegionKey(request);
+        for (var held = outcome.Rarity; held <= Rarity.Legendary; held++)
+        {
+            if (await _skills.GetByIdempotencyKeyAsync($"{styleKey}:{held}", ct) is not null)
+                return new EvaluateTriggerResponse(false, outcome.Score, null); // already here, or above it
+        }
+
+        var claimKey = $"{styleKey}:{outcome.Rarity}";
         var (discoveryId, isNew) = await CreateDiscoveryAsync(
             request.ActorId, request.RegionId, request.Type, request.Theme,
             request.ContextTags, request.PrimaryBehavior, request.Behaviors, budget.Total, parents, claimKey, ct);
