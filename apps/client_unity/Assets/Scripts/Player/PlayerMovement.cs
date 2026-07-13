@@ -36,6 +36,14 @@ namespace ProjectAscension.Player
             _state = new PlayerState(new SimVector3(p.x, p.y, p.z), SimVector3.Zero, IsGrounded: true, InputSequence: 0);
         }
 
+        /// <summary>The simulation's own grounded state — the single source of truth for "is the
+        /// player on the ground" (ADR: Unity is a shell). Grounded is computed by
+        /// <c>PlayerSimulation</c> from the sim's position each tick; nothing else (a
+        /// CharacterController's own isGrounded, say) should be asked instead, or the game would have
+        /// two disagreeing answers to the same fact. True before <see cref="Initialize"/> runs, matching
+        /// the sim's own starting state.</summary>
+        public bool IsGrounded => _state?.IsGrounded ?? true;
+
         public void QueueJump() => _jumpQueued = true;
 
         /// <summary>Hard-set position (respawn) and clear velocity in the simulation.</summary>

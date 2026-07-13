@@ -40,6 +40,7 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             // Active block: a raised shield absorbs 75% of a FRONTAL blow; the flank is uncovered.
             BlockReduction = 0.75f,
             BlockFrontArcDot = 0.35f,
+            MovingDistanceThreshold = 0.02f,
         });
     }
 }

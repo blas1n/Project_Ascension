@@ -35,5 +35,10 @@ namespace ProjectAscension.GameSimulation.Contracts
         /// <summary>Whether a timeout-failing contract is currently eligible to expire (opted in and
         /// not yet complete); the caller then ticks the timer with <see cref="TickTimer"/>.</summary>
         public static bool CanExpire(bool failOnTimeout, bool isComplete) => failOnTimeout && !isComplete;
+
+        /// <summary>The standing lost on a contract failure: the contract's reward reputation, clamped
+        /// so a player can never be pushed below zero standing by a single failure.</summary>
+        public static int ReputationPenalty(int currentReputation, int rewardReputation)
+            => currentReputation < rewardReputation ? currentReputation : rewardReputation;
     }
 }

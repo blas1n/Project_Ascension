@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using ProjectAscension.GameSimulation.Combat;
+using NumVec3 = System.Numerics.Vector3;
 
 namespace ProjectAscension.Combat
 {
@@ -55,7 +56,8 @@ namespace ProjectAscension.Combat
             if (shieldUp)
             {
                 float before = amount;
-                amount = BlockRules.Blocked(amount, true, FacingDot(source), CombatTuningCatalog.Current);
+                float facingDot = BlockRules.FacingDot(ToNum(transform.position), ToNum(transform.forward), SourcePosition(source));
+                amount = BlockRules.Blocked(amount, true, facingDot, CombatTuningCatalog.Current);
                 if (amount < before) DamageBlocked?.Invoke(this);
             }
 
@@ -66,23 +68,12 @@ namespace ProjectAscension.Combat
             if (IsDead) Died?.Invoke(this);
         }
 
-        /// <summary>How head-on the blow was: dot(forward, directionToAttacker). 1 = dead ahead, 0 = the
-        /// flank, negative = behind. A source we can't locate is treated as frontal so an unattributed
-        /// hit isn't unfairly unblockable.</summary>
-        private float FacingDot(GameObject source)
-        {
-            if (source == null) return 1f;
+        /// <summary>The attacker's position, or null when it can't be located — BlockRules.FacingDot
+        /// (the sim) decides what a null source means for blocking, not this shell method.</summary>
+        private static NumVec3? SourcePosition(GameObject source)
+            => source != null ? ToNum(source.transform.position) : (NumVec3?)null;
 
-            var toAttacker = source.transform.position - transform.position;
-            toAttacker.y = 0f; // a blow from above/below is still "in front" if it faces you
-            if (toAttacker.sqrMagnitude < 0.0001f) return 1f;
-
-            var forward = transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f) return 1f;
-
-            return Vector3.Dot(forward.normalized, toAttacker.normalized);
-        }
+        private static NumVec3 ToNum(Vector3 v) => new NumVec3(v.x, v.y, v.z);
 
         /// <summary>Restore health up to max (e.g. a skill's Leech self-heal).</summary>
         public void Heal(float amount)

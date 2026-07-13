@@ -28,6 +28,7 @@ public class CombatTuningProvider : ICombatTuningProvider
             s.PassiveLeech, s.FocusCostPerPoint,
             s.SlowPerMagnitude, s.KnockbackPerMagnitude, s.ChargedAttackThreshold,
             s.DeliveryProjectileSpeed, s.DeliveryProjectileGravity, s.DeliveryRange,
-            s.DeliveryAreaRadius, s.DeliveryHitscanRadius);
+            s.DeliveryAreaRadius, s.DeliveryHitscanRadius,
+            MovingDistanceThreshold: s.MovingDistanceThreshold);
     }
 }

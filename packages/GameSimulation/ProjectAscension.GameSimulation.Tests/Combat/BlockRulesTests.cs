@@ -1,3 +1,4 @@
+using System.Numerics;
 using ProjectAscension.GameSimulation.Combat;
 using Xunit;
 
@@ -63,6 +64,60 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         {
             var wide = CombatTuning.Default with { BlockFrontArcDot = -0.5f }; // nearly all-round
             Assert.True(BlockRules.Blocks(true, facingDot: Side, frontArcDot: wide.BlockFrontArcDot));
+        }
+
+        // FacingDot is the GEOMETRY that feeds Blocks/Blocked — moved out of the MonoBehaviour
+        // (ADR: Unity is a shell) because it decides an input to a combat outcome, not a render detail.
+
+        [Fact]
+        public void NoSource_DefaultsToFrontal()
+        {
+            // An unattributed hit (e.g. a hazard) must not be unfairly unblockable.
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, attackerPosition: null);
+            Assert.Equal(1f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void AttackerDirectlyAhead_IsFullyFrontal()
+        {
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, 5f));
+            Assert.Equal(1f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void AttackerDirectlyBehind_IsFullyBehind()
+        {
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, -5f));
+            Assert.Equal(-1f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void AttackerToTheSide_IsZero()
+        {
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, new Vector3(5f, 0f, 0f));
+            Assert.Equal(0f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void VerticalOffset_IsIgnored_SoABlowFromAboveIsStillFrontal()
+        {
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 10f, 5f));
+            Assert.Equal(1f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void DegenerateOffset_AtTheSamePosition_DefaultsToFrontal()
+        {
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, Vector3.Zero);
+            Assert.Equal(1f, dot, precision: 3);
+        }
+
+        [Fact]
+        public void FacingDot_FeedsDirectlyIntoBlocked()
+        {
+            // End-to-end: standing still, attacker dead ahead, shield up — the blow is absorbed.
+            float dot = BlockRules.FacingDot(Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, 3f));
+            Assert.Equal(5f, BlockRules.Blocked(20f, isBlocking: true, dot), precision: 3);
         }
     }
 }

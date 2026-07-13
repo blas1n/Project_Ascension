@@ -105,5 +105,21 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             var p = Observe(TutorialProgress.Start, TutorialSignal.NameChosen, TutorialSignal.NameChosen);
             Assert.Equal(TutorialStep.Training, p.Step);
         }
+
+        // "Has moved enough to count" is UX, not economy — not DB-driven per CLAUDE.md — but it must
+        // still be the sequencer's call, not a constant sitting in the shell (ADR: Unity is a shell).
+
+        [Fact]
+        public void BelowTheTravelThreshold_HasNotMovedEnough()
+        {
+            Assert.False(TutorialDirector.HasTravelledEnoughToCountAsMoved(3.99f));
+        }
+
+        [Fact]
+        public void AtOrAboveTheTravelThreshold_HasMovedEnough()
+        {
+            Assert.True(TutorialDirector.HasTravelledEnoughToCountAsMoved(TutorialDirector.TravelToCountAsMovedMeters));
+            Assert.True(TutorialDirector.HasTravelledEnoughToCountAsMoved(10f));
+        }
     }
 }

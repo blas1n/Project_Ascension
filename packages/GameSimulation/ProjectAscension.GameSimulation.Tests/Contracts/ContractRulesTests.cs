@@ -56,5 +56,24 @@ namespace ProjectAscension.GameSimulation.Tests.Contracts
             Assert.False(ContractRules.CanExpire(failOnTimeout: false, isComplete: false));
             Assert.False(ContractRules.CanExpire(failOnTimeout: true, isComplete: true));
         }
+
+        [Fact]
+        public void ReputationPenalty_IsTheContractsReward()
+        {
+            Assert.Equal(15, ContractRules.ReputationPenalty(currentReputation: 50, rewardReputation: 15));
+        }
+
+        [Fact]
+        public void ReputationPenalty_NeverExceedsCurrentStanding()
+        {
+            // A player with only 5 standing can't be pushed below zero by a 15-reputation contract.
+            Assert.Equal(5, ContractRules.ReputationPenalty(currentReputation: 5, rewardReputation: 15));
+        }
+
+        [Fact]
+        public void ReputationPenalty_AtZeroStanding_IsZero()
+        {
+            Assert.Equal(0, ContractRules.ReputationPenalty(currentReputation: 0, rewardReputation: 15));
+        }
     }
 }

@@ -52,5 +52,8 @@ namespace ProjectAscension.Domain.Entities
         // Active block (shield): held, not passive, and only covering the front arc.
         public float BlockReduction { get; set; }
         public float BlockFrontArcDot { get; set; }
+
+        // Discovery grammar input (ADR 0009): metres of per-frame displacement that reads as Moving.
+        public float MovingDistanceThreshold { get; set; }
     }
 }

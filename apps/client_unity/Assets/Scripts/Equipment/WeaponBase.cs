@@ -15,6 +15,16 @@ namespace ProjectAscension.Equipment
         private float _chargeStart = -1f;
         private Spread _spread;
 
+        // The per-shot facts that seed deterministic spread sampling (SpreadRules.Deviation) — never
+        // UnityEngine.Random, because the deviation decides whether the shot hits (ADR: Unity is a
+        // shell). _instanceSeed is assigned once, in creation order, so a deterministic simulation that
+        // creates weapons in the same order (client and a future authoritative server both derive this
+        // order from the same PlayerState/Loadout) agrees on it without transmitting anything;
+        // _shotIndex is this weapon's own monotonically increasing shot count.
+        private static uint _nextInstanceSeed = 1;
+        private uint _instanceSeed;
+        private uint _shotIndex;
+
         // Magazine state (ReloadRules — GameSimulation owns the gating, this just holds the numbers).
         // A magazine-less weapon (MagazineSize 0) never touches any of this: CanFire/CanBeginReload
         // both short-circuit true/false for it.
@@ -53,6 +63,8 @@ namespace ProjectAscension.Equipment
             _loaded = data.MagazineSize; // starts full
             _isReloading = false;
             _reloadStart = -1f;
+            _instanceSeed = _nextInstanceSeed++;
+            _shotIndex = 0;
         }
 
         private void Update()
@@ -127,17 +139,22 @@ namespace ProjectAscension.Equipment
             LastCharge = charge;
             if (_data.HasSpread) _spread = SpreadRules.Bloom(_spread, _data.SpreadPerShot); // bloom on each shot
             if (HasMagazine) _loaded = ReloadRules.AfterShot(_loaded);
+            _shotIndex++; // this shot's per-weapon fact — SpreadDirection seeds off it below
             OnPrimary(ctx, charge);
             return true;
         }
 
-        /// <summary>Deviate an aim direction by the current spread cone (a no-op for
-        /// precise weapons). Firing subclasses use this for their shot direction.</summary>
+        /// <summary>Deviate an aim direction by the current spread cone (a no-op for precise weapons).
+        /// Firing subclasses use this for their shot direction. The deviation itself is a deterministic
+        /// sample (SpreadRules.Deviation) seeded from this weapon instance + shot index — never engine
+        /// randomness, because it decides whether the shot hits (ADR: Unity is a shell). Unity's job
+        /// ends at turning the returned angles into a direction; it does not choose them.</summary>
         protected Vector3 SpreadDirection(Vector3 direction)
         {
             if (_data == null || !_data.HasSpread || _spread.Current <= 0f) return direction;
-            float a = _spread.Current;
-            var deviation = Quaternion.Euler(Random.Range(-a, a), Random.Range(-a, a), 0f);
+            uint seed = DeterministicRng.Combine(_instanceSeed, _shotIndex);
+            var (yaw, pitch) = SpreadRules.Deviation(_spread.Current, seed);
+            var deviation = Quaternion.Euler(pitch, yaw, 0f);
             return (Quaternion.LookRotation(direction) * deviation * Vector3.forward).normalized;
         }
 
