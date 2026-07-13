@@ -38,7 +38,8 @@ namespace ProjectAscension.Game
             }
 
             // Only what's USABLE right now — the four ability hotkeys and active passives. The
-            // full list (which grows large) lives in the City, so this HUD never overflows.
+            // full list (which grows large) lives in the discovery journal ([J], DiscoveryJournalHud),
+            // so this HUD never overflows.
             var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
             var session = GameSession.Instance;
 

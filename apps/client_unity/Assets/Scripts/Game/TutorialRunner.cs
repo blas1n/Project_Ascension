@@ -41,6 +41,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Attacked += OnAttacked;
             GameplayEvents.PlayerDied += OnPlayerDied;
             GameplayEvents.SkillDiscovered += OnSkillDiscovered;
+            GameplayEvents.EquipmentChosen += OnEquipmentChosen;
             SceneManager.activeSceneChanged += OnSceneChanged;
         }
 
@@ -51,6 +52,7 @@ namespace ProjectAscension.Game
             GameplayEvents.Attacked -= OnAttacked;
             GameplayEvents.PlayerDied -= OnPlayerDied;
             GameplayEvents.SkillDiscovered -= OnSkillDiscovered;
+            GameplayEvents.EquipmentChosen -= OnEquipmentChosen;
             SceneManager.activeSceneChanged -= OnSceneChanged;
             UnbindContracts();
             if (Instance == this) Instance = null;
@@ -65,6 +67,7 @@ namespace ProjectAscension.Game
         private void OnAttacked(bool _) => Signal(TutorialSignal.Attacked);
         private void OnPlayerDied() => Signal(TutorialSignal.Died);
         private void OnSkillDiscovered(string _) => Signal(TutorialSignal.DiscoveryMade);
+        private void OnEquipmentChosen() => Signal(TutorialSignal.EquipmentChosen);
 
         private void OnSceneChanged(Scene _, Scene next)
         {
@@ -155,14 +158,14 @@ namespace ProjectAscension.Game
         {
             TutorialStep.CreateCharacter => "",
             TutorialStep.Training => TrainingPrompt(progress),
-            TutorialStep.ChooseEquipment => "Choose two pieces of equipment.",
+            TutorialStep.ChooseEquipment => "Press [F] at the equipment station to choose two pieces of equipment.",
             TutorialStep.FirstDiscovery => "Fight your own way — discovery comes from how you act.",
             TutorialStep.AcceptSurveyContract => "Press [F] at the board to take a contract.",
             TutorialStep.EarnMap => "Survey the outskirts. Reach the marker.",
             TutorialStep.AcceptDeepContract => "Press [F] at the board to take the next contract.",
             TutorialStep.FirstDeath => "Go deeper.",
-            TutorialStep.DelegateContract => "You cannot finish this alone. Delegate it (위임).",
-            TutorialStep.IssueContract => "Then hire someone who can. Issue a contract (발주).",
+            TutorialStep.DelegateContract => "You cannot finish this alone. Delegate it with the clerk (위임).",
+            TutorialStep.IssueContract => "Then hire someone who can. Issue a contract with the clerk (발주).",
             TutorialStep.Return => "Press [F] at the return pad to go back to the city.",
             _ => "",
         };

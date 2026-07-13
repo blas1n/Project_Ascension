@@ -12,17 +12,23 @@ namespace ProjectAscension.Game
     ///
     /// So they come from a person now. What each NPC says depends on where the player is in the first
     /// hour (the director decides that; this only reads it). The speech bubble is ambient — flavour,
-    /// shown on mere proximity — but the quartermaster's issuing panel (발주) is an ACTION: it opens
-    /// only when you press [F] on him, not just by standing near.
+    /// shown on mere proximity — but the quartermaster's and the clerk's own business panels are
+    /// ACTIONS: they open only when you press [F] on the person, not just by standing near. The
+    /// serjeant is flavour only — the guard has no counter to run.
     /// </summary>
     public sealed class CityNpc : MonoBehaviour
     {
         public const float TalkReach = 3.5f;
 
-        /// <summary>The quartermaster's interactable, so CityHub can subscribe to it without polling
-        /// distance itself. Set once, when the city is built; there is exactly one quartermaster in
-        /// the slice.</summary>
+        /// <summary>The quartermaster's interactable, so QuartermasterPanel can subscribe to it
+        /// without polling distance itself. Set once, when the city is built; there is exactly one
+        /// quartermaster in the slice.</summary>
         public static Interactable QuartermasterInteractable { get; private set; }
+
+        /// <summary>The clerk's interactable, so ContractClerkPanel can subscribe to it without
+        /// polling distance itself. Set once, when the city is built; there is exactly one clerk in
+        /// the slice.</summary>
+        public static Interactable ClerkInteractable { get; private set; }
 
         public enum Role { Quartermaster, Serjeant, Clerk }
 
@@ -36,14 +42,16 @@ namespace ProjectAscension.Game
             _name = npcName;
             _role = role;
 
-            // Only the quartermaster has anything to press [F] on — talking to the serjeant or the
-            // clerk is flavour only (their lines come from the ambient bubble below).
-            if (_role == Role.Quartermaster)
+            // The quartermaster (shop + settlement delivery) and the clerk (issuing, delegation,
+            // knowledge licensing) both have business to press [F] on — the serjeant is flavour only
+            // (his lines come from the ambient bubble below, same as the others', but he has no panel).
+            if (_role == Role.Quartermaster || _role == Role.Clerk)
             {
                 var interactable = gameObject.AddComponent<Interactable>();
-                interactable.Label = "Quartermaster";
+                interactable.Label = _role == Role.Quartermaster ? "Quartermaster" : "Contract Clerk";
                 interactable.Reach = TalkReach;
-                QuartermasterInteractable = interactable;
+                if (_role == Role.Quartermaster) QuartermasterInteractable = interactable;
+                else ClerkInteractable = interactable;
             }
         }
 
@@ -113,14 +121,16 @@ namespace ProjectAscension.Game
                 // The 위임 beat — offered, right after the world has just proved the point.
                 TutorialStep.DelegateContract =>
                     "You can't finish that one. You don't have to — hand it to someone who can (위임).",
+                // The 발주 beat, verbatim in spirit: "그렇다면 직접 해결할 사람을 구해보는 건 어떻습니까?"
+                // Issuing is paperwork, same as accepting and delegating — it's hers, not the
+                // quartermaster's.
+                TutorialStep.IssueContract =>
+                    "So hire someone who can. Post the work and pay for it — that's how a city gets things done (발주).",
                 _ => "Everything past the wall is someone's guess until you go and look.",
             },
 
-            // The 발주 beat, verbatim in spirit: "그렇다면 직접 해결할 사람을 구해보는 건 어떻습니까?"
             _ => step switch
             {
-                TutorialStep.IssueContract =>
-                    "So hire someone who can. Post the work and pay for it — that's how a city gets things done (발주).",
                 TutorialStep.Return => "You came back. Most of the story is just that.",
                 TutorialStep.Complete => "There's always more work. That's the good news and the bad.",
                 _ => "Coin for goods, goods for coin. Come see me when you have either.",
