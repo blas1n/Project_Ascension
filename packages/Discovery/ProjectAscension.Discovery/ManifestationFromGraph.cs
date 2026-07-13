@@ -1,3 +1,4 @@
+using System;
 namespace ProjectAscension.SkillForge;
 
 /// <summary>
@@ -17,7 +18,28 @@ namespace ProjectAscension.SkillForge;
 /// </summary>
 public static class ManifestationFromGraph
 {
-    public static ManifestationKind? Classify(EffectNode? graph, bool magicContext)
+    /// <summary>
+    /// A WEAPON is not "you were carrying a catalyst". Making a weapon is how the game expresses MAGIC
+    /// SYNTHESIS — "화기 + 술식 → 마력 탄환" — so it takes an actual FUSION: two hands woven into one act,
+    /// one of them magic (ADR 0011). A single spell, however fierce, is a technique you invoke: a COMMAND.
+    ///
+    /// Judged on what the player DID (ADR 0009's Fuse:), never on what they happened to be holding.
+    /// </summary>
+    public static bool IsMagicFusion(IReadOnlyList<string>? behaviors)
+    {
+        if (behaviors == null) return false;
+        foreach (var b in behaviors)
+        {
+            if (b == null || !b.StartsWith("Fuse:", StringComparison.Ordinal)) continue;
+            var pair = b.Substring("Fuse:".Length).Split('>');
+            if (pair.Length != 2) continue;
+            // Two DIFFERENT hands, one of them magic: that is a synthesis, and a synthesis makes a thing.
+            if (pair[0] != pair[1] && (pair[0] == "arcane" || pair[1] == "arcane")) return true;
+        }
+        return false;
+    }
+
+    public static ManifestationKind? Classify(EffectNode? graph, bool magicFusion)
     {
         if (graph is not Trigger trigger) return null;
 
@@ -44,7 +66,7 @@ public static class ManifestationFromGraph
 
         // OnCast (and any default): dominant category decides, mirroring SkillManifest.
         if (offensive >= control && offensive >= mobility && offensive >= defensive)
-            return magicContext ? ManifestationKind.Weapon : ManifestationKind.Command;
+            return magicFusion ? ManifestationKind.Weapon : ManifestationKind.Command;
         if (control >= mobility && control >= defensive)
             return ManifestationKind.Command;
         return ManifestationKind.Passive; // mobility or defensive

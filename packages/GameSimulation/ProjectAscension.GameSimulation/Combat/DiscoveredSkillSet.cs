@@ -45,18 +45,26 @@ namespace ProjectAscension.GameSimulation.Combat
 
         /// <summary>The combined always-on bonuses from every discovered passive — resolved from
         /// each skill's effect graph (ADR 0007; EffectiveGraph is always present).</summary>
-        public PassiveEffect AggregatePassive()
+        public PassiveEffect AggregatePassive(ICollection<string>? equipped = null)
         {
             var total = PassiveEffect.None;
             foreach (var passive in _passives)
+            {
+                // A passive found THROUGH a weapon is that weapon's: sheathe it and the passive sleeps
+                // (ADR 0011). One found with the body — double-jumping, learned by jumping — is always
+                // yours. Passing no loadout means "unfiltered", for tests and offline callers.
+                if (equipped != null && !SkillBinding.Usable(passive.Behaviors, equipped)) continue;
                 total += GraphPassiveResolver.Resolve(passive.EffectiveGraph);
+            }
             return total;
         }
 
         /// <summary>The combined movement capability read off every discovered skill's effect
         /// graph (ADR 0007) — extra air jumps, wall-climb. Graph-driven, not a bespoke field: a
         /// new movement mechanic is a new trigger, no engine change.</summary>
-        public MovementCapability AggregateMovement()
-            => MovementCapability.From(All.Select(s => s.EffectiveGraph)); // never null (translates legacy)
+        public MovementCapability AggregateMovement(ICollection<string>? equipped = null)
+            => MovementCapability.From(All
+                .Where(s => equipped == null || SkillBinding.Usable(s.Behaviors, equipped))
+                .Select(s => s.EffectiveGraph)); // never null (translates legacy)
     }
 }

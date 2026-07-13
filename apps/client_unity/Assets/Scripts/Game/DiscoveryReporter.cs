@@ -5,6 +5,7 @@ using UnityEngine;
 using ProjectAscension.Combat;
 using ProjectAscension.Domain.Enums;
 using ProjectAscension.Equipment;
+using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.GameSimulation.Discovery;
 using ProjectAscension.Net;
 
@@ -79,6 +80,11 @@ namespace ProjectAscension.Game
 
         private void OnActPerformed(Act act)
         {
+            // Provenance (ADR 0011): WHICH instrument made this act. Scores nothing — it is evidence,
+            // not achievement — but it is how a skill knows which weapons actually took part in it, so
+            // that carrying a catalyst you never used cannot lay claim to the gun's discovery.
+            if (act.IsValid) _accumulator.Record(SkillBinding.UsePrefix + act.Token);
+
             _composites.Clear();
             _grammar.Observe(act, _composites);
             foreach (var composite in _composites) _accumulator.Record(composite);

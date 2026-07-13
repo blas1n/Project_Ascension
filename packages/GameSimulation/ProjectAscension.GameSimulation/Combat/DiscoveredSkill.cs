@@ -26,6 +26,10 @@ namespace ProjectAscension.GameSimulation.Combat
         // The discovery's context tags (equipment + situation at discovery). A command whose
         // combo uses a weapon click is gated by its equipment tags — ADR 0005 (재개정).
         IReadOnlyList<string>? ContextTags = null,
+        // The behaviours that MADE this discovery. They name the instruments that took part
+        // ("Fuse:arcane>firearm", "Use:melee"), which is what binds the skill to a weapon — or leaves
+        // it free, when the body made it alone (ADR 0011).
+        IReadOnlyList<string>? Behaviors = null,
         // The AI-composed flavor description (a sentence, like a real game's skill text).
         string? Description = null,
         // The AI-composed effect graph (ADR 0007) the runtime interprets. Null only for a legacy

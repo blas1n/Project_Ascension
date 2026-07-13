@@ -153,7 +153,8 @@ namespace ProjectAscension.Game
             // Push the restored skills' movement capability (double jump, wall-climb) so it's
             // active from session start — not only after a frontier PassiveModifiers runs.
             // Graph-driven (ADR 0007). GameSession persists, so this survives the City<->Frontier loop.
-            var movement = DiscoveredSkills.AggregateMovement();
+            var movement = DiscoveredSkills.AggregateMovement(
+                Equipment.EquipmentTags.CurrentTags(FindAnyObjectByType<Equipment.Loadout>()));
             GameSimulation.Player.MovementCapabilityCatalog.Set(movement);
             Debug.Log($"[Restore] {DiscoveredSkills.Weapons.Count}W/{DiscoveredSkills.Commands.Count}C/{DiscoveredSkills.Passives.Count}P restored; extraJumps={movement.ExtraJumps} wallClimb={movement.WallClimb}");
         }
