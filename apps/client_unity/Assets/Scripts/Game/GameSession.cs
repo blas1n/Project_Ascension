@@ -238,7 +238,9 @@ namespace ProjectAscension.Game
 
         private void ApplyFailure(ContractInstance contract, string reason)
         {
-            int penalty = Mathf.Min(PlayerState.Reputation, contract.RewardReputation);
+            // The clamped-subtraction formula is ContractRules' call (ADR: Unity is a shell) — it
+            // already owns every other contract rule, this one belongs beside them, not inline here.
+            int penalty = ContractRules.ReputationPenalty(PlayerState.Reputation, contract.RewardReputation);
             PlayerState.Reputation -= penalty;
             Contracts.FailedRecently.Add($"{contract.Title} ({reason}, -{penalty} rep)");
         }
@@ -308,6 +310,6 @@ namespace ProjectAscension.Game
             d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold,
             d.deliveryProjectileSpeed, d.deliveryProjectileGravity, d.deliveryRange,
             d.deliveryAreaRadius, d.deliveryHitscanRadius,
-            d.blockReduction, d.blockFrontArcDot);
+            d.blockReduction, d.blockFrontArcDot, d.movingDistanceThreshold);
     }
 }

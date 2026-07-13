@@ -27,8 +27,6 @@ namespace ProjectAscension.Game
 
         public TutorialProgress Progress { get; private set; } = TutorialProgress.Start;
 
-        private const float TravelToCountAsMoved = 4f; // metres before "you have moved" reads as true
-
         private ContractService _contracts;
         private Transform _player;
         private Vector3 _lastPlayerPos;
@@ -130,7 +128,7 @@ namespace ProjectAscension.Game
             var p = _player.position;
             _travelled += Vector3.Distance(new Vector3(p.x, 0f, p.z), new Vector3(_lastPlayerPos.x, 0f, _lastPlayerPos.z));
             _lastPlayerPos = p;
-            if (_travelled >= TravelToCountAsMoved) Signal(TutorialSignal.Moved);
+            if (TutorialDirector.HasTravelledEnoughToCountAsMoved(_travelled)) Signal(TutorialSignal.Moved);
         }
 
         private void OnGUI()

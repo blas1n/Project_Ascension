@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
@@ -25,6 +27,29 @@ namespace ProjectAscension.GameSimulation.Combat
             var t = tuning ?? CombatTuning.Default;
             if (!Blocks(isBlocking, facingDot, t.BlockFrontArcDot)) return amount;
             return CombatResolver.Reduced(amount, t.BlockReduction); // clamps the fraction to 0..1
+        }
+
+        /// <summary>How head-on a blow was: dot(forward, directionToAttacker) — 1 is dead ahead, 0 is
+        /// the flank, negative is behind. Flattened to the horizontal plane, so a blow from above/below
+        /// still counts as "in front" if it faces you. This is the geometry INPUT to
+        /// <see cref="Blocked"/>, and it decides whether a shield actually stops a blow, so it lives
+        /// here rather than in the MonoBehaviour that measures the positions (ADR: Unity is a shell).
+        ///
+        /// A source we can't locate (<paramref name="attackerPosition"/> null — e.g. an unattributed
+        /// hit) is treated as frontal, so it isn't unfairly unblockable; the same default a degenerate
+        /// (near-zero) facing or offset vector gets, for the same reason.</summary>
+        public static float FacingDot(Vector3 selfPosition, Vector3 selfForward, Vector3? attackerPosition)
+        {
+            if (attackerPosition == null) return 1f;
+
+            var toAttacker = attackerPosition.Value - selfPosition;
+            toAttacker = new Vector3(toAttacker.X, 0f, toAttacker.Z); // a blow from above/below is still "in front" if it faces you
+            if (toAttacker.LengthSquared() < 0.0001f) return 1f;
+
+            var forward = new Vector3(selfForward.X, 0f, selfForward.Z);
+            if (forward.LengthSquared() < 0.0001f) return 1f;
+
+            return Vector3.Dot(Vector3.Normalize(forward), Vector3.Normalize(toAttacker));
         }
     }
 }

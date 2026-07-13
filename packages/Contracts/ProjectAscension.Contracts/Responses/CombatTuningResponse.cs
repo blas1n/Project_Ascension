@@ -28,5 +28,6 @@ namespace ProjectAscension.Contracts.Responses
         float DeliveryAreaRadius,
         float DeliveryHitscanRadius,
         float BlockReduction,
-        float BlockFrontArcDot);
+        float BlockFrontArcDot,
+        float MovingDistanceThreshold);
 }

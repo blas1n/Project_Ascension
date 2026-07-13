@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 using ProjectAscension.Combat;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Discovery;
@@ -17,18 +18,22 @@ namespace ProjectAscension.Player
     ///
     /// It reports facts. It decides nothing.
     /// </summary>
-    [RequireComponent(typeof(CharacterController))]
     public sealed class ActRecorder : MonoBehaviour
     {
         [SerializeField] private Loadout loadout;
 
-        private CharacterController _controller;
+        private PlayerMovement _movement;
         private Vector3 _lastPosition;
         private bool _moving;
 
+        // PlayerMovement is the sim's own grounded state (ADR: Unity is a shell) — the same fact
+        // PlayerSimulation computes and PlayerState carries, not a second answer from
+        // CharacterController.isGrounded. Injected (VContainer), like PlayerCombat/InteractionSensor.
+        [Inject]
+        public void Construct(PlayerMovement movement) => _movement = movement;
+
         private void Awake()
         {
-            _controller = GetComponent<CharacterController>();
             if (loadout == null) loadout = GetComponent<Loadout>();
             _lastPosition = transform.position;
         }
@@ -50,7 +55,12 @@ namespace ProjectAscension.Player
         private void Update()
         {
             var p = transform.position;
-            _moving = (new Vector2(p.x - _lastPosition.x, p.z - _lastPosition.z)).sqrMagnitude > 0.0004f;
+            // The displacement is measured here (rendering-adjacent); whether it's ENOUGH to count as
+            // moving is a DB-driven rule (ActRules.IsMoving / CombatTuning.MovingDistanceThreshold),
+            // the same pattern as ChargedNow() below (ADR: Unity is a shell) — not a magic constant.
+            _moving = ActRules.IsMoving(
+                p.x - _lastPosition.x, p.z - _lastPosition.z,
+                GameSimulation.Combat.CombatTuningCatalog.Current.MovingDistanceThreshold);
             _lastPosition = p;
         }
 
@@ -67,7 +77,7 @@ namespace ProjectAscension.Player
         private void Emit(string verb, string instrument, bool charged = false)
         {
             var qualities = ActQuality.None;
-            if (_controller != null && !_controller.isGrounded) qualities |= ActQuality.Airborne;
+            if (_movement != null && !_movement.IsGrounded) qualities |= ActQuality.Airborne;
             if (charged) qualities |= ActQuality.Charged;
             if (ShieldUp()) qualities |= ActQuality.Blocking;
             if (_moving) qualities |= ActQuality.Moving;

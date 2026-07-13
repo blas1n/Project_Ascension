@@ -66,6 +66,16 @@ namespace ProjectAscension.GameSimulation.Tutorial
     /// </summary>
     public static class TutorialDirector
     {
+        /// <summary>Metres of real travel before the "you have moved" signal reads as true — UX, not
+        /// economy, so (per CLAUDE.md) it does not need to be DB-driven; it just needs to not be a
+        /// magic number sitting in the shell (ADR: Unity is a shell). The shell measures distance
+        /// travelled; whether that's "enough" is this sequencer's call, same as every other step.</summary>
+        public const float TravelToCountAsMovedMeters = 4f;
+
+        /// <summary>Whether accumulated ground travel is enough to count as the Moved training signal.</summary>
+        public static bool HasTravelledEnoughToCountAsMoved(float metersTravelled)
+            => metersTravelled >= TravelToCountAsMovedMeters;
+
         /// <summary>What a step needs before the player has genuinely lived it.</summary>
         public static TutorialSignal Requirement(TutorialStep step) => step switch
         {
