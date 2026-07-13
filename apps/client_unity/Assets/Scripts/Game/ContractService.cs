@@ -16,6 +16,13 @@ namespace ProjectAscension.Game
         public List<ContractInstance> Available { get; } = new();
         public ContractInstance Active { get; private set; }
 
+        /// <summary>The contract beats the first-hour director listens for (docs/03-gameplay/
+        /// first-hour-experience.md): taking one from the board, handing it off (위임), issuing
+        /// one (발주). Facts, not decisions — the director interprets them.</summary>
+        public event System.Action<ContractInstance> Accepted;
+        public event System.Action<ContractInstance> HandedOff;
+        public event System.Action<ContractInstance> Issued;
+
         /// <summary>Replace the board with DB-driven contracts (fetched at startup). A null
         /// or empty list is ignored, so an offline session keeps the built-in defaults.</summary>
         public void SetAvailable(List<ContractInstance> contracts)
@@ -51,7 +58,9 @@ namespace ProjectAscension.Game
         /// <summary>Add a player-issued contract to the board (already calibrated by the server).</summary>
         public void AddIssued(ContractInstance contract)
         {
-            if (contract != null) Available.Add(contract);
+            if (contract == null) return;
+            Available.Add(contract);
+            Issued?.Invoke(contract);
         }
 
         // Delegation (위임): contracts the player handed to a contractor instead of clearing
@@ -66,8 +75,10 @@ namespace ProjectAscension.Game
         public bool DelegateActive(float seconds)
         {
             if (Active == null || !Active.DelegationAllowed) return false;
-            InProgress.Add(new Delegated { Contract = Active, Remaining = seconds });
+            var handed = Active;
+            InProgress.Add(new Delegated { Contract = handed, Remaining = seconds });
             Active = null;
+            HandedOff?.Invoke(handed);
             return true;
         }
 
@@ -98,7 +109,11 @@ namespace ProjectAscension.Game
         /// <summary>Whether the player's standing meets the contract's requirement.</summary>
         public static bool CanAccept(ContractInstance c, int reputation) => c != null && ContractRules.CanAccept(reputation, c.MinReputation);
 
-        public void Accept(ContractInstance template) => Active = template.Fresh();
+        public void Accept(ContractInstance template)
+        {
+            Active = template.Fresh();
+            Accepted?.Invoke(Active);
+        }
 
         public void Abandon() => Active = null;
 
