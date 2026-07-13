@@ -279,6 +279,25 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class CreateCharacterDto
+    {
+        public string name;
+    }
+
+    /// <summary>Mirrors ProjectAscension.Contracts.Responses.CharacterResponse — the identity a
+    /// fresh character creation (or a lookup) returns. <see cref="actorId"/> is what every other
+    /// endpoint keys on (ADR 0014); the client never invents one.</summary>
+    [Serializable]
+    public sealed class CharacterDto
+    {
+        public string id;
+        public string actorId;
+        public string name;
+        public string currentRegionId;
+        public string status;
+    }
+
+    [Serializable]
     public sealed class PlayerDefinitionDto
     {
         public float maxHealth;
@@ -313,6 +332,18 @@ namespace ProjectAscension.Net
             {
                 return "Request failed — check the connection.";
             }
+        }
+
+        /// <summary>Names a new character — the server mints the Character + its Actor atomically
+        /// and returns it (ADR 0014). The only place a client identity is minted; the caller must
+        /// take the returned actorId as its own from now on, never invent one.</summary>
+        public IEnumerator CreateCharacter(string name, Action<CharacterDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/characters",
+                JsonUtility.ToJson(new CreateCharacterDto { name = name }),
+                json => onResult?.Invoke(JsonUtility.FromJson<CharacterDto>(json)),
+                onError);
         }
 
         public IEnumerator GetCombatTuning(Action<CombatTuningDto> onResult)

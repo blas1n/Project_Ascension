@@ -12,9 +12,27 @@ namespace ProjectAscension.Core
     {
         [SerializeField] private string firstScene = "City";
 
+        private void Awake()
+        {
+            DisableRuntimeDebugUi();
+        }
+
         private void Start()
         {
             SceneManager.LoadScene(firstScene);
+        }
+
+        // BUG 4: URP's built-in Rendering Debugger overlay (default shortcut Ctrl+Backspace;
+        // gamepad L3+R3) has no discoverable way to close it once summoned — a player who hits it
+        // by accident is stuck looking at frame-stats/settings with no way out. It is not our UI;
+        // it must simply never be reachable. Wrapped in a null check (not a platform #if — the
+        // Core RP Library that owns DebugManager is a transitive dependency of URP, which this
+        // project always uses) so a build/tooling context where the manager hasn't initialized
+        // yet still compiles and runs cleanly instead of throwing.
+        private static void DisableRuntimeDebugUi()
+        {
+            var debugManager = UnityEngine.Rendering.DebugManager.instance;
+            if (debugManager != null) debugManager.enableRuntimeUI = false;
         }
     }
 }

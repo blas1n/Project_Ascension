@@ -18,8 +18,13 @@ namespace ProjectAscension.Game
     {
         [SerializeField] private WeaponData[] ownedWeapons;
         [SerializeField] private string serverUrl = ""; // empty → offline (defaults/SO assets)
-        [SerializeField] private string actorId = "11111111-1111-1111-1111-111111111111"; // for restoring discoveries
 
+        // No default: an actor id must be MINTED by character creation (CharactersController),
+        // never assumed. A fresh install has none until CharacterCreation.Confirm() gets one back
+        // from the server and calls SetActorId — that's the only place this is ever set.
+        private string actorId = "";
+
+        private const string ActorIdPrefKey = "ProjectAscension.ActorId"; // persisted so a returning player reloads their own actor, not a fresh one
         private const string RegionId = "22222222-2222-2222-2222-222222222222"; // the slice's frontier
 
         public static GameSession Instance { get; private set; }
@@ -28,8 +33,9 @@ namespace ProjectAscension.Game
         /// make its own requests.</summary>
         public string ServerUrl => serverUrl;
 
-        /// <summary>This player's actor id — the identity contract accept/turn-in/delegate and
-        /// knowledge licensing act as (ADR 0014's server checks are keyed on this).</summary>
+        /// <summary>This player's actor id — the identity contract accept/turn-in/delegate,
+        /// discovery, and knowledge licensing act as (ADR 0014's server checks are keyed on this).
+        /// Empty until character creation mints one (see <see cref="SetActorId"/>).</summary>
         public string ActorId => actorId;
 
         public ContractService Contracts { get; private set; }
@@ -120,6 +126,11 @@ namespace ProjectAscension.Game
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            // A returning player already minted an actor id last session — reload IT, not a fresh
+            // one. A brand-new install has nothing here; actorId stays empty until CharacterCreation
+            // gets one back from the server (SetActorId).
+            actorId = PlayerPrefs.GetString(ActorIdPrefKey, "");
+
             Contracts = new ContractService();
             PlayerState = new PlayerStateService(ownedWeapons ?? new WeaponData[0]);
             DiscoveredSkills = new DiscoveredSkillSet();
@@ -135,8 +146,27 @@ namespace ProjectAscension.Game
                 // so the city shows them and their weapons are in inventory immediately. A
                 // discovery's claim persists server-side, so re-playing returns fired=false and
                 // the reporter never re-loads it — without this they'd be lost every restart.
-                StartCoroutine(RestoreDiscoveredSkills(new DiscoveryApiClient(serverUrl)));
+                // A fresh install has no actor yet (empty) — nothing to restore until creation
+                // mints one, at which point SetActorId runs this itself.
+                if (!string.IsNullOrWhiteSpace(actorId))
+                    StartCoroutine(RestoreDiscoveredSkills(new DiscoveryApiClient(serverUrl)));
             }
+        }
+
+        /// <summary>Adopts a newly-minted (or previously-persisted) actor id as this player's
+        /// identity — the ONLY place <see cref="actorId"/> changes after <see cref="Awake"/>.
+        /// Called by CharacterCreation once the server has actually created the Character + Actor
+        /// (never assumed client-side). Persists to PlayerPrefs so a returning player reloads the
+        /// same actor next session, and — since a fresh actor couldn't have been restored at
+        /// Awake — restores its discovered skills now.</summary>
+        public void SetActorId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || id == actorId) return;
+            actorId = id;
+            PlayerPrefs.SetString(ActorIdPrefKey, id);
+            PlayerPrefs.Save();
+            if (!string.IsNullOrWhiteSpace(serverUrl))
+                StartCoroutine(RestoreDiscoveredSkills(new DiscoveryApiClient(serverUrl)));
         }
 
         private IEnumerator RestoreDiscoveredSkills(DiscoveryApiClient discoveryApi)

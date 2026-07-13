@@ -2,7 +2,8 @@
   "name": "ProjectAscension.Core",
   "rootNamespace": "ProjectAscension.Core",
   "references": [
-    "VContainer"
+    "VContainer",
+    "Unity.RenderPipelines.Core.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

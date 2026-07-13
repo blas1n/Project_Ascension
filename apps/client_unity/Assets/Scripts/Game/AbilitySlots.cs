@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
+using ProjectAscension.Player;
 
 namespace ProjectAscension.Game
 {
@@ -38,6 +39,11 @@ namespace ProjectAscension.Game
 
         private void Update()
         {
+            // A keyboard-focused panel is up (character creation's name field, the city board,
+            // ...) — this polls Keyboard.current directly (not an input action), so it must honour
+            // the shared UiFocus gate itself rather than relying on the "Player" action map alone.
+            if (UiFocus.IsFocused) return;
+
             var session = GameSession.Instance;
             if (session == null) return;
             session.EnsureDefaultCommandSlots(); // seed the bar with the first commands until the player customises it

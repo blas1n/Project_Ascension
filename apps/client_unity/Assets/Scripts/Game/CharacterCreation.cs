@@ -1,5 +1,8 @@
+using System.Collections;
 using UnityEngine;
 using ProjectAscension.GameSimulation.Tutorial;
+using ProjectAscension.Net;
+using ProjectAscension.Player;
 
 namespace ProjectAscension.Game
 {
@@ -37,6 +40,7 @@ namespace ProjectAscension.Game
         private string _name = "";
         private int _look;
         private bool _done;
+        private bool _focusHeld; // whether WE currently hold the UiFocus gate (Push/Pop exactly once)
 
         private bool Active =>
             !_done && TutorialRunner.Instance != null &&
@@ -44,10 +48,19 @@ namespace ProjectAscension.Game
 
         private void Update()
         {
-            if (!Active) return;
-            // The cursor belongs to the form while the form is up.
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            // BUG 3: typing the name must not also drive the player. UiFocus disables the "Player"
+            // action map (+ AbilitySlots) and owns the cursor while this form is up, restoring
+            // whatever state (lock mode, visibility) preceded it once we Pop.
+            if (Active && !_focusHeld) { UiFocus.Push(); _focusHeld = true; }
+            else if (!Active && _focusHeld) { UiFocus.Pop(); _focusHeld = false; }
+        }
+
+        private void OnDestroy()
+        {
+            // Defensive: this object is DontDestroyOnLoad and normally outlives the form, but an
+            // unmatched Push would permanently disable gameplay input if it were ever destroyed
+            // while still holding focus (e.g. a domain reload mid-play in the editor).
+            if (_focusHeld) { UiFocus.Pop(); _focusHeld = false; }
         }
 
         private void OnGUI()
@@ -108,10 +121,35 @@ namespace ProjectAscension.Game
 
             ApplyLook();
 
-            // The world takes the cursor back.
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            // The world takes the cursor (and gameplay input) back — restores whatever state
+            // preceded the form, same gate the city panels use (UiFocus). Popped here rather than
+            // waiting for the next Update() so there is no one-frame gap.
+            if (_focusHeld) { UiFocus.Pop(); _focusHeld = false; }
 
+            // This is the ONLY place a client identity is minted (GameSession must never assume
+            // one — a fresh database has no Actor row until this call creates it). A returning
+            // player already has an actor id restored from PlayerPrefs at session start, so there
+            // is nothing to create — just move on. Offline has no server to ask, so it moves on too.
+            bool needsIdentity = session != null && string.IsNullOrWhiteSpace(session.ActorId)
+                && !string.IsNullOrWhiteSpace(session.ServerUrl);
+            if (needsIdentity)
+                StartCoroutine(CreateCharacterOnServer(session));
+            else
+                TutorialRunner.Instance.Signal(TutorialSignal.NameChosen);
+        }
+
+        private IEnumerator CreateCharacterOnServer(GameSession session)
+        {
+            var api = new CatalogApiClient(session.ServerUrl);
+            yield return api.CreateCharacter(_name.Trim(), dto =>
+            {
+                if (dto != null && !string.IsNullOrEmpty(dto.actorId)) session.SetActorId(dto.actorId);
+                else Debug.LogError("[CharacterCreation] Character creation returned no actor id — discovery/contracts will not work this session.");
+            },
+            error => Debug.LogError($"[CharacterCreation] Character creation failed: {CatalogApiClient.ParseErrorMessage(error)}"));
+
+            // The tutorial advances regardless of the outcome — the player is already back in the
+            // world by the time the response lands; a failed creation is logged, not blocking.
             TutorialRunner.Instance.Signal(TutorialSignal.NameChosen);
         }
 

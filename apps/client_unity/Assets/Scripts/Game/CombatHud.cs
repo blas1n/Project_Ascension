@@ -140,42 +140,63 @@ namespace ProjectAscension.Game
             GUI.Label(new Rect(x, y, w, h), $"{Mathf.CeilToInt(_player.Current)} / {Mathf.CeilToInt(_player.Max)}", style);
         }
 
-        // Ammo readout near the crosshair — only for a weapon that actually has a magazine (sword/bow/
-        // catalyst/shield draw nothing here). Reloading shows progress instead of a count; empty and
-        // idle hints the reload key rather than leaving the player clicking a dead trigger unexplained.
+        // Ammo readout, BOTTOM-RIGHT (the conventional FPS position) — clear of the health bar
+        // (bottom-center), the contract HUD/focus/gold (top-left), and SkillGuideHud (top-right;
+        // see its own comment about this hand-coordinated layout). The player has TWO hands and
+        // BOTH can hold a firearm (e.g. dual pistols), so both magazines show when both are
+        // present, and NEITHER draws when neither hand has one (sword/bow-only/catalyst/shield).
+        // Reloading shows progress instead of a count; empty and idle hints the reload key rather
+        // than leaving the player clicking a dead trigger unexplained.
         private void DrawMagazine()
         {
-            var weapon = ActiveFirearm();
-            if (weapon == null) return;
+            if (_loadout == null) return;
+            var right = _loadout.RightSlot?.Current as WeaponBase;   // LMB — primary fire
+            var left = _loadout.LeftSlot?.Current as WeaponBase;     // RMB
+            bool rightHas = right != null && right.HasMagazine;
+            bool leftHas = left != null && left.HasMagazine;
+            if (!rightHas && !leftHas) return;
 
-            float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
-            var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-            var rect = new Rect(cx - 70f, cy + 26f, 140f, 20f);
+            // LMB sits closest to the corner (primary fire, the conventional single-readout spot);
+            // RMB stacks above it only when the other hand also holds a magazine weapon.
+            float y = Screen.height - MagazinePad;
+            if (rightHas) y = DrawMagazineRow(y, "LMB", right);
+            if (leftHas) DrawMagazineRow(y, "RMB", left);
+        }
+
+        private const float MagazinePad = 24f, MagazineWidth = 170f, MagazineRowHeight = 20f,
+            MagazineBarHeight = 5f, MagazineGap = 4f;
+
+        // Draws one hand's ammo readout with its BOTTOM edge at `bottom` (growing upward) and
+        // returns the y to stack the next row above it.
+        private float DrawMagazineRow(float bottom, string label, WeaponBase weapon)
+        {
+            float x = Screen.width - MagazineWidth - MagazinePad;
+            float rowY = bottom - MagazineRowHeight;
+            var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
             var prev = GUI.color;
 
             if (weapon.IsReloading)
             {
                 GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
-                GUI.Label(rect, "Reloading…", style);
-                DrawReloadBar(cx, cy + 48f, weapon.ReloadFraction);
+                GUI.Label(new Rect(x, rowY, MagazineWidth, MagazineRowHeight), $"{label}  Reloading…", style);
+                GUI.color = prev;
+                float barY = rowY - MagazineGap - MagazineBarHeight;
+                DrawReloadBar(x, barY, MagazineWidth, weapon.ReloadFraction);
+                return barY - MagazineGap;
             }
-            else if (weapon.Loaded <= 0)
-            {
-                GUI.color = new Color(0.9f, 0.3f, 0.25f, 0.95f);
-                GUI.Label(rect, $"Reload [{PlayerInputHandler.ReloadKeyLabel}]", style);
-            }
-            else
-            {
-                GUI.color = new Color(1f, 1f, 1f, 0.85f);
-                GUI.Label(rect, $"{weapon.Loaded} / {weapon.MagazineSize}", style);
-            }
+
+            GUI.color = weapon.Loaded <= 0 ? new Color(0.9f, 0.3f, 0.25f, 0.95f) : new Color(1f, 1f, 1f, 0.85f);
+            string text = weapon.Loaded <= 0
+                ? $"{label}  Reload [{PlayerInputHandler.ReloadKeyLabel}]"
+                : $"{label}  {weapon.Loaded} / {weapon.MagazineSize}";
+            GUI.Label(new Rect(x, rowY, MagazineWidth, MagazineRowHeight), text, style);
             GUI.color = prev;
+            return rowY - MagazineGap;
         }
 
-        private void DrawReloadBar(float cx, float y, float frac)
+        private void DrawReloadBar(float x, float y, float w, float frac)
         {
-            const float w = 100f, h = 6f;
-            float x = cx - w * 0.5f;
+            const float h = MagazineBarHeight;
             var prev = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 0.5f);
             GUI.DrawTexture(new Rect(x - 1, y - 1, w + 2, h + 2), _tex);
@@ -184,16 +205,6 @@ namespace ProjectAscension.Game
             GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
             GUI.DrawTexture(new Rect(x, y, w * Mathf.Clamp01(frac), h), _tex);
             GUI.color = prev;
-        }
-
-        // Whichever hand holds a magazine weapon (right hand takes priority — dual pistols still
-        // reload both, this just picks which one's ammo count is on screen).
-        private WeaponBase ActiveFirearm()
-        {
-            if (_loadout == null) return null;
-            if (_loadout.RightSlot?.Current is WeaponBase right && right.HasMagazine) return right;
-            if (_loadout.LeftSlot?.Current is WeaponBase left && left.HasMagazine) return left;
-            return null;
         }
     }
 }
