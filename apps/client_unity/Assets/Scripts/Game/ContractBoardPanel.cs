@@ -45,7 +45,8 @@ namespace ProjectAscension.Game
             var contracts = session.Contracts;
             var ps = session.PlayerState;
 
-            GUILayout.BeginArea(new Rect(20, 20, 420, 560), GUI.skin.box);
+            var o = ModalOrigin(420f, 560f);
+            GUILayout.BeginArea(new Rect(o.x, o.y, 420f, 560f), GUI.skin.box);
             GUILayout.Label($"CONTRACT BOARD      Gold: {ps.Currency}    Rep: {ps.Reputation}");
             GUILayout.Space(8);
 

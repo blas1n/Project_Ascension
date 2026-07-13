@@ -52,6 +52,37 @@ namespace ProjectAscension.Player
         /// <see cref="InteractKeyLabel"/>, so the HUD's empty-magazine hint tracks a rebind.</summary>
         public static string ReloadKeyLabel { get; private set; } = "R";
 
+        /// <summary>
+        /// The label for a key binding — read from the binding's PATH ("&lt;Keyboard&gt;/f" → "F"), never
+        /// from the layout's display string.
+        ///
+        /// GetBindingDisplayString() asks the OS what character that key produces RIGHT NOW, so on a
+        /// Korean layout the interact prompt came out as "[ㄹ]" and the reload hint as "[ㄱ]" — the game
+        /// telling you to press a letter that is not written on the key you must actually press. The
+        /// key is F. It is F in every layout, because it is a position, not a character.
+        /// </summary>
+        private static string KeyLabel(InputAction action, string fallback)
+        {
+            const string keyboard = "<Keyboard>/";
+            if (action == null) return fallback;
+
+            foreach (var binding in action.bindings)
+            {
+                if (binding.isComposite || binding.isPartOfComposite) continue;
+
+                var path = binding.effectivePath;
+                if (string.IsNullOrEmpty(path) || !path.StartsWith(keyboard, StringComparison.Ordinal)) continue;
+
+                var key = path.Substring(keyboard.Length);
+                if (key.Length == 0) continue;
+                if (key.Length == 1) return key.ToUpperInvariant();          // "f" → "F"
+                if (key.StartsWith("left", StringComparison.Ordinal)) key = key.Substring(4);  // "leftShift" → "Shift"
+                if (key.StartsWith("right", StringComparison.Ordinal)) key = key.Substring(5);
+                return char.ToUpperInvariant(key[0]) + key.Substring(1);
+            }
+            return fallback;
+        }
+
         public PlayerInputHandler(InputActionAsset asset)
         {
             _playerMap = asset.FindActionMap("Player", throwIfNotFound: true);
@@ -73,10 +104,8 @@ namespace ProjectAscension.Player
             _interact.performed += OnInteract;
             _reload.performed += OnReload;
 
-            if (_interact.bindings.Count > 0)
-                InteractKeyLabel = _interact.GetBindingDisplayString(0);
-            if (_reload.bindings.Count > 0)
-                ReloadKeyLabel = _reload.GetBindingDisplayString(0);
+            InteractKeyLabel = KeyLabel(_interact, InteractKeyLabel);
+            ReloadKeyLabel = KeyLabel(_reload, ReloadKeyLabel);
 
             // A keyboard-focused panel (character creation's name field, the city board, ...) is
             // the single shared reason gameplay input goes quiet — see UiFocus. Start disabled if

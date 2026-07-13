@@ -62,9 +62,29 @@ namespace ProjectAscension.Game
                 Close();
         }
 
+        /// <summary>
+        /// The top-left corner of a centred block of this size. A station panel is a MODAL — you are
+        /// standing at the board, doing one thing — so it belongs in the middle of the screen, where
+        /// you are already looking.
+        ///
+        /// These panels inherited (20, 20) from the old CityHub, which put them straight on top of the
+        /// contract tracker and the rest of the top-left HUD. Two things drawn over each other are not
+        /// two things: they are one unreadable thing.
+        /// </summary>
+        protected static Vector2 ModalOrigin(float width, float height)
+            => new Vector2(Mathf.Round((Screen.width - width) * 0.5f),
+                           Mathf.Round((Screen.height - height) * 0.5f));
+
         private void OnGUI()
         {
             if (!IsOpen) return;
+
+            // Behind the panel, the world waits — and the HUD underneath stops competing with it.
+            var was = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.72f);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = was;
+
             DrawPanel();
         }
 
