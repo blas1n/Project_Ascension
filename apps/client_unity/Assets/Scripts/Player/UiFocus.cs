@@ -18,8 +18,9 @@ namespace ProjectAscension.Player
     /// "normal" looks like — it gets back exactly what was there before it opened.
     ///
     /// A caller that might be destroyed while still holding focus (e.g. a scene unload mid-panel)
-    /// MUST Pop in OnDestroy — see CityHub, whose board panel is up for the "Depart to Frontier"
-    /// button that ends the scene. An unmatched Push leaves gameplay input permanently disabled.
+    /// MUST Pop in OnDestroy — see CityStationPanel, whose equipment station panel is up for the
+    /// "Depart to Frontier" button that ends the scene. An unmatched Push leaves gameplay input
+    /// permanently disabled.
     /// </summary>
     public static class UiFocus
     {

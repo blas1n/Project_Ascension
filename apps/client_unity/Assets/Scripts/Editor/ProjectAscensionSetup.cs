@@ -249,8 +249,16 @@ namespace ProjectAscension.Editor
 
             BuildPlayerStack(CityBlockout.PlayerSpawn);
 
-            var hub = new GameObject("CityHub");
-            hub.AddComponent<CityHub>();
+            // Each city activity gets its OWN station script — the contract board, the equipment
+            // rack, and each NPC's own business are separate things (per the design review), not one
+            // giant panel bolted to the board. CityStationPanel is the shared open/focus/Esc plumbing;
+            // each of these only draws its own content.
+            var stations = new GameObject("CityStations");
+            stations.AddComponent<ContractBoardPanel>();
+            stations.AddComponent<EquipmentStationPanel>();
+            stations.AddComponent<QuartermasterPanel>();
+            stations.AddComponent<ContractClerkPanel>();
+            stations.AddComponent<CityHintHud>();
 
             // The first discovery happens in the TRAINING GROUND — which is inside the city. So the
             // discovery stack has to live here too, not only in the frontier, or stage 4 can never fire.

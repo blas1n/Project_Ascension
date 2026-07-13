@@ -45,6 +45,11 @@ namespace ProjectAscension.Combat
         // teachable moment.
         public static event Action PlayerDied;
 
+        /// <summary>The player explicitly committed a two-hand loadout at the Equipment Station —
+        /// not merely opened the panel to look. The first hour's "첫 장비 선택" (stage 3) teachable
+        /// moment; TutorialRunner turns this into TutorialSignal.EquipmentChosen.</summary>
+        public static event Action EquipmentChosen;
+
         // A discovery finished composing on the server and its skill loaded — carries the
         // AI-composed NAME. The single source of a discovery's identity: the client no longer
         // names discoveries locally (the server is authoritative — ADR 0002/0004).
@@ -74,6 +79,7 @@ namespace ProjectAscension.Combat
         public static void RaiseSkillCastRequested(Skill skill) => SkillCastRequested?.Invoke(skill);
 
         public static void RaisePlayerDied() => PlayerDied?.Invoke();
+        public static void RaiseEquipmentChosen() => EquipmentChosen?.Invoke();
 
         public static void RaiseSkillDiscovered(string name) => SkillDiscovered?.Invoke(name);
 

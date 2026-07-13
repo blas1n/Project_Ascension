@@ -7,8 +7,9 @@ namespace ProjectAscension.Game
     /// <summary>
     /// Builds the starting city procedurally at load — no authored art needed yet (the art track swaps
     /// meshes into these seams later). The city has to be a PLACE, not a menu: the first hour has the
-    /// player walk to the training ground, the board, and the people (docs/03-gameplay/first-hour-experience.md),
-    /// and stage 1 requires a city to actually have 훈련장 / 게시판 / 안전 구역.
+    /// player walk to the training ground, the board, the armoury, and the people
+    /// (docs/03-gameplay/first-hour-experience.md), and stage 1 requires a city to actually have
+    /// 훈련장 / 게시판 / 안전 구역 (stage 3's "첫 장비 선택" needs somewhere to happen too — the armoury).
     ///
     /// Styled per docs/05-art/art-direction.md — the south-east civilisation (폭포 초원도시): stone
     /// masonry, a windmill, green/sky-blue/white, silhouette and readability over detail. Deterministic
@@ -24,6 +25,7 @@ namespace ProjectAscension.Game
         private static readonly Color Timber = new Color(0.55f, 0.42f, 0.30f);
         private static readonly Color BoardWood = new Color(0.48f, 0.36f, 0.24f);
         private static readonly Color SafeLine = new Color(0.55f, 0.85f, 1f);
+        private static readonly Color RackMetal = new Color(0.7f, 0.72f, 0.76f);
 
         /// <summary>Where the player should start — inside the safe zone, facing the board.</summary>
         public static readonly Vector3 PlayerSpawn = new Vector3(0f, 0f, -6f);
@@ -32,13 +34,27 @@ namespace ProjectAscension.Game
         /// <summary>The contract board (게시판).</summary>
         public static readonly Vector3 BoardSpot = new Vector3(0f, 0f, 4f);
 
+        /// <summary>The armoury rack (stage 3's "첫 장비 선택") — its own station, away from the
+        /// board and the NPCs so a player walking the plaza can tell them apart at a glance.</summary>
+        public static readonly Vector3 EquipmentSpot = new Vector3(6f, 0f, -6f);
+
         /// <summary>How close to the board you must stand to press [F] and read it — a board is
         /// legible from further away than a lootable, hence its own (larger) reach.</summary>
         public const float BoardReach = 4.5f;
 
-        /// <summary>The board's interactable, so CityHub can subscribe to it without polling distance
-        /// itself. Set once, when the city is built; there is exactly one board in the slice.</summary>
+        /// <summary>How close to the armoury you must stand to press [F] — a workbench-scale reach,
+        /// same idea as the board's but for something you stand right at.</summary>
+        public const float EquipmentReach = 3.5f;
+
+        /// <summary>The board's interactable, so ContractBoardPanel can subscribe to it without
+        /// polling distance itself. Set once, when the city is built; there is exactly one board in
+        /// the slice.</summary>
         public static Interactable BoardInteractable { get; private set; }
+
+        /// <summary>The armoury's interactable, so EquipmentStationPanel can subscribe to it without
+        /// polling distance itself. Set once, when the city is built; there is exactly one armoury in
+        /// the slice.</summary>
+        public static Interactable EquipmentInteractable { get; private set; }
 
         private void Awake()
         {
@@ -50,6 +66,7 @@ namespace ProjectAscension.Game
             Quarter(root);
             Windmill(root, new Vector3(14f, 0f, 12f));
             Board(root);
+            Equipment(root);
             Training(root);
             Npcs(root);
         }
@@ -126,7 +143,7 @@ namespace ProjectAscension.Game
         }
 
         /// <summary>The 게시판 — where contracts are taken. A physical place, not a menu button: you
-        /// walk up to it AND press [F] to read it (CityHub opens the panel on that interact, not on
+        /// walk up to it AND press [F] to read it (ContractBoardPanel opens on that interact, not on
         /// proximity alone).</summary>
         private static void Board(Transform root)
         {
@@ -139,6 +156,26 @@ namespace ProjectAscension.Game
             interactable.Label = "Contract Board";
             interactable.Reach = BoardReach;
             BoardInteractable = interactable;
+        }
+
+        /// <summary>The armoury (stage 3's "첫 장비 선택") — a weapon rack over a low table, its own
+        /// station away from the board and the NPCs. Walk up AND press [F] to open it
+        /// (EquipmentStationPanel opens on that interact, same discipline as the board).</summary>
+        private static void Equipment(Transform root)
+        {
+            var table = Box(root, "Armoury_Table", EquipmentSpot + new Vector3(0f, 0.5f, 0f), new Vector3(2.2f, 1f, 1.2f), Timber);
+            Box(root, "Armoury_Post_L", EquipmentSpot + new Vector3(-1f, 1.3f, 0f), new Vector3(0.2f, 1.6f, 0.2f), StoneDark);
+            Box(root, "Armoury_Post_R", EquipmentSpot + new Vector3(1f, 1.3f, 0f), new Vector3(0.2f, 1.6f, 0.2f), StoneDark);
+            Box(root, "Armoury_Rail", EquipmentSpot + new Vector3(0f, 2.0f, 0f), new Vector3(2.4f, 0.15f, 0.15f), StoneDark);
+            // Two hanging silhouettes — a blade and a bow — read as "weapons here" at a glance;
+            // fidelity is the art track's job later, readability is this pass's.
+            Box(root, "Armoury_Blade", EquipmentSpot + new Vector3(-0.5f, 1.4f, 0f), new Vector3(0.12f, 1.1f, 0.12f), RackMetal);
+            Box(root, "Armoury_Bow", EquipmentSpot + new Vector3(0.5f, 1.4f, 0f), new Vector3(0.12f, 1.1f, 0.12f), Timber);
+
+            var interactable = table.AddComponent<Interactable>();
+            interactable.Label = "Equipment Station";
+            interactable.Reach = EquipmentReach;
+            EquipmentInteractable = interactable;
         }
 
         /// <summary>The 훈련장: an arena with dummies to hit. Everything the first hour teaches — move,
