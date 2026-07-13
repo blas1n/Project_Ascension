@@ -29,7 +29,8 @@ namespace ProjectAscension.Monsters
             switch (type)
             {
                 case MonsterType.Ranged: BuildRanged(root.transform, color, dark, pale); break;
-                case MonsterType.Elite: BuildElite(root.transform, color, dark, pale); break;
+                case MonsterType.Elite:
+                case MonsterType.Guardian: BuildElite(root.transform, color, dark, pale); break;
                 default: BuildMelee(root.transform, color, dark, pale); break;
             }
         }
