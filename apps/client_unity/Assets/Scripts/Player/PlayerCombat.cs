@@ -34,6 +34,7 @@ namespace ProjectAscension.Player
             _input.AttackReleased += OnLeftRelease;
             _input.AttackLeftPressed += OnRightClick;
             _input.AttackLeftReleased += OnRightRelease;
+            _input.ReloadPressed += OnReload;
 
             // A shield defends only while its hand is HELD down. Tell the player's HitReceiver how to
             // ask; BlockRules decides what a raised shield is worth against a given blow.
@@ -48,6 +49,15 @@ namespace ProjectAscension.Player
             _input.AttackReleased -= OnLeftRelease;
             _input.AttackLeftPressed -= OnRightClick;
             _input.AttackLeftReleased -= OnRightRelease;
+            _input.ReloadPressed -= OnReload;
+        }
+
+        // Both hands — dual pistols must both reload. WeaponBase.BeginReload is already a no-op for
+        // a weapon with no magazine or one that's already full/reloading, so no filtering is needed here.
+        private void OnReload()
+        {
+            (loadout?.LeftSlot?.Current as WeaponBase)?.BeginReload();
+            (loadout?.RightSlot?.Current as WeaponBase)?.BeginReload();
         }
 
         // LMB = right-hand weapon, RMB = left-hand. Press starts (instant weapons fire,

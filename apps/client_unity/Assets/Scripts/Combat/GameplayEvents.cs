@@ -27,6 +27,11 @@ namespace ProjectAscension.Combat
         /// observed instead of inferred from the loadout (ADR 0008).</summary>
         public static event Action<string> WeaponUsed;
 
+        /// <summary>A weapon of this context just BEGAN a reload (dry-fire auto-reload or the Reload
+        /// key). Feeds ActRecorder like any other verb — reload is an act, not a special case, so
+        /// weaving something into a reload can compose into a discovery (ADR 0009).</summary>
+        public static event Action<string> Reloaded;
+
         // Raw attack-button inputs (left/right click) — feed the command combo
         // recognizer, which needs the button press, not the weapon-fire execution.
         public static event Action LeftClicked;
@@ -60,6 +65,7 @@ namespace ProjectAscension.Combat
         public static void RaiseAttacked(bool isMelee) => Attacked?.Invoke(isMelee);
         public static void RaiseAttackEvaded() => AttackEvaded?.Invoke();
         public static void RaiseWeaponUsed(string contextTag) => WeaponUsed?.Invoke(contextTag);
+        public static void RaiseReloaded(string contextTag) => Reloaded?.Invoke(contextTag);
         public static void RaiseActPerformed(GameSimulation.Discovery.Act act) => ActPerformed?.Invoke(act);
 
         public static void RaiseLeftClicked() => LeftClicked?.Invoke();
