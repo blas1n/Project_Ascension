@@ -36,6 +36,8 @@ namespace ProjectAscension.Net
         public float deliveryRange;
         public float deliveryAreaRadius;
         public float deliveryHitscanRadius;
+        public float blockReduction;
+        public float blockFrontArcDot;
     }
 
     [Serializable]

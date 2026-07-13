@@ -37,6 +37,9 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             DeliveryRange = 60f,
             DeliveryAreaRadius = 4f,
             DeliveryHitscanRadius = 1.5f,
+            // Active block: a raised shield absorbs 75% of a FRONTAL blow; the flank is uncovered.
+            BlockReduction = 0.75f,
+            BlockFrontArcDot = 0.35f,
         });
     }
 }

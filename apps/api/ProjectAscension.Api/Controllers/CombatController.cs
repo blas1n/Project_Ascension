@@ -26,6 +26,7 @@ public class CombatController : ControllerBase
             t.PassiveLeech, t.FocusCostPerPoint,
             t.SlowPerMagnitude, t.KnockbackPerMagnitude, t.ChargedAttackThreshold,
             t.DeliveryProjectileSpeed, t.DeliveryProjectileGravity, t.DeliveryRange,
-            t.DeliveryAreaRadius, t.DeliveryHitscanRadius));
+            t.DeliveryAreaRadius, t.DeliveryHitscanRadius,
+            t.BlockReduction, t.BlockFrontArcDot));
     }
 }

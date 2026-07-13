@@ -68,6 +68,20 @@ public class WeaponDefinitionConfiguration : IEntityTypeConfiguration<WeaponDefi
                 ProjectileSpeed = 18f,
                 Cooldown = 0.8f,
                 MaxChargeMultiplier = 1f,
+            },
+            // A shield is not a weapon: it deals nothing and fires nothing. Held in the off hand, it
+            // BLOCKS while the hand is held down (BlockRules) — an active decision, not a passive stat.
+            new WeaponDefinition
+            {
+                Key = "shield",
+                DisplayName = "Kite Shield",
+                EquipmentType = EquipmentType.Shield,
+                SlotType = SlotType.Left,
+                Damage = 0f,
+                Range = 0f,
+                ProjectileSpeed = 0f,
+                Cooldown = 0f,
+                MaxChargeMultiplier = 1f,
             });
     }
 }

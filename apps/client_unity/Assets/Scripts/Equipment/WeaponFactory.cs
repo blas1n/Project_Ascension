@@ -20,6 +20,7 @@ namespace ProjectAscension.Equipment
                     EquipmentType.Bow => go.AddComponent<BowWeapon>(),
                     EquipmentType.Firearm => go.AddComponent<PistolWeapon>(),
                     EquipmentType.Catalyst => go.AddComponent<CatalystWeapon>(),
+                    EquipmentType.Shield => go.AddComponent<ShieldWeapon>(), // holds a block; never attacks
                     _ => go.AddComponent<SwordWeapon>(), // Weapon / default = melee
                 };
             weapon.Configure(data);
@@ -34,6 +35,8 @@ namespace ProjectAscension.Equipment
                 EquipmentType.Bow => (PrimitiveType.Capsule, new Vector3(0.06f, 0.4f, 0.06f), new Vector3(0f, 0f, 0.3f)),
                 EquipmentType.Firearm => (PrimitiveType.Cube, new Vector3(0.08f, 0.12f, 0.25f), new Vector3(0f, 0f, 0.15f)),
                 EquipmentType.Catalyst => (PrimitiveType.Sphere, new Vector3(0.15f, 0.15f, 0.15f), new Vector3(0f, 0f, 0.2f)),
+                // A broad slab held out front — it should read as cover, and it's what you see raise.
+                EquipmentType.Shield => (PrimitiveType.Cube, new Vector3(0.5f, 0.6f, 0.06f), new Vector3(0f, 0f, 0.35f)),
                 _ => (PrimitiveType.Cube, new Vector3(0.05f, 0.05f, 0.7f), new Vector3(0f, 0f, 0.4f)), // sword blade
             };
 
