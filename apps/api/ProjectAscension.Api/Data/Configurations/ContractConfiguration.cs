@@ -43,7 +43,9 @@ public class ContractConfiguration : IEntityTypeConfiguration<Contract>
                 Title = "Map the Frontier",
                 Description = "Reach the survey marker.",
                 ConditionsJson = "{\"targetCount\":1,\"issuer\":\"Survey Office\"}",
-                RewardJson = "{\"currency\":80,\"reputation\":4}",
+                // The first hour's survey pays in a MAP, not gold — the player owns it, and one day can
+                // lose or trade it (docs/03-gameplay/first-hour-experience.md).
+                RewardJson = "{\"currency\":20,\"reputation\":4,\"itemKey\":\"frontier_map\",\"itemAmount\":1}",
                 CreatedAt = SeedTime,
             },
             new Contract

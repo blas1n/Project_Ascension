@@ -14,10 +14,13 @@ namespace ProjectAscension.GameSimulation.Contracts
             string? purpose, string? title, string? description, int targetCount,
             int rewardCurrency, string? target, string? issuer, bool delegationAllowed,
             int rewardReputation, int minReputation, int timeLimitSeconds,
-            bool failOnTimeout, bool failOnDeath)
+            bool failOnTimeout, bool failOnDeath,
+            string? rewardItemKey = null, int rewardItemAmount = 0)
         {
             return new ContractInstance
             {
+                RewardItemKey = rewardItemKey ?? "",
+                RewardItemAmount = rewardItemAmount < 0 ? 0 : rewardItemAmount,
                 Purpose = System.Enum.TryParse<ContractPurpose>(purpose, out var p) ? p : ContractPurpose.Hunt,
                 Title = title ?? "",
                 Description = description ?? "",

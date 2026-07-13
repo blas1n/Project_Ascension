@@ -18,5 +18,9 @@ namespace ProjectAscension.Contracts.Responses
         // failure conditions can never fail.
         int TimeLimitSeconds, bool FailOnTimeout, bool FailOnDeath,
         // The NPC/office that issued it (ConditionsJson "issuer"); empty for player-issued.
-        string Issuer);
+        string Issuer,
+        // An ITEM paid on completion (RewardJson "itemKey"/"itemAmount") — the first hour's survey
+        // pays in a map, not gold. Empty key = no item reward.
+        string RewardItemKey = "",
+        int RewardItemAmount = 0);
 }

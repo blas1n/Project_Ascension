@@ -16,6 +16,12 @@ namespace ProjectAscension.GameSimulation.Contracts
         public int Progress;
         public int RewardCurrency;
         public int RewardReputation; // 명성 gained on completion
+
+        /// <summary>An ITEM handed over on completion — the first hour's survey pays in a map, not gold
+        /// (docs/03-gameplay/first-hour-experience.md). Empty key = no item reward.</summary>
+        public string RewardItemKey = "";
+        public int RewardItemAmount;
+
         public int MinReputation;    // standing required to accept (0 = open to all)
         public int TimeLimitSeconds; // deadline once accepted (0 = no limit)
         public float Remaining;      // runtime countdown after accepting
@@ -42,6 +48,8 @@ namespace ProjectAscension.GameSimulation.Contracts
             Progress = 0,
             RewardCurrency = RewardCurrency,
             RewardReputation = RewardReputation,
+            RewardItemKey = RewardItemKey,
+            RewardItemAmount = RewardItemAmount,
             MinReputation = MinReputation,
             TimeLimitSeconds = TimeLimitSeconds,
             Remaining = TimeLimitSeconds,

@@ -102,6 +102,8 @@ namespace ProjectAscension.Net
         public int timeLimitSeconds;
         public bool failOnTimeout;
         public bool failOnDeath;
+        public string rewardItemKey; // an item paid on completion (the survey pays a map); "" = none
+        public int rewardItemAmount;
         public string issuer;
     }
 

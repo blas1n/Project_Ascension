@@ -287,7 +287,8 @@ namespace ProjectAscension.Game
                     board.Add(GameSimulation.Contracts.ContractMapping.FromFields(
                         d.purpose, d.title, d.description, d.targetCount, d.rewardCurrency, d.target,
                         d.issuer, d.delegationAllowed, d.rewardReputation, d.minReputation,
-                        d.timeLimitSeconds, d.failOnTimeout, d.failOnDeath));
+                        d.timeLimitSeconds, d.failOnTimeout, d.failOnDeath,
+                        d.rewardItemKey, d.rewardItemAmount));
                 Contracts.SetAvailable(board);
             });
         }
