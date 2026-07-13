@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using ProjectAscension.Combat;
+using NumVec3 = System.Numerics.Vector3;
 
 namespace ProjectAscension.Game
 {
@@ -7,28 +9,29 @@ namespace ProjectAscension.Game
     /// A discovered skill's projectile delivery (DeliveryMotion.Projectile): travels per the
     /// DeliverySpec and, on hitting something or expiring, resolves the skill at the impact
     /// point via the supplied callback. It only carries the skill — the caster owns the
-    /// effect (GraphSkillResolver). Does its own linecast so it can't pass through walls/monsters.
+    /// effect (GraphSkillResolver). Sweeps against <see cref="SimWorld"/> each frame (ADR 0013) so
+    /// it can't pass through walls/monsters.
     /// </summary>
     public sealed class SkillProjectile : MonoBehaviour
     {
         private Vector3 _velocity;
         private float _gravity;
         private float _remaining; // seconds of flight left (range / speed)
-        private LayerMask _mask;
+        private int _ownerActorId;
         private Action<Vector3> _onImpact;
         private bool _spent;
 
-        public void Launch(Vector3 position, Vector3 direction, float speed, float gravity, float range, LayerMask mask, Action<Vector3> onImpact)
-            => Launch(position, direction, speed, gravity, range, mask, onImpact, SkillVfx.ElementColor(null), 1f);
+        public void Launch(Vector3 position, Vector3 direction, float speed, float gravity, float range, int ownerActorId, Action<Vector3> onImpact)
+            => Launch(position, direction, speed, gravity, range, ownerActorId, onImpact, SkillVfx.ElementColor(null), 1f);
 
         public void Launch(Vector3 position, Vector3 direction, float speed, float gravity, float range,
-            LayerMask mask, Action<Vector3> onImpact, Color color, float intensity)
+            int ownerActorId, Action<Vector3> onImpact, Color color, float intensity)
         {
             transform.position = position;
             _velocity = direction.normalized * speed;
             _gravity = gravity;
             _remaining = speed > 0.01f ? range / speed : 0.01f;
-            _mask = mask;
+            _ownerActorId = ownerActorId;
             _onImpact = onImpact;
 
             // Stylized look: a glowing orb of the skill's element, with a fading trail scaled
@@ -49,9 +52,9 @@ namespace ProjectAscension.Game
             if (_spent) return;
             float dt = Time.deltaTime;
             var next = transform.position + _velocity * dt;
-            if (Physics.Linecast(transform.position, next, out var hit, _mask, QueryTriggerInteraction.Ignore))
+            if (SimWorld.Collision.SweepSphere(ToNum(transform.position), ToNum(next), 0f, _ownerActorId, out var hit))
             {
-                Impact(hit.point);
+                Impact(ToUnity(hit.Point));
                 return;
             }
             transform.position = next;
@@ -59,6 +62,9 @@ namespace ProjectAscension.Game
             _remaining -= dt;
             if (_remaining <= 0f) Impact(transform.position);
         }
+
+        private static NumVec3 ToNum(Vector3 v) => new NumVec3(v.x, v.y, v.z);
+        private static Vector3 ToUnity(NumVec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         private void Impact(Vector3 point)
         {

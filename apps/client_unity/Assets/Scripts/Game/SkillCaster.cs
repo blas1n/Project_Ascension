@@ -6,6 +6,7 @@ using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.GameSimulation.Effects;
 using ProjectAscension.Net;
+using NumVec3 = System.Numerics.Vector3;
 
 namespace ProjectAscension.Game
 {
@@ -24,7 +25,6 @@ namespace ProjectAscension.Game
     {
         [SerializeField] private string serverUrl = "";
         [SerializeField] private Transform aimSource;
-        [SerializeField] private LayerMask targetMask = ~0;
         [SerializeField] private float dotInterval = 1f;
 
         private DiscoveryApiClient _api;
@@ -235,8 +235,9 @@ namespace ProjectAscension.Game
         private List<IDamageable> TargetsAround(Vector3 point, float radius)
         {
             var list = new List<IDamageable>();
-            foreach (var col in Physics.OverlapSphere(point, radius, targetMask))
-                if (col.TryGetComponent<IDamageable>(out var d) && !ReferenceEquals(d, _self) && !d.IsDead)
+            int selfActorId = SimWorld.ActorIdOf(gameObject);
+            foreach (var actorId in SimWorld.Collision.OverlapSphere(ToNum(point), radius, selfActorId))
+                if (SimWorld.TryGetDamageable(actorId, out var d) && !ReferenceEquals(d, _self) && !d.IsDead)
                     list.Add(d);
             // Nearest-to-impact first so index 0 is the primary target the resolver focuses on.
             list.Sort((a, b) => SqrDistance(a, point).CompareTo(SqrDistance(b, point)));
@@ -245,19 +246,26 @@ namespace ProjectAscension.Game
 
         // Where an instant delivery resolves: the first thing aimed at, or the far reach.
         private Vector3 AimPoint(Vector3 origin, Vector3 dir, float range)
-            => Physics.Raycast(origin + dir * 0.5f, dir, out var hit, range, targetMask, QueryTriggerInteraction.Ignore)
-                ? hit.point
+        {
+            int selfActorId = SimWorld.ActorIdOf(gameObject);
+            var from = origin + dir * 0.5f;
+            return SimWorld.Collision.SweepSphere(ToNum(from), ToNum(origin + dir * range), 0f, selfActorId, out var hit)
+                ? ToUnity(hit.Point)
                 : origin + dir * range;
+        }
 
         private void SpawnProjectile(Vector3 origin, Vector3 dir, DeliverySpec spec, Color color, bool homing, System.Action<Vector3> onImpact)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "SkillProjectile";
-            Destroy(go.GetComponent<Collider>()); // the projectile does its own linecast
+            Destroy(go.GetComponent<Collider>()); // the projectile does its own sweep
             go.AddComponent<SkillProjectile>().Launch(
-                origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, targetMask, onImpact, color, _intensity);
+                origin + dir * 0.6f, dir, spec.Speed, spec.Gravity, spec.Range, SimWorld.ActorIdOf(gameObject), onImpact, color, _intensity);
             if (homing) SkillVfx.HomingAccent(go, color, _intensity); // curling motes trail
         }
+
+        private static NumVec3 ToNum(Vector3 v) => new NumVec3(v.x, v.y, v.z);
+        private static Vector3 ToUnity(NumVec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         private static float SqrDistance(IDamageable d, Vector3 origin)
             => d is Component c ? (c.transform.position - origin).sqrMagnitude : float.MaxValue;

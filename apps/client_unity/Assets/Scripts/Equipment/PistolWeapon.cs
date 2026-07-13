@@ -1,9 +1,11 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using NumVec3 = System.Numerics.Vector3;
 
 namespace ProjectAscension.Equipment
 {
-    /// <summary>Firearm: instant hitscan raycast.</summary>
+    /// <summary>Firearm: instant hitscan — a <see cref="SimWorld"/> sweep of radius 0 (ADR 0013),
+    /// the sim's ray.</summary>
     public sealed class PistolWeapon : WeaponBase
     {
         protected override void OnPrimary(AttackContext ctx, float charge)
@@ -13,11 +15,12 @@ namespace ProjectAscension.Equipment
             var end = ctx.Origin + dir * Data.Range;
 
             bool struck = false;
-            if (Physics.Raycast(origin, dir, out var hit, Data.Range))
+            int ownerActorId = SimWorld.ActorIdOf(ctx.Attacker);
+            if (SimWorld.Collision.SweepSphere(ToNum(origin), ToNum(origin + dir * Data.Range), 0f, ownerActorId, out var hit))
             {
-                end = hit.point;
+                end = ToUnity(hit.Point);
                 struck = true;
-                if (hit.collider.TryGetComponent<IDamageable>(out var target) && !target.IsDead)
+                if (SimWorld.TryGetDamageable(hit.ActorId, out var target) && !target.IsDead)
                     target.TakeDamage(Data.Damage, ctx.Attacker);
             }
 
@@ -25,5 +28,8 @@ namespace ProjectAscension.Equipment
             CombatVfx.Tracer(ctx.Origin, end, color);
             if (struck) CombatVfx.Burst(end, color, 0.6f); // impact spark
         }
+
+        private static NumVec3 ToNum(Vector3 v) => new NumVec3(v.x, v.y, v.z);
+        private static Vector3 ToUnity(NumVec3 v) => new Vector3(v.X, v.Y, v.Z);
     }
 }
