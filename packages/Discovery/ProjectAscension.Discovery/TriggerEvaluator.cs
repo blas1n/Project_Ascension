@@ -17,7 +17,9 @@ public sealed record BehaviorSignature(
 
 /// <summary>Whether a behavior signature fires a discovery, the derived rarity, and
 /// the raw significance score (for observability/tuning).</summary>
-public sealed record TriggerOutcome(bool Fires, Rarity Rarity, int Score);
+/// <summary>… and the BAR it had to clear, which rises exponentially with how much the player has
+/// already discovered in this space (ADR 0010).</summary>
+public sealed record TriggerOutcome(bool Fires, Rarity Rarity, int Score, int Threshold = 0);
 
 /// <summary>
 /// The deterministic discovery trigger (ADR 0002 core 4) — a significance-scoring
@@ -72,20 +74,27 @@ public static class TriggerEvaluator
             distinct++;
         }
 
-        // Prior knowledge the player owns in this space deepens a discovery — mastered
-        // discoveries are the material for the next one (discovery.md 발견 그래프:
-        // "발견은 다음 발견의 시작"). Depth adds significance and counts as an element.
-        int depthScore = signature.KnowledgeDepth * tuning.KnowledgeDepthWeight;
-        if (signature.KnowledgeDepth > 0) distinct++;
+        // Prior knowledge does NOT add score (ADR 0010). It used to — and that was an inflation vector
+        // hiding in plain sight: repeating the SAME play scored higher every time, purely because you
+        // had discovered here before, so a player could climb the rarity ladder by doing nothing new.
+        // Depth is not a drip of significance.
+        //
+        // "발견은 다음 발견의 시작" is still honoured — but through LINEAGE (the composer is given the
+        // ancestors and evolves them), which enriches what the discovery IS. Not through making it
+        // cheaper to get.
 
         int score =
             behaviorScore
             + contextScore
-            + depthScore
             + Math.Max(0, distinct - 1) * tuning.CombinationSynergy
             + signature.Persistence * tuning.PersistenceWeight;
 
-        return new TriggerOutcome(score >= tuning.FireThreshold, RarityFor(score, tuning), score);
+        // The LADDER is the progression (see the claim key): a style yields one discovery per rarity
+        // rung, and you climb by scoring higher. So the anti-inflation lever is the SPACING of the
+        // rungs — they are seeded EXPONENTIALLY (100 / 150 / 225 / 338 / 506, ADR 0010). Repeating an
+        // act raises the score roughly linearly, so each further discovery in that style costs
+        // exponentially more of it. Grinding exhausts itself; the way up is to compose better (ADR 0009).
+        return new TriggerOutcome(score >= tuning.FireThreshold, RarityFor(score, tuning), score, tuning.FireThreshold);
     }
 
     /// <summary>The weight of a composite behaviour, or null if it is a plain count.</summary>
@@ -98,6 +107,8 @@ public static class TriggerEvaluator
         return null;
     }
 
+    /// <summary>The rungs of the ladder. Seeded with EXPONENTIAL spacing (ADR 0010), which is what makes
+    /// the next discovery in a style cost exponentially more play than the last.</summary>
     private static Rarity RarityFor(int score, DiscoveryTuning t) =>
         score >= t.LegendaryScore ? Rarity.Legendary
         : score >= t.EpicScore ? Rarity.Epic

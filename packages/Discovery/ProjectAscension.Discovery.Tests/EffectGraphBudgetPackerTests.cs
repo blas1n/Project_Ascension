@@ -15,18 +15,24 @@ public class EffectGraphBudgetPackerTests
     [Fact]
     public void OverBudget_IsClampedToFit_AndValidates()
     {
-        // A coherent offensive graph at cost 30 against budget 19 (the tight-budget defer case).
+        // Cost is structural now (ADR 0010): Emit 3 + Damage 3 + Dot 4 + Spread 3 = 13, whatever the
+        // tiers. An over-budget graph gives up an EFFECT — it never gives up its teeth.
         var graph = new Trigger(TriggerKind.OnCast, new Sequence(new EffectNode[]
         {
             new Emit(EmitDelivery.Burst, 2), new Damage(2), new Dot(1, 2), new Spread(2),
         }));
-        Assert.Equal(30, EffectGraph.Cost(graph));
+        Assert.Equal(13, EffectGraph.Cost(graph));
 
-        var packed = EffectGraphBudgetPacker.Pack(graph, new PowerBudget(19));
+        var packed = EffectGraphBudgetPacker.Pack(graph, new PowerBudget(9));
 
-        Assert.True(EffectGraph.Cost(packed) <= 19);
-        Assert.True(EffectGraphValidator.Validate(packed, new PowerBudget(19)).IsValid);
+        Assert.True(EffectGraph.Cost(packed) <= 9);
+        Assert.True(EffectGraphValidator.Validate(packed, new PowerBudget(9)).IsValid);
         Assert.Equal(TriggerKind.OnCast, Assert.IsType<Trigger>(packed).Kind); // trigger preserved
+
+        // The Dot (the priciest, 4) was surrendered — and the Emit that survived is still tier 2.
+        var steps = ((Sequence)((Trigger)packed).Child).Steps;
+        Assert.DoesNotContain(steps, n => n is Dot);
+        Assert.Contains(steps, n => n is Emit { Tier: 2 });
     }
 
     [Fact]

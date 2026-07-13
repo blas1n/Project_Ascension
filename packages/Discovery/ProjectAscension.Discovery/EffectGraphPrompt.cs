@@ -90,7 +90,9 @@ Theme: {theme}
 How the player fought: {play}
 {fusionSteer}
 {steer}
-Power budget: {budget.Total} (Emit/Damage/Dot cost (tier+1)*3, Impulse (tier+1)*4, Control (tier+1)*5, Ward (tier+1)*4, Spread (tier+1)*2, Homing 2; stay within budget).
+Expression budget: {budget.Total}. It buys WHAT THE SKILL DOES, never how hard it hits.
+Effect costs (structural, tier does NOT affect cost): Emit 3, Damage 3, Spread 3, Impulse 4, Ward 4, Dot 4, Control 5, Homing 2. Stay within budget.
+Tier (0-3) is the magnitude and is FREE and CAPPED — do not treat a big budget as permission to hit harder. A significant discovery is not a bigger number; it is a more INTERESTING effect. Spend the budget on richer, stranger, more expressive combinations.
 
 Respond ONLY as JSON of this exact shape:
 {{ ""trigger"": <TRIGGER>, ""effect"": <NODE> }}

@@ -291,7 +291,7 @@ public class SkillCompositionServiceTests
         var actor = Guid.NewGuid();
         EvaluateTriggerRequest Ranged(int persistence, params BehaviorCount[] extra) =>
             new(actor, Guid.NewGuid(), DiscoveryType.Skill, "t", new[] { "arcane" }, "Beam",
-                new[] { new BehaviorCount("RangedAttack", 200) }.Concat(extra).ToArray(), persistence);
+                new[] { new BehaviorCount("RangedAttack", 300) }.Concat(extra).ToArray(), persistence);
 
         var plain = await service.EvaluateAndTriggerAsync(Ranged(2));
         var withJump = await service.EvaluateAndTriggerAsync(Ranged(6, new BehaviorCount("Jump", 40)));
@@ -342,10 +342,12 @@ public class SkillCompositionServiceTests
 
         var actor = Guid.NewGuid();
 
+        // jumpCount clears the rarity rung comfortably: the volatile tags wobble the score by a few
+        // points (monster:elite 14 vs monster:melee 6), and the claim must not fragment on that.
         var first = await service.EvaluateAndTriggerAsync(
-            EvalCtx(actor, new[] { "arcane", "monster:elite" }, jumpCount: 200));
+            EvalCtx(actor, new[] { "arcane", "monster:elite" }, jumpCount: 400));
         var withDifferentCatalysts = await service.EvaluateAndTriggerAsync(
-            EvalCtx(actor, new[] { "arcane", "monster:melee", "spell:flame-bullet" }, jumpCount: 200));
+            EvalCtx(actor, new[] { "arcane", "monster:melee", "spell:flame-bullet" }, jumpCount: 400));
 
         Assert.True(first.Fired);                    // claims arcane+Projectile once
         Assert.False(withDifferentCatalysts.Fired);  // only the volatile tags differ → no re-fire

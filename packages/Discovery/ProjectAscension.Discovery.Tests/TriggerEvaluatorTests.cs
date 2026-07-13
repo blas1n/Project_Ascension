@@ -102,13 +102,15 @@ public class TriggerEvaluatorTests
     [Fact]
     public void KnowledgeDepth_DeepensDiscovery()
     {
-        // Jump×50 alone = 50; owning 2 relevant prior discoveries adds
-        // 2 × 12 depth + (2 distinct − 1) × 15 synergy = 50 + 24 + 15 = 89.
+        // DEPTH NO LONGER ADDS SCORE (ADR 0010). It used to — and that was an inflation vector: the
+        // same play scored higher every time simply because you had discovered here before, so a
+        // player could climb the rarity ladder without ever doing anything new. "발견은 다음 발견의
+        // 시작" is honoured through LINEAGE (the composer evolves the ancestors), which enriches what
+        // the discovery IS — not by making the next one cheaper to get.
         var shallow = TriggerEvaluator.Evaluate(SigD(0, ("Jump", 50)), Tuning);
         var deep = TriggerEvaluator.Evaluate(SigD(2, ("Jump", 50)), Tuning);
         Assert.Equal(50, shallow.Score);
-        Assert.Equal(89, deep.Score);
-        Assert.True(deep.Score > shallow.Score);
+        Assert.Equal(shallow.Score, deep.Score); // the same play is worth the same, however deep you are
     }
 
     [Fact]

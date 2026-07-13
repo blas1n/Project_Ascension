@@ -9,9 +9,13 @@ public class BudgetRulesTests
     [Fact]
     public void FromScore_ScalesContinuously()
     {
-        // base 8 + score × 0.18: 100 → 26, 200 → 44.
-        Assert.Equal(26, BudgetRules.FromScore(100, Tuning).Total);
-        Assert.Equal(44, BudgetRules.FromScore(200, Tuning).Total);
+        // Logarithmic (ADR 0010): base 6 + 2.4 × log2(1+score). The budget buys BREADTH of effect, and
+        // it deliberately barely moves — doubling the score does not double what you may compose.
+        Assert.Equal(22, BudgetRules.FromScore(100, Tuning).Total);
+        Assert.Equal(24, BudgetRules.FromScore(200, Tuning).Total);
+
+        // Sixteen times the score buys about a third more expression — and nothing at all in magnitude.
+        Assert.True(BudgetRules.FromScore(1600, Tuning).Total < BudgetRules.FromScore(100, Tuning).Total * 2);
     }
 
     [Fact]

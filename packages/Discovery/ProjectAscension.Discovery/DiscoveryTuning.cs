@@ -23,8 +23,13 @@ public sealed record DiscoveryTuning(
     int ConcurrencyWeight, // While:a@q — done while airborne / charged / blocking
     int ChainWeight,       // Chain:a   — done again and again
     int FireThreshold,
+    // The Nth discovery in the SAME space costs exponentially more (ADR 0010). The first is easy; the
+    // fifth is ten times harder. Repeating one act runs out of road — you must play differently, or
+    // compose better (ADR 0009). Grinding is made to exhaust itself.
     int BudgetBase,
-    double BudgetPerScore,
+    // Power rises LOGARITHMICALLY while cost rises exponentially (ADR 0010). A 60x score buys a 1.6x
+    // budget. Getting stronger is never forbidden — only made steadily more expensive.
+    double BudgetGrowth,
     int BudgetMin,
     int BudgetMax,
     int UncommonScore,
@@ -75,12 +80,12 @@ public sealed record DiscoveryTuning(
         ConcurrencyWeight: 12,
         ChainWeight: 6,
         FireThreshold: 100,
-        BudgetBase: 8,
-        BudgetPerScore: 0.18,
-        BudgetMin: 16,
-        BudgetMax: 64,
-        UncommonScore: 120,
-        RareScore: 150,
-        EpicScore: 200,
-        LegendaryScore: 250);
+        BudgetBase: 6,
+        BudgetGrowth: 2.4,
+        BudgetMin: 10,
+        BudgetMax: 40, // a full 8-effect graph — significance buys BREADTH, and then saturates
+        UncommonScore: 150,
+        RareScore: 225,
+        EpicScore: 338,
+        LegendaryScore: 506);
 }

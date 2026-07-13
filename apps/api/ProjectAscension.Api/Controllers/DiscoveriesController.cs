@@ -67,7 +67,7 @@ public class DiscoveriesController : ControllerBase
         return Ok(new DiscoveryTuningResponse(
             t.BehaviorWeights, t.FactorWeights, t.DefaultBehaviorWeight, t.DefaultFactorWeight,
             t.KnowledgeDepthWeight, t.PersistenceWeight, t.CombinationSynergy, t.FireThreshold,
-            t.BudgetBase, t.BudgetPerScore, t.BudgetMin, t.BudgetMax,
+            t.BudgetBase, t.BudgetGrowth, t.BudgetMin, t.BudgetMax,
             t.UncommonScore, t.RareScore, t.EpicScore, t.LegendaryScore));
     }
 

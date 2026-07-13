@@ -28,14 +28,16 @@ public class DiscoveryTuningSettingsConfiguration : IEntityTypeConfiguration<Dis
             ConcurrencyWeight = 12,
             ChainWeight = 6,
             FireThreshold = 100,
-            BudgetBase = 8,
-            BudgetPerScore = 0.18,
-            BudgetMin = 16,
-            BudgetMax = 64,
-            UncommonScore = 120,
-            RareScore = 150,
-            EpicScore = 200,
-            LegendaryScore = 250,
+            BudgetBase = 6,
+            // Cost exponential, power logarithmic (ADR 0010): grinding one act exhausts itself, and
+            // getting stronger stays possible but grows steadily dearer.
+            BudgetGrowth = 2.4,
+            BudgetMin = 10,
+            BudgetMax = 40,
+            UncommonScore = 150,
+            RareScore = 225,
+            EpicScore = 338,
+            LegendaryScore = 506,
         });
     }
 }
