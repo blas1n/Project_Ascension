@@ -42,6 +42,32 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
+        public void DiscoveryId_Parses_SoLicensingCanTargetTheDiscovery()
+        {
+            var id = Guid.NewGuid();
+            var skill = SkillRestore.FromResponse(
+                status: "Ready", name: "Bolt", manifestation: "Weapon",
+                primitives: Array.Empty<string>(), contextTags: null, description: null,
+                effectGraph: Graph, behaviors: null, discoveryId: id.ToString());
+
+            Assert.Equal(id, skill!.DiscoveryId);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("not-a-guid")]
+        public void DiscoveryId_AbsentOrUnparseable_IsEmpty(string? raw)
+        {
+            // A legacy/offline skill with no server discovery id can't be licensed — Guid.Empty
+            // marks that (ADR 0014), rather than crashing on a bad string.
+            var skill = SkillRestore.FromResponse("Ready", "Bolt", "Weapon",
+                Array.Empty<string>(), null, null, Graph, discoveryId: raw);
+
+            Assert.Equal(Guid.Empty, skill!.DiscoveryId);
+        }
+
+        [Fact]
         public void NotReady_IsRejected()
         {
             Assert.Null(SkillRestore.FromResponse("Pending", "x", "Weapon",

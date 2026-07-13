@@ -24,7 +24,7 @@ public class PlayerProfileService : IPlayerProfileService
         var p = await _repo.GetAsync(ct);
         return p is null
             ? Result<PlayerStateResponse>.Fail(Error.NotFound)
-            : Result<PlayerStateResponse>.Ok(ToResponse(p));
+            : Result<PlayerStateResponse>.Ok(PlayerProfileMapper.ToResponse(p));
     }
 
     public async Task<Result<PlayerStateResponse>> SaveAsync(SavePlayerStateRequest request, CancellationToken ct = default)
@@ -39,27 +39,10 @@ public class PlayerProfileService : IPlayerProfileService
             .Where(r => !string.IsNullOrEmpty(r.Key) && r.Count > 0)
             .GroupBy(r => r.Key)
             .ToDictionary(g => g.Key, g => g.Sum(r => r.Count));
-        p.ResourcesJson = JsonSerializer.Serialize(resources);
+        PlayerProfileMapper.WriteResources(p, resources);
         p.SoldKnowledgeJson = JsonSerializer.Serialize(request.SoldKnowledge ?? System.Array.Empty<string>());
 
         await _repo.UpdateAsync(p, ct);
-        return Result<PlayerStateResponse>.Ok(ToResponse(p));
-    }
-
-    private static PlayerStateResponse ToResponse(Domain.Entities.PlayerProfile p)
-    {
-        var resources = Deserialize<Dictionary<string, int>>(p.ResourcesJson) ?? new();
-        var sold = Deserialize<string[]>(p.SoldKnowledgeJson) ?? System.Array.Empty<string>();
-        return new PlayerStateResponse(
-            p.Currency, p.Reputation,
-            resources.Select(kv => new ResourceCount(kv.Key, kv.Value)).ToArray(),
-            sold);
-    }
-
-    private static T? Deserialize<T>(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return default;
-        try { return JsonSerializer.Deserialize<T>(json); }
-        catch (JsonException) { return default; }
+        return Result<PlayerStateResponse>.Ok(PlayerProfileMapper.ToResponse(p));
     }
 }

@@ -28,7 +28,10 @@ namespace ProjectAscension.GameSimulation.Combat
             string? effectGraph,
             // The behaviours that MADE it — the evidence that binds it to a weapon, or leaves it free
             // (ADR 0011). Optional so legacy callers keep compiling.
-            IReadOnlyList<string>? behaviors = null)
+            IReadOnlyList<string>? behaviors = null,
+            // The server's discovery id — the handle knowledge licensing (ADR 0014) sells BY.
+            // Optional/unparseable → Guid.Empty (a legacy/offline skill can't be licensed).
+            string? discoveryId = null)
         {
             if (!string.Equals(status, "Ready", StringComparison.OrdinalIgnoreCase)) return null;
 
@@ -43,7 +46,8 @@ namespace ProjectAscension.GameSimulation.Combat
                 ? PrimitiveGraphTranslator.Translate(skill)
                 : EffectGraphReader.Parse(effectGraph!) ?? PrimitiveGraphTranslator.Translate(skill);
 
-            return new DiscoveredSkill(skill.Name, kind, skill, contextTags, behaviors, description, graph);
+            Guid.TryParse(discoveryId, out var id);
+            return new DiscoveredSkill(skill.Name, kind, skill, contextTags, behaviors, description, graph, id);
         }
     }
 }

@@ -13,11 +13,15 @@ public class ContractService : IContractService
     private readonly IContractRepository _repo;
     private readonly IMonsterDefinitionRepository _monsters;
     private readonly IContractFlavorComposer _flavor;
-    public ContractService(IContractRepository repo, IMonsterDefinitionRepository monsters, IContractFlavorComposer flavor)
+    private readonly IPlayerProfileRepository _players;
+    public ContractService(
+        IContractRepository repo, IMonsterDefinitionRepository monsters,
+        IContractFlavorComposer flavor, IPlayerProfileRepository players)
     {
         _repo = repo;
         _monsters = monsters;
         _flavor = flavor;
+        _players = players;
     }
 
     public async Task<Result<IReadOnlyList<ContractResponse>>> GetByRegionAsync(Guid regionId, CancellationToken ct = default)
@@ -33,13 +37,19 @@ public class ContractService : IContractService
         return Result<ContractQuoteResponse>.Ok(new ContractQuoteResponse(suggested, min, max));
     }
 
-    public async Task<Result<ContractResponse>> IssueAsync(IssueContractRequest request, CancellationToken ct = default)
+    public async Task<Result<IssueContractResponse>> IssueAsync(IssueContractRequest request, CancellationToken ct = default)
     {
-        if (request.IssuerActorId == Guid.Empty) return Result<ContractResponse>.Fail(Error.Invalid);
+        if (request.IssuerActorId == Guid.Empty) return Result<IssueContractResponse>.Fail(Error.Invalid);
 
         int count = Math.Clamp(request.TargetCount, 1, MaxObjectiveCount);
         var (_, min, max) = await ComputeQuoteAsync(request.Purpose, request.Target, count, ct);
         int reward = Math.Clamp(request.DesiredReward, min, max); // the server owns the economy
+
+        // Issuing escrows the reward from the issuer immediately (ADR 0014) — a contract
+        // can't be posted with gold the issuer doesn't have.
+        var profile = await _players.GetAsync(ct);
+        if (profile is null) return Result<IssueContractResponse>.Fail(Error.NotFound);
+        if (profile.Currency < reward) return Result<IssueContractResponse>.Fail(Error.Conflict);
 
         // Assisted: fill the tedious copy when the player didn't write it. The AI flavor
         // composer writes a posting from the objective (deterministic template under Stub /
@@ -71,7 +81,11 @@ public class ContractService : IContractService
             ExpiresAt = request.DurationHours > 0 ? DateTime.UtcNow.AddHours(request.DurationHours) : null,
         };
         await _repo.AddAsync(contract, ct);
-        return Result<ContractResponse>.Ok(ToResponse(contract));
+
+        profile.Currency -= reward;
+        await _players.UpdateAsync(profile, ct);
+
+        return Result<IssueContractResponse>.Ok(new IssueContractResponse(ToResponse(contract), PlayerProfileMapper.ToResponse(profile)));
     }
 
     // Calibrate the reward from the objective: a flat base per unit plus, for a targeted
@@ -152,6 +166,89 @@ public class ContractService : IContractService
         contract.ProgressCount = request.ProgressCount;
         await _repo.UpdateAsync(contract, ct);
         return Result<ContractResponse>.Ok(ToResponse(contract));
+    }
+
+    // Pays the reward from the contract's OWN stored RewardJson — never from the request — and
+    // only once the assignee's reported progress (UpdateProgressAsync, called first) has reached
+    // the objective. Monster-kill credit is still client-reported (no server combat simulation
+    // yet); this closes the OTHER half — the payout itself is server-computed and can't be
+    // replayed (Completed is a one-way transition).
+    public async Task<Result<ContractTurnInResponse>> TurnInAsync(Guid contractId, TurnInContractRequest request, CancellationToken ct = default)
+    {
+        var contract = await _repo.GetByIdAsync(contractId, ct);
+        if (contract is null) return Result<ContractTurnInResponse>.Fail(Error.NotFound);
+        if (contract.Status != ContractStatus.Assigned) return Result<ContractTurnInResponse>.Fail(Error.Conflict);
+        if (contract.AssigneeActorId != request.ActorId) return Result<ContractTurnInResponse>.Fail(Error.Conflict);
+
+        int targetCount = ReadInt(contract.ConditionsJson, "targetCount", 1);
+        if (contract.ProgressCount < targetCount) return Result<ContractTurnInResponse>.Fail(Error.Conflict); // not complete yet
+
+        var profile = await _players.GetAsync(ct);
+        if (profile is null) return Result<ContractTurnInResponse>.Fail(Error.NotFound);
+
+        profile.Currency += ReadInt(contract.RewardJson, "currency", 0);
+        profile.Reputation += ReadInt(contract.RewardJson, "reputation", 0);
+        await _players.UpdateAsync(profile, ct);
+
+        contract.Status = ContractStatus.Completed;
+        contract.CompletedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(contract, ct);
+
+        return Result<ContractTurnInResponse>.Ok(new ContractTurnInResponse(ToResponse(contract), PlayerProfileMapper.ToResponse(profile)));
+    }
+
+    // Delegation (위임): the assignee hands the contract to a stub contractor instead of clearing
+    // it themselves, paying the reward upfront as the contractor's fee. The contract moves
+    // straight to Completed (handled, not reusable) — there is no further payout to the player.
+    public async Task<Result<PlayerStateResponse>> DelegateAsync(Guid contractId, DelegateContractRequest request, CancellationToken ct = default)
+    {
+        var contract = await _repo.GetByIdAsync(contractId, ct);
+        if (contract is null) return Result<PlayerStateResponse>.Fail(Error.NotFound);
+        if (contract.Status != ContractStatus.Assigned) return Result<PlayerStateResponse>.Fail(Error.Conflict);
+        if (contract.AssigneeActorId != request.ActorId) return Result<PlayerStateResponse>.Fail(Error.Conflict);
+        if (!contract.DelegationAllowed) return Result<PlayerStateResponse>.Fail(Error.Conflict);
+
+        int escrow = ReadInt(contract.RewardJson, "currency", 0);
+        var profile = await _players.GetAsync(ct);
+        if (profile is null) return Result<PlayerStateResponse>.Fail(Error.NotFound);
+        if (profile.Currency < escrow) return Result<PlayerStateResponse>.Fail(Error.Conflict); // insufficient funds
+
+        profile.Currency -= escrow;
+        await _players.UpdateAsync(profile, ct);
+
+        contract.Status = ContractStatus.Completed;
+        contract.CompletedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(contract, ct);
+
+        return Result<PlayerStateResponse>.Ok(PlayerProfileMapper.ToResponse(profile));
+    }
+
+    // Failure (사망/시간초과): the caller reports only the INTENT (why) — the server reads the
+    // contract's OWN stored reward reputation and runs it through the shared pure rule
+    // (ContractRules.ReputationPenalty, clamped so a single failure can never push a player
+    // below zero standing) to compute the penalty. Only an Assigned contract can fail: Open
+    // was never taken, Completed/Failed are terminal, so a replay is rejected before any
+    // second penalty is applied.
+    public async Task<Result<PlayerStateResponse>> FailAsync(Guid contractId, FailContractRequest request, CancellationToken ct = default)
+    {
+        var contract = await _repo.GetByIdAsync(contractId, ct);
+        if (contract is null) return Result<PlayerStateResponse>.Fail(Error.NotFound);
+        if (contract.Status != ContractStatus.Assigned) return Result<PlayerStateResponse>.Fail(Error.Conflict);
+        if (contract.AssigneeActorId != request.ActorId) return Result<PlayerStateResponse>.Fail(Error.Conflict);
+
+        var profile = await _players.GetAsync(ct);
+        if (profile is null) return Result<PlayerStateResponse>.Fail(Error.NotFound);
+
+        int rewardReputation = ReadInt(contract.RewardJson, "reputation", 0);
+        int penalty = GameSimulation.Contracts.ContractRules.ReputationPenalty(profile.Reputation, rewardReputation);
+        profile.Reputation -= penalty;
+        await _players.UpdateAsync(profile, ct);
+
+        contract.Status = ContractStatus.Failed;
+        contract.FailedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(contract, ct);
+
+        return Result<PlayerStateResponse>.Ok(PlayerProfileMapper.ToResponse(profile));
     }
 
     private static ContractResponse ToResponse(Domain.Entities.Contract c) =>

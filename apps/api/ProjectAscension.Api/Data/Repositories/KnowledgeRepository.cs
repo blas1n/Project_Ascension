@@ -20,4 +20,13 @@ public class KnowledgeRepository : IKnowledgeRepository
             .Where(k => k.OwnerActorId == ownerActorId)
             .OrderByDescending(k => k.CreatedAt)
             .ToListAsync(ct);
+
+    public Task<Knowledge?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
+        => _db.Knowledge.FirstOrDefaultAsync(k => k.DiscoveryId == discoveryId, ct);
+
+    public async Task UpdateAsync(Knowledge knowledge, CancellationToken ct = default)
+    {
+        _db.Knowledge.Update(knowledge);
+        await _db.SaveChangesAsync(ct);
+    }
 }

@@ -81,6 +81,11 @@ public class SkillCompositionServiceTests
 
         public Task<IReadOnlyList<Knowledge>> GetByOwnerAsync(Guid ownerActorId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Knowledge>>(Items.Where(k => k.OwnerActorId == ownerActorId).ToList());
+
+        public Task<Knowledge?> GetByDiscoveryIdAsync(Guid discoveryId, CancellationToken ct = default)
+            => Task.FromResult(Items.FirstOrDefault(k => k.DiscoveryId == discoveryId));
+
+        public Task UpdateAsync(Knowledge knowledge, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeTuningProvider : IDiscoveryTuningProvider

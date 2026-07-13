@@ -43,4 +43,23 @@ public class ContractsController : ControllerBase
     [HttpPost("{id:guid}/progress")]
     public async Task<IActionResult> UpdateProgress(Guid id, [FromBody] UpdateContractProgressRequest request, CancellationToken ct)
         => (await _service.UpdateProgressAsync(id, request, ct)).ToActionResult(this);
+
+    /// <summary>Hand in a completed contract — the server pays the reward from its own stored
+    /// terms and returns the resulting authoritative player state (ADR 0014).</summary>
+    [HttpPost("{id:guid}/turn-in")]
+    public async Task<IActionResult> TurnIn(Guid id, [FromBody] TurnInContractRequest request, CancellationToken ct)
+        => (await _service.TurnInAsync(id, request, ct)).ToActionResult(this);
+
+    /// <summary>Hand the active contract to a stub contractor instead of clearing it yourself —
+    /// escrows the reward as the contractor's fee.</summary>
+    [HttpPost("{id:guid}/delegate")]
+    public async Task<IActionResult> Delegate(Guid id, [FromBody] DelegateContractRequest request, CancellationToken ct)
+        => (await _service.DelegateAsync(id, request, ct)).ToActionResult(this);
+
+    /// <summary>Report a contract failure (died / deadline expired) — only the INTENT; the
+    /// server computes the reputation penalty from the contract's own stored reward and
+    /// returns the resulting authoritative player state (ADR 0014).</summary>
+    [HttpPost("{id:guid}/fail")]
+    public async Task<IActionResult> Fail(Guid id, [FromBody] FailContractRequest request, CancellationToken ct)
+        => (await _service.FailAsync(id, request, ct)).ToActionResult(this);
 }

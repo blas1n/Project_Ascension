@@ -95,6 +95,7 @@ namespace ProjectAscension.Net
     [Serializable]
     public sealed class ContractDto
     {
+        public string id; // server contract row id — needed to accept/turn-in/delegate THIS contract later
         public string title;
         public string description;
         public string purpose; // ContractPurpose name
@@ -167,6 +168,83 @@ namespace ProjectAscension.Net
     }
 
     [Serializable]
+    public sealed class IssueContractResponseDto
+    {
+        public ContractDto contract;
+        public PlayerStateDto playerState;
+    }
+
+    [Serializable]
+    public sealed class AcceptContractDto
+    {
+        public string actorId;
+    }
+
+    [Serializable]
+    public sealed class UpdateContractProgressDto
+    {
+        public string actorId;
+        public int progressCount;
+    }
+
+    [Serializable]
+    public sealed class TurnInContractDto
+    {
+        public string actorId;
+    }
+
+    [Serializable]
+    public sealed class ContractTurnInResponseDto
+    {
+        public ContractDto contract;
+        public PlayerStateDto playerState;
+    }
+
+    [Serializable]
+    public sealed class DelegateContractDto
+    {
+        public string actorId;
+    }
+
+    [Serializable]
+    public sealed class FailContractDto
+    {
+        public string actorId;
+        public string reason;
+    }
+
+    [Serializable]
+    public sealed class BuyItemDto
+    {
+        public string itemKey;
+        public int quantity;
+    }
+
+    [Serializable]
+    public sealed class SellItemDto
+    {
+        public string itemKey;
+        public int quantity;
+    }
+
+    [Serializable]
+    public sealed class LicenseKnowledgeDto
+    {
+        public string actorId;
+        public string discoveryId;
+    }
+
+    /// <summary>Mirrors ProjectAscension.Shared.Error — every rejected economy transaction
+    /// (ADR 0014) returns one of these as the response body, so the UI can show the SERVER's
+    /// reason instead of guessing one.</summary>
+    [Serializable]
+    public sealed class ApiErrorDto
+    {
+        public string code;
+        public string message;
+    }
+
+    [Serializable]
     public sealed class ItemDefinitionDto
     {
         public string key;
@@ -219,6 +297,23 @@ namespace ProjectAscension.Net
         private readonly string _baseUrl;
 
         public CatalogApiClient(string baseUrl) => _baseUrl = baseUrl?.TrimEnd('/');
+
+        /// <summary>Reads the server's own reason out of a rejected transaction's response body
+        /// (ADR 0014) — never a client-invented guess. Falls back to a generic line only when
+        /// the body isn't the expected Error JSON (e.g. no connection at all).</summary>
+        public static string ParseErrorMessage(string responseBody)
+        {
+            if (string.IsNullOrEmpty(responseBody)) return "Request failed — check the connection.";
+            try
+            {
+                var err = JsonUtility.FromJson<ApiErrorDto>(responseBody);
+                return !string.IsNullOrEmpty(err?.message) ? err.message : "Request failed.";
+            }
+            catch (ArgumentException)
+            {
+                return "Request failed — check the connection.";
+            }
+        }
 
         public IEnumerator GetCombatTuning(Action<CombatTuningDto> onResult)
         {
@@ -304,12 +399,101 @@ namespace ProjectAscension.Net
             yield return GetJson(url, json => onResult?.Invoke(JsonUtility.FromJson<ContractQuoteDto>(json)));
         }
 
-        public IEnumerator IssueContract(IssueContractDto request, Action<ContractDto> onResult)
+        public IEnumerator IssueContract(IssueContractDto request, Action<IssueContractResponseDto> onResult, Action<string> onError = null)
         {
             yield return PostJson(
                 $"{_baseUrl}/api/contracts",
                 JsonUtility.ToJson(request),
+                json => onResult?.Invoke(JsonUtility.FromJson<IssueContractResponseDto>(json)),
+                onError);
+        }
+
+        /// <summary>Accept an OPEN server contract — assigns it to the actor so a later
+        /// turn-in/delegate can be validated server-side (ADR 0014).</summary>
+        public IEnumerator AcceptContract(string contractId, string actorId, Action<ContractDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts/{contractId}/accept",
+                JsonUtility.ToJson(new AcceptContractDto { actorId = actorId }),
+                json => onResult?.Invoke(JsonUtility.FromJson<ContractDto>(json)),
+                onError);
+        }
+
+        /// <summary>Report the assignee's tracked progress — the server stores this and
+        /// TurnInContract checks it before paying out (kill/objective credit is still
+        /// client-reported; the PAYOUT itself is server-computed, ADR 0014).</summary>
+        public IEnumerator UpdateContractProgress(string contractId, string actorId, int progressCount, Action<ContractDto> onResult)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts/{contractId}/progress",
+                JsonUtility.ToJson(new UpdateContractProgressDto { actorId = actorId, progressCount = progressCount }),
                 json => onResult?.Invoke(JsonUtility.FromJson<ContractDto>(json)));
+        }
+
+        /// <summary>Hand in a completed contract — the server pays the reward from its own
+        /// stored terms and returns the resulting authoritative player state.</summary>
+        public IEnumerator TurnInContract(string contractId, string actorId, Action<ContractTurnInResponseDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts/{contractId}/turn-in",
+                JsonUtility.ToJson(new TurnInContractDto { actorId = actorId }),
+                json => onResult?.Invoke(JsonUtility.FromJson<ContractTurnInResponseDto>(json)),
+                onError);
+        }
+
+        /// <summary>Hand the active contract to a stub contractor — the server escrows the
+        /// reward as the contractor's fee and returns the resulting player state.</summary>
+        public IEnumerator DelegateContract(string contractId, string actorId, Action<PlayerStateDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts/{contractId}/delegate",
+                JsonUtility.ToJson(new DelegateContractDto { actorId = actorId }),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)),
+                onError);
+        }
+
+        /// <summary>Report a contract failure (died / deadline expired) — only the INTENT; the
+        /// server reads the contract's own stored reward and computes the reputation penalty
+        /// itself, returning the resulting authoritative player state (ADR 0014).</summary>
+        public IEnumerator FailContract(string contractId, string actorId, string reason, Action<PlayerStateDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/contracts/{contractId}/fail",
+                JsonUtility.ToJson(new FailContractDto { actorId = actorId, reason = reason }),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)),
+                onError);
+        }
+
+        /// <summary>Buy an item from the shop — the server prices it from its own catalog.</summary>
+        public IEnumerator BuyItem(string itemKey, int quantity, Action<PlayerStateDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/shop/buy",
+                JsonUtility.ToJson(new BuyItemDto { itemKey = itemKey, quantity = quantity }),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)),
+                onError);
+        }
+
+        /// <summary>Sell an item to the shop — the server prices it from its own catalog.</summary>
+        public IEnumerator SellItem(string itemKey, int quantity, Action<PlayerStateDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/shop/sell",
+                JsonUtility.ToJson(new SellItemDto { itemKey = itemKey, quantity = quantity }),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)),
+                onError);
+        }
+
+        /// <summary>Sell a license for an owned, composed discovery — once per discovery
+        /// (server-enforced). The server derives price/reputation from the skill's own
+        /// composed effect graph, never from this request.</summary>
+        public IEnumerator LicenseKnowledge(string actorId, string discoveryId, Action<PlayerStateDto> onResult, Action<string> onError = null)
+        {
+            yield return PostJson(
+                $"{_baseUrl}/api/knowledge/license",
+                JsonUtility.ToJson(new LicenseKnowledgeDto { actorId = actorId, discoveryId = discoveryId }),
+                json => onResult?.Invoke(JsonUtility.FromJson<PlayerStateDto>(json)),
+                onError);
         }
 
         private static IEnumerator GetJson(string url, Action<string> onOk)
@@ -339,7 +523,9 @@ namespace ProjectAscension.Net
                 Debug.LogWarning($"[Catalog] PUT {url} failed: {req.error}");
         }
 
-        private static IEnumerator PostJson(string url, string body, Action<string> onOk)
+        // onError receives the raw response body (an economy rejection is a normal JSON Error
+        // body, e.g. {"code":"CONFLICT","message":"..."}) — never invented client-side.
+        private static IEnumerator PostJson(string url, string body, Action<string> onOk, Action<string> onError = null)
         {
             using var req = new UnityWebRequest(url, "POST")
             {
@@ -352,7 +538,10 @@ namespace ProjectAscension.Net
             if (req.result == UnityWebRequest.Result.Success)
                 onOk?.Invoke(req.downloadHandler.text);
             else
+            {
                 Debug.LogWarning($"[Catalog] POST {url} failed: {req.error}");
+                onError?.Invoke(req.downloadHandler.text);
+            }
         }
     }
 }

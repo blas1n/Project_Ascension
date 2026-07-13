@@ -98,24 +98,6 @@ namespace ProjectAscension.Game
             }
         }
 
-        /// <summary>The payout of a completed contract — currency, standing (명성), and possibly an ITEM
-        /// (the first hour's survey pays in a map). An empty ItemKey means no item was owed.</summary>
-        public readonly struct Reward
-        {
-            public readonly int Currency;
-            public readonly int Reputation;
-            public readonly string ItemKey;
-            public readonly int ItemAmount;
-
-            public Reward(int currency, int reputation, string itemKey = "", int itemAmount = 0)
-            {
-                Currency = currency;
-                Reputation = reputation;
-                ItemKey = itemKey ?? "";
-                ItemAmount = itemAmount;
-            }
-        }
-
         /// <summary>Whether the player's standing meets the contract's requirement.</summary>
         public static bool CanAccept(ContractInstance c, int reputation) => c != null && ContractRules.CanAccept(reputation, c.MinReputation);
 
@@ -126,6 +108,10 @@ namespace ProjectAscension.Game
         }
 
         public void Abandon() => Active = null;
+
+        /// <summary>Clear the active contract after the SERVER has confirmed the turn-in paid
+        /// out (ADR 0014) — unlike <see cref="TurnIn"/>, this trusts no local reward numbers.</summary>
+        public void ClearActiveAfterServerTurnIn() => Active = null;
 
         // A targeted hunt only counts kills of its target monster type (the objective
         // filter); an untargeted hunt counts any kill.
@@ -147,16 +133,6 @@ namespace ProjectAscension.Game
         {
             if (Active == null || Active.Purpose != purpose || Active.IsComplete) return;
             Active.Progress = ContractRules.ClampedProgress(Active.Progress, amount, Active.TargetCount);
-        }
-
-        /// <summary>Hand in a completed contract; returns the reward (0 if not completable).</summary>
-        public Reward TurnIn()
-        {
-            if (Active == null || !Active.IsComplete) return default;
-            var reward = new Reward(Active.RewardCurrency, Active.RewardReputation,
-                Active.RewardItemKey, Active.RewardItemAmount);
-            Active = null;
-            return reward;
         }
 
         // Failure: a contract whose specified failure condition triggered. Surfaced for the
