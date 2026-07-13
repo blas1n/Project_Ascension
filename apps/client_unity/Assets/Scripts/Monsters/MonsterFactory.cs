@@ -19,6 +19,13 @@ namespace ProjectAscension.Monsters
             hr.SetMaxHealth(stats.MaxHealth);
             go.transform.localScale = Vector3.one * stats.Scale;
 
+            // Monsters spawn dynamically (waves, the deep guardian) well after the scene's one-time
+            // registration pass — describe this body into the sim world right here, the single place
+            // every monster is actually created (ADR 0013). A monster nobody registers is invisible
+            // to every weapon in the game, no matter how solid its capsule looks.
+            var simBody = go.AddComponent<SimBody>();
+            simBody.Configure(SimWorld.AllocateActorId(go));
+
             MonsterBase monster = type switch
             {
                 MonsterType.Ranged => go.AddComponent<RangedMonster>(),
