@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using ProjectAscension.Combat;
-using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
 using ProjectAscension.GameSimulation.Effects;
 using ProjectAscension.Net;
@@ -117,24 +116,28 @@ namespace ProjectAscension.Game
 
             // Announce the discovery with the SERVER-composed name (the frontier toast + any other
             // observer). The client no longer names discoveries locally — server is authoritative.
-            GameplayEvents.RaiseSkillDiscovered(_skill.Name);
+            GameplayEvents.RaiseSkillDiscovered(_skill.Name, _manifestation);
 
             if (_manifestation == ManifestationKind.Passive)
                 (GetComponent<PassiveModifiers>() ?? FindAnyObjectByType<PassiveModifiers>())?.Refresh();
             else if (_manifestation == ManifestationKind.Weapon && weapon != null)
             {
-                // With a session the weapon goes to inventory (equip in the city); without one
-                // (Frontier played directly) equip it now rather than drop it.
+                // A discovery is NOT an equip: the weapon goes to inventory only. Auto-equipping a
+                // fresh discovery took the choice away from the player, and — because equipping it
+                // changed the discovery ladder's style key — is exactly what fed the "discover ->
+                // equip -> discover" ladder-multiplication bug. The player equips it deliberately
+                // at the Equipment Station (CLAUDE.md Phase 7).
                 var state = GameSession.Instance?.PlayerState;
                 if (state != null)
                 {
                     state.AddWeapon(weapon);
-                    Debug.Log($"[SkillCaster] \"{_skill.Name}\" added to inventory ({state.OwnedWeapons.Count} owned) — equip it in the city.");
+                    Debug.Log($"[SkillCaster] \"{_skill.Name}\" added to inventory ({state.OwnedWeapons.Count} owned) — equip it at the Equipment Station.");
                 }
                 else
                 {
-                    Debug.LogWarning($"[SkillCaster] No GameSession — equipping \"{_skill.Name}\" now.");
-                    FindAnyObjectByType<Loadout>()?.EquipLeft(weapon);
+                    // No session (e.g. Frontier played standalone) means no PlayerState to hold it —
+                    // there is nowhere to store the weapon, so it is not minted into the world.
+                    Debug.LogWarning($"[SkillCaster] No GameSession — \"{_skill.Name}\" discovered but not stored (no PlayerState).");
                 }
             }
 

@@ -78,7 +78,7 @@ namespace ProjectAscension.Game
         private void OnEvaded() => Signal(TutorialSignal.Evaded);
         private void OnAttacked(bool _) => Signal(TutorialSignal.Attacked);
         private void OnPlayerDied() => Signal(TutorialSignal.Died);
-        private void OnSkillDiscovered(string _) => Signal(TutorialSignal.DiscoveryMade);
+        private void OnSkillDiscovered(string _, GameSimulation.Combat.ManifestationKind __) => Signal(TutorialSignal.DiscoveryMade);
         private void OnEquipmentChosen() => Signal(TutorialSignal.EquipmentChosen);
 
         private void OnSceneChanged(Scene _, Scene next)

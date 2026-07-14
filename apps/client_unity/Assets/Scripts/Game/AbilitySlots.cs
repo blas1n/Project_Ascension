@@ -11,8 +11,10 @@ namespace ProjectAscension.Game
     /// Discovered COMMANDS are cast from ability slots (hotkeys), not input combos. The combat
     /// inputs are all reused for normal fighting, so combo invocation misfired mid-fight and did
     /// not scale as commands accumulated. Each slot binds a discovered command to a key; pressing
-    /// it casts the command, subject to the equipment gate (ADR 0011). Slots auto-fill from the
-    /// discovered commands in discovery order (a reassignment UI is a follow-up).
+    /// it casts the command, subject to the equipment gate (ADR 0011). Nothing auto-binds a slot —
+    /// a fresh discovery enters the journal only, and the player assigns it at the Equipment
+    /// Station's hotkey picker (EquipmentStationPanel), which lists only the commands assignable
+    /// with the current loadout (GameSimulation.Combat.AssignableCommands).
     /// Destiny/Overwatch-style dedicated abilities — and since ADR 0012 removed the dodge button,
     /// a dash IS one of these: mobility is discovered, not issued.
     ///
@@ -46,7 +48,6 @@ namespace ProjectAscension.Game
 
             var session = GameSession.Instance;
             if (session == null) return;
-            session.EnsureDefaultCommandSlots(); // seed the bar with the first commands until the player customises it
 
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
