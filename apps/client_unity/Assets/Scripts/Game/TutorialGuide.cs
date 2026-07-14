@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using ProjectAscension.Combat;
 using ProjectAscension.GameSimulation.Tutorial;
 using ProjectAscension.Player;
@@ -12,8 +13,8 @@ namespace ProjectAscension.Game
     /// existed only in the simulation — the player was just dropped in the city with nothing telling
     /// them what to do. The fix is NOT a single NPC that walks over to greet every player: that cannot
     /// work once more than one player exists (this is an MMOFPS), so it is not "the" guide, it is A
-    /// guide — spawned fresh for whoever's first hour this is, built into every scene the first hour
-    /// touches by ProjectAscensionSetup (City, Frontier), and gone for good once
+    /// guide — spawned fresh for whoever's first hour this is, self-installed into every scene the
+    /// first hour touches (City, Frontier — see <see cref="Install"/> below), and gone for good once
     /// <see cref="TutorialStep.Complete"/> is reached. Nothing here reads or writes any shared state:
     /// two players standing in the same plaza each get their own Usher, at their own pace, saying
     /// whatever THEIR <see cref="TutorialRunner"/> currently says.
@@ -29,9 +30,46 @@ namespace ProjectAscension.Game
     /// Procedural body (no authored art yet, same seam as MonsterBody/CityNpc) — its own hooded,
     /// lantern-carrying silhouette and warm gold palette, distinct from every monster and every other
     /// city NPC, so it reads as "not part of the world, here for YOU" at a glance.
+    ///
+    /// Self-installs at runtime (playtest, 2nd report: the guide only existed after a dev re-ran
+    /// "Setup > Build All Scenes" — most players never do, so the whole authored first hour silently
+    /// never appeared). Unlike CombatHud/ObjectiveMarker it must NOT be DontDestroyOnLoad — a fresh
+    /// instance belongs to whichever scene the player is currently in (a different approach point and
+    /// FollowPoint per scene), so it installs on EVERY scene load, not just the first, guarded so it
+    /// never double-spawns alongside one ProjectAscensionSetup already baked into the committed scene
+    /// (that editor-script path is kept working deliberately — see BuildAllScenes).
     /// </summary>
     public sealed class TutorialGuide : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Install()
+        {
+            // AfterSceneLoad only fires once, for the FIRST scene — City/Frontier reached later via
+            // GameScenes.LoadCity/LoadFrontier need their own guide too, so every subsequent load is
+            // covered by this subscription (registered here, before Bootstrap.Start() ever calls
+            // SceneManager.LoadScene, so no transition can be missed).
+            SceneManager.sceneLoaded += (scene, _) => EnsureForScene(scene.name);
+            EnsureForScene(SceneManager.GetActiveScene().name);
+        }
+
+        private static void EnsureForScene(string sceneName)
+        {
+            // Where a fresh guide starts, beside the player's own spawn in that scene — mirrors
+            // ProjectAscensionSetup's BuildCityScene/BuildFrontierScene placement exactly.
+            Vector3 spawn;
+            if (sceneName == GameScenes.City) spawn = CityBlockout.PlayerSpawn + new Vector3(2f, 0f, 1f);
+            else if (sceneName == GameScenes.Frontier) spawn = new Vector3(2f, 0f, 1f);
+            else return; // Bootstrap, or any scene outside the first hour: no guide belongs here
+
+            // Guard: a scene rebuilt by ProjectAscensionSetup already has one baked in (its Awake has
+            // already run by the time sceneLoaded fires) — never spawn a second.
+            if (FindObjectOfType<TutorialGuide>() != null) return;
+
+            var go = new GameObject("TutorialGuide");
+            go.transform.position = spawn;
+            go.AddComponent<TutorialGuide>();
+        }
+
         private const string DisplayName = "Usher";
 
         private static readonly Color Robe = new Color(0.82f, 0.64f, 0.22f);
@@ -226,32 +264,62 @@ namespace ProjectAscension.Game
             return Keyboard.current.fKey.wasPressedThisFrame; // fallback if the label doesn't parse as a Key
         }
 
+        // A real dialogue, not a floating string (playtest, 2nd report): a framed panel with the
+        // speaker's own name plate, the line, and an unmissable dismiss button — the ONLY thing the
+        // guide's popup is allowed to look like is "someone is talking to you", never ambient text.
         private void OnGUI()
         {
             if (_state != GuideState.Speaking) return;
 
             // A light veil, not a blackout — you are standing in the open world, not at a station.
             var prev = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.32f);
+            GUI.color = new Color(0f, 0f, 0f, 0.4f);
             GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = prev;
 
-            const float w = 620f, h = 100f;
-            var box = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.6f, w, h);
-            GUI.Box(box, GUIContent.none);
+            const float w = 640f, h = 148f, namePlateH = 30f, buttonW = 150f, buttonH = 30f;
+            var box = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.58f, w, h);
 
-            var name = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontSize = 13, fontStyle = FontStyle.Bold };
-            name.normal.textColor = new Color(1f, 0.85f, 0.5f);
-            GUI.Label(new Rect(box.x, box.y + 8f, box.width, 18f), DisplayName, name);
+            // Panel body.
+            GUI.color = new Color(0.08f, 0.07f, 0.05f, 0.92f);
+            GUI.DrawTexture(box, Texture2D.whiteTexture);
+            GUI.color = prev;
+            // Gold accent border so it reads as a FRAME, not a stray rectangle.
+            DrawBorder(box, new Color(1f, 0.82f, 0.35f, 0.9f), 2f);
 
-            var say = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 16, wordWrap = true };
+            // Name plate — its own strip along the top, not just a label floating in the body.
+            var namePlate = new Rect(box.x, box.y, box.width, namePlateH);
+            GUI.color = new Color(1f, 0.82f, 0.35f, 0.22f);
+            GUI.DrawTexture(namePlate, Texture2D.whiteTexture);
+            GUI.color = prev;
+            var name = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 14, fontStyle = FontStyle.Bold };
+            name.normal.textColor = new Color(1f, 0.88f, 0.55f);
+            GUI.Label(namePlate, DisplayName, name);
+
+            var say = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperLeft, fontSize = 17, wordWrap = true };
             say.normal.textColor = Color.white;
-            GUI.Label(new Rect(box.x + 16f, box.y + 26f, box.width - 32f, 44f), _line, say);
+            GUI.Label(new Rect(box.x + 22f, namePlate.yMax + 12f, box.width - 44f, h - namePlateH - buttonH - 24f), _line, say);
 
-            var hint = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerCenter, fontSize = 11 };
-            hint.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.9f);
-            GUI.Label(new Rect(box.x, box.y + h - 20f, box.width, 18f),
-                $"[{PlayerInputHandler.InteractKeyLabel}] or click to continue", hint);
+            // The dismiss — a real button-looking pill, not a caption. Key label is read from the
+            // live binding (PlayerInputHandler.InteractKeyLabel), never hardcoded "[F]".
+            var button = new Rect(box.x + (box.width - buttonW) * 0.5f, box.yMax - buttonH - 12f, buttonW, buttonH);
+            GUI.color = new Color(1f, 0.82f, 0.35f, 0.9f);
+            GUI.DrawTexture(button, Texture2D.whiteTexture);
+            GUI.color = prev;
+            var buttonLabel = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 13, fontStyle = FontStyle.Bold };
+            buttonLabel.normal.textColor = new Color(0.15f, 0.1f, 0.02f);
+            GUI.Label(button, $"[{PlayerInputHandler.InteractKeyLabel}]  Continue", buttonLabel);
+        }
+
+        private static void DrawBorder(Rect r, Color color, float thickness)
+        {
+            var prev = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(new Rect(r.x, r.y, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.yMax - thickness, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.y, thickness, r.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.xMax - thickness, r.y, thickness, r.height), Texture2D.whiteTexture);
+            GUI.color = prev;
         }
 
         // --- body ----------------------------------------------------------------------------------

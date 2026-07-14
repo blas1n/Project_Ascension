@@ -24,8 +24,12 @@ namespace ProjectAscension.GameSimulation.Tutorial
         ReturnPad,
     }
 
-    /// <summary>What the guide says, verbatim, and where it points while saying it.</summary>
-    public sealed record TutorialGuideLine(string Text, TutorialGuideStation Station);
+    /// <summary>What the guide says, verbatim; the one-line imperative objective for the persistent
+    /// tracker (distinct from <see cref="Text"/> — the guide SPEAKS in character, the tracker STATES
+    /// the task; "" for CreateCharacter/Complete, where the tracker has nothing useful to add — the
+    /// character sheet already owns the moment, and there is no more tutorial); and where the guide
+    /// points while saying it.</summary>
+    public sealed record TutorialGuideLine(string Text, string Objective, TutorialGuideStation Station);
 
     /// <summary>
     /// The dedicated first-hour guide's SCRIPT — pure and deterministic (ADR: Unity is a shell), the
@@ -45,53 +49,74 @@ namespace ProjectAscension.GameSimulation.Tutorial
         public static TutorialGuideLine For(TutorialStep step) => step switch
         {
             // 0 — a screen, not a place. The guide has nothing to add before you have a name; the
-            // character sheet already owns the moment (and the UiFocus gate).
+            // character sheet already owns the moment (and the UiFocus gate) — no tracker objective.
             TutorialStep.CreateCharacter =>
-                new("You're new here. Everyone was, once.", TutorialGuideStation.None),
+                new("You're new here. Everyone was, once.", "", TutorialGuideStation.None),
 
             // 2 — 훈련장. Minimal, present-tense, exactly what the doc asks for.
             TutorialStep.Training =>
-                new("The yard's this way. Move. Jump. Hit something.", TutorialGuideStation.TrainingGround),
+                new("The yard's this way. Move. Jump. Hit something.",
+                    "Learn the basics at the training ground — move, jump, evade a wind-up, and strike.",
+                    TutorialGuideStation.TrainingGround),
 
             // 3 — 첫 장비 선택. No steer toward a "right" pair — the doc is explicit that there isn't one.
             TutorialStep.ChooseEquipment =>
-                new("Two hands, two choices — the rack won't judge you.", TutorialGuideStation.EquipmentStation),
+                new("Two hands, two choices — the rack won't judge you.",
+                    "Choose your two weapons at the equipment station.",
+                    TutorialGuideStation.EquipmentStation),
 
             // 4 — 첫 발견. Behavioural, not a destination. No marker (see TutorialGuideStation.None).
             TutorialStep.FirstDiscovery =>
-                new("Fight it your own way. See what happens.", TutorialGuideStation.None),
+                new("Fight it your own way. See what happens.",
+                    "Fight your own way — a discovery comes from how you act.",
+                    TutorialGuideStation.None),
 
             // 5 — 첫 계약 (외곽 조사).
             TutorialStep.AcceptSurveyContract =>
-                new("The board's got idle work on it. Go read it.", TutorialGuideStation.ContractBoard),
+                new("The board's got idle work on it. Go read it.",
+                    "Take the survey contract from the board.",
+                    TutorialGuideStation.ContractBoard),
 
             // 6 — 지도 시스템. The map is earned by reaching the marker, not handed over.
             TutorialStep.EarnMap =>
-                new("Outskirts. Find the marker, and come back with proof.", TutorialGuideStation.SurveyMarker),
+                new("Outskirts. Find the marker, and come back with proof.",
+                    "Survey the outskirts — reach the marker and come back with proof.",
+                    TutorialGuideStation.SurveyMarker),
 
             // 7 — 불가능한 계약 (심층 조사). The guide doesn't warn you it's too hard — you aren't
             // supposed to know that yet.
             TutorialStep.AcceptDeepContract =>
-                new("There's another posting up. Take a look.", TutorialGuideStation.ContractBoard),
+                new("There's another posting up. Take a look.",
+                    "Take the next contract from the board.",
+                    TutorialGuideStation.ContractBoard),
 
             // 8 — 첫 사망. A directed ambush. No warning, no marker — see TutorialGuideStation.None.
             TutorialStep.FirstDeath =>
-                new("Go deeper, if you're going.", TutorialGuideStation.None),
+                new("Go deeper, if you're going.",
+                    "Go deeper into the frontier.",
+                    TutorialGuideStation.None),
 
             // 9 — 계약 위임. Offered right after the world has proved the point.
             TutorialStep.DelegateContract =>
-                new("You don't have to finish that alone. Mira takes work off hands like yours.", TutorialGuideStation.Clerk),
+                new("You don't have to finish that alone. Mira takes work off hands like yours.",
+                    "You can't finish this alone — delegate it with the clerk (위임).",
+                    TutorialGuideStation.Clerk),
 
             // 10 — 발주.
             TutorialStep.IssueContract =>
-                new("Or pay someone else to carry it. She'll set that up too.", TutorialGuideStation.Clerk),
+                new("Or pay someone else to carry it. She'll set that up too.",
+                    "Or hire someone who can — issue a contract with the clerk (발주).",
+                    TutorialGuideStation.Clerk),
 
             // 11 — 첫 귀환.
             TutorialStep.Return =>
-                new("Get back to the pad. The city keeps the lights on for you.", TutorialGuideStation.ReturnPad),
+                new("Get back to the pad. The city keeps the lights on for you.",
+                    "Return to the city through the return pad.",
+                    TutorialGuideStation.ReturnPad),
 
             // Complete — the guide has nothing left to say, and nowhere left to send you. It leaves.
-            _ => new("", TutorialGuideStation.None),
+            // No tracker objective either — there is no more tutorial.
+            _ => new("", "", TutorialGuideStation.None),
         };
     }
 }
