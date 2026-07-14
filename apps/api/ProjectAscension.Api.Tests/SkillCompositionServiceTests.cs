@@ -121,6 +121,45 @@ public class SkillCompositionServiceTests
         }
     }
 
+    // Hands back a scripted sequence of results, one per call — models a composer whose first
+    // (few) attempt(s) collide with something taken and a later one doesn't, the way a real LLM's
+    // retry (a different seed each time) is meant to behave.
+    private sealed class SequenceGraphComposer : IEffectGraphComposer
+    {
+        private readonly Queue<SkillGraphComposition?> _results;
+        public List<EffectGraphRequest> Requests { get; } = new();
+
+        public SequenceGraphComposer(params SkillGraphComposition?[] results) => _results = new(results);
+
+        public Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
+        {
+            Requests.Add(request);
+            return Task.FromResult(_results.Count > 0 ? _results.Dequeue() : null);
+        }
+    }
+
+    // A composer that NEVER produces anything new — every call returns the same graph shape (under
+    // a fresh name each time, which is exactly what let "Aerial Convergence" freeze into the dev DB
+    // four times: the old code checked nothing, so a renamed duplicate sailed through as Ready).
+    private sealed class AlwaysSameGraphComposer : IEffectGraphComposer
+    {
+        private readonly EffectNode _graph;
+        private readonly string _namePrefix;
+        public int CallCount { get; private set; }
+
+        public AlwaysSameGraphComposer(EffectNode graph, string namePrefix)
+        {
+            _graph = graph;
+            _namePrefix = namePrefix;
+        }
+
+        public Task<SkillGraphComposition?> ComposeAsync(EffectGraphRequest request, CancellationToken ct = default)
+        {
+            CallCount++;
+            return Task.FromResult<SkillGraphComposition?>(new SkillGraphComposition($"{_namePrefix} {CallCount}", "desc", _graph));
+        }
+    }
+
     private static SkillCompositionService Service(
         FakeDiscoveryRepo discoveries, FakeSkillRepo skills, FakeKnowledgeRepo knowledge, CompositionMetrics metrics,
         FakeLineageRepo? lineage = null, IEffectGraphComposer? graphComposer = null)
@@ -196,6 +235,118 @@ public class SkillCompositionServiceTests
 
         Assert.NotNull(composer.Last);
         Assert.Contains(existingGraph, composer.Last!.Avoid ?? new List<string>());
+    }
+
+    // --- The duplicate-skill bug (project owner playtest report, 2026-07): the dev DB showed the
+    // SAME graph shape frozen as Ready under FOUR different names ("Aerial Convergence" x4), plus
+    // more sharing a shape under other names ("Aerial Cascade", "Fusion Firepath", "Converging
+    // Leap" x2). The Avoid/AvoidNames lists were only ever a PROMPT HINT — nothing checked the
+    // composer's actual output against them, so a model (or, offline, the deterministic stub) that
+    // ignored the hint sailed straight through to Ready. These tests pin the fix: the service must
+    // verify the result and retry, and must defer (never persist a duplicate) if it can't get
+    // something new. ---
+
+    [Fact]
+    public async Task ComposePending_RetriesOnDuplicateGraph_AndLandsOnAUniqueOne()
+    {
+        var duplicateGraph = new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Beam, 1));
+        var duplicateGraphJson = EffectGraphJson.Serialize(duplicateGraph);
+        var uniqueGraph = new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Nova, 1));
+
+        var skills = new FakeSkillRepo();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Existing",
+            EffectGraphJson = duplicateGraphJson,
+            CreatedAt = DateTime.UtcNow,
+        });
+        var pending = Pending();
+        skills.Skills.Add(pending);
+
+        // Attempt 0 collides on GRAPH with "Existing" (different name, same shape — precisely the
+        // reproduced bug); attempt 1 is genuinely new and must be the one that lands.
+        var composer = new SequenceGraphComposer(
+            new SkillGraphComposition("Fresh Name", "desc", duplicateGraph),
+            new SkillGraphComposition("Fresh Name 2", "desc", uniqueGraph));
+
+        using var metrics = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, graphComposer: composer)
+            .ComposePendingAsync(10);
+
+        Assert.Equal(DiscoveryContentStatus.Ready, pending.Status);
+        Assert.Equal("Fresh Name 2", pending.Name);
+        Assert.Equal(EffectGraphJson.Serialize(uniqueGraph), pending.EffectGraphJson);
+        Assert.Equal(2, composer.Requests.Count); // it actually retried, not just accepted the first try
+    }
+
+    [Fact]
+    public async Task ComposePending_RetriesOnDuplicateName_EvenWhenTheGraphDiffers()
+    {
+        // A rename of a duplicate is still a duplicate, but the converse matters too: a REUSED name
+        // over a genuinely different mechanic is still not "your own skill" — identity, not just
+        // mechanics, must be distinct.
+        var existingGraph = new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Beam, 1));
+        var skills = new FakeSkillRepo();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Aerial Convergence",
+            EffectGraphJson = EffectGraphJson.Serialize(existingGraph),
+            CreatedAt = DateTime.UtcNow,
+        });
+        var pending = Pending();
+        skills.Skills.Add(pending);
+
+        var composer = new SequenceGraphComposer(
+            new SkillGraphComposition("Aerial Convergence", "desc", new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Nova, 1))),
+            new SkillGraphComposition("Skybound Reprise", "desc", new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Nova, 1))));
+
+        using var metrics = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, graphComposer: composer)
+            .ComposePendingAsync(10);
+
+        Assert.Equal(DiscoveryContentStatus.Ready, pending.Status);
+        Assert.Equal("Skybound Reprise", pending.Name);
+        Assert.Equal(2, composer.Requests.Count);
+    }
+
+    [Fact]
+    public async Task ComposePending_DefersRatherThanPersistingADuplicate_WhenTheComposerNeverProducesSomethingNew()
+    {
+        var duplicateGraph = new Trigger(TriggerKind.OnCast, new Emit(EmitDelivery.Beam, 1));
+        var duplicateGraphJson = EffectGraphJson.Serialize(duplicateGraph);
+
+        var skills = new FakeSkillRepo();
+        skills.Skills.Add(new DiscoverySkill
+        {
+            Id = Guid.NewGuid(),
+            DiscoveryId = Guid.NewGuid(),
+            Status = DiscoveryContentStatus.Ready,
+            Name = "Existing",
+            EffectGraphJson = duplicateGraphJson,
+            CreatedAt = DateTime.UtcNow,
+        });
+        var pending = Pending();
+        skills.Skills.Add(pending);
+
+        var composer = new AlwaysSameGraphComposer(duplicateGraph, "Reused Shape");
+
+        using var metrics = new CompositionMetrics();
+        await Service(new FakeDiscoveryRepo(), skills, new FakeKnowledgeRepo(), metrics, graphComposer: composer)
+            .ComposePendingAsync(10);
+
+        // Deferred (ADR 0002: no deterministic fallback skill) — NOT frozen as a duplicate Ready row.
+        Assert.Equal(DiscoveryContentStatus.Pending, pending.Status);
+        Assert.Null(pending.Name);
+        Assert.Null(pending.EffectGraphJson);
+        Assert.True(pending.Attempts > 0);
+        Assert.Single(skills.Skills, s => s.EffectGraphJson == duplicateGraphJson); // still just "Existing"
+        Assert.Equal(3, composer.CallCount); // exhausted every retry rather than giving up on the first collision
     }
 
     [Fact]

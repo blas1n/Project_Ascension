@@ -14,8 +14,12 @@ namespace ProjectAscension.Game
     /// </summary>
     public static class CommandGate
     {
+        // BoundInstruments, not RequiredEquipment: a command discovered through a forged weapon
+        // (its own "spell:" tag) is gated on that weapon too, not just the four base categories —
+        // see SkillBinding.BoundInstruments. This is what the label shown next to an ability slot
+        // must agree with, or the UI would say "no requirement" for a command the gate still blocks.
         public static IReadOnlyCollection<string> RequiredEquipment(DiscoveredSkill command)
-            => SkillBinding.RequiredEquipment(command?.Behaviors);
+            => SkillBinding.BoundInstruments(command?.Behaviors);
 
         public static bool Invocable(DiscoveredSkill command, ICollection<string> currentTags)
             => SkillBinding.Usable(command?.Behaviors, currentTags);

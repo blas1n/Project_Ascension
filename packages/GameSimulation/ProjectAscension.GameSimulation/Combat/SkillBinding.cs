@@ -29,17 +29,50 @@ namespace ProjectAscension.GameSimulation.Combat
         /// to the weapons that actually made it.</summary>
         public const string UsePrefix = "Use:";
 
-        /// <summary>The weapon CATEGORIES that can bind a skill. A discovered weapon's own "spell:" tag
-        /// does not (a skill must not be bound to the skill that made it), nor do situation tags.</summary>
+        /// <summary>A discovered (forged) weapon's own context tag prefix — "spell:emberbrand". Distinct
+        /// from <see cref="WeaponTags"/>: those four are a small, STABLE vocabulary; this is an
+        /// unbounded one, a fresh word per forged item.</summary>
+        public const string SpellPrefix = "spell:";
+
+        /// <summary>The base weapon CATEGORIES — the small, stable vocabulary used to key the discovery
+        /// LADDER (<c>SkillCompositionService.RegionKey</c>, ADR 0010/0011). A discovered weapon's own
+        /// "spell:" tag is deliberately NOT one of these: filing a discovery under the specific item that
+        /// made it would let a player equip their own find and farm a fresh, easy ladder per skill — the
+        /// exact snowball ADR 0011 closed. Do not widen this set for that reason; see
+        /// <see cref="BoundInstruments"/> for the (different) question of what a COMMAND/PASSIVE needs
+        /// equipped to be usable.</summary>
         public static readonly IReadOnlyCollection<string> WeaponTags =
             new HashSet<string> { "melee", "firearm", "bow", "arcane" };
 
         /// <summary>
-        /// The weapons that TOOK PART in this discovery — read out of the behaviours, which name their
-        /// instrument. Empty when nothing was used but the player's own body, in which case the skill is
-        /// theirs to keep.
+        /// The base weapon CATEGORIES that TOOK PART in this discovery — read out of the behaviours,
+        /// which name their instrument. Empty when nothing was used but the player's own body (or only a
+        /// forged weapon — see <see cref="BoundInstruments"/>), in which case nothing here claims it.
+        ///
+        /// This is the discovery LADDER's vocabulary, not the use-gate's — see <see cref="WeaponTags"/>.
+        /// For "can this skill be CAST right now", use <see cref="BoundInstruments"/> instead.
         /// </summary>
         public static IReadOnlyCollection<string> RequiredEquipment(IReadOnlyList<string>? behaviors)
+            => Bound(behaviors, includeForged: false);
+
+        /// <summary>
+        /// Everything that actually TOOK PART in this discovery and can gate its USE: the base weapon
+        /// categories (<see cref="WeaponTags"/>) AND a specific forged weapon's own "spell:" tag. A
+        /// technique discovered by casting a forged weapon (alone, or fused with a body verb like jump)
+        /// still names an instrument that took part — ADR 0011 binds a skill to what MADE it, and a
+        /// one-off forged weapon is as much a maker as a firearm. Leaving it out of the GATE (as
+        /// <see cref="RequiredEquipment"/> must, for the ladder — see its doc) makes such a command
+        /// unconditionally assignable no matter what is equipped, which is not "usable with what's in
+        /// your hands right now" — it is "usable with anything", the reported bug.
+        ///
+        /// Equipping a forged weapon already produces this exact tag (<c>EquipmentTags.For</c> returns a
+        /// weapon's own ContextTag first), so the vocabulary this reads matches the vocabulary equipping
+        /// produces — no new "dead key".
+        /// </summary>
+        public static IReadOnlyCollection<string> BoundInstruments(IReadOnlyList<string>? behaviors)
+            => Bound(behaviors, includeForged: true);
+
+        private static IReadOnlyCollection<string> Bound(IReadOnlyList<string>? behaviors, bool includeForged)
         {
             if (behaviors == null) return Array.Empty<string>();
 
@@ -54,6 +87,12 @@ namespace ProjectAscension.GameSimulation.Combat
                     if (!required.Contains(weapon) && NamesWeapon(b, weapon))
                         required.Add(weapon);
                 }
+
+                if (includeForged)
+                {
+                    var forged = ForgedWeaponTag(b);
+                    if (forged != null && !required.Contains(forged)) required.Add(forged);
+                }
             }
             return required;
         }
@@ -61,8 +100,8 @@ namespace ProjectAscension.GameSimulation.Combat
         /// <summary>Whether the skill can be used with what is in the player's hands right now.</summary>
         public static bool Usable(IReadOnlyList<string>? behaviors, ICollection<string>? equipped)
         {
-            var required = RequiredEquipment(behaviors);
-            if (required.Count == 0) return true; // the body's, not the weapon's
+            var required = BoundInstruments(behaviors);
+            if (required.Count == 0) return true; // the body's, not any weapon's
 
             if (equipped == null) return false;
             foreach (var r in required)
@@ -84,6 +123,21 @@ namespace ProjectAscension.GameSimulation.Combat
                 i = behavior.IndexOf(weapon, i + 1, StringComparison.Ordinal);
             }
             return false;
+        }
+
+        // Extracts a forged weapon's own tag ("spell:emberbrand") out of a behaviour token
+        // ("Use:spell:emberbrand", "Fuse:jump>spell:emberbrand"). Same token-boundary discipline as
+        // NamesWeapon: the prefix must start at a word boundary, and the slug runs while it's a
+        // slug character (matches DiscoveredSkillFactory.Slug on the client — letters/digits/'-').
+        private static string? ForgedWeaponTag(string behavior)
+        {
+            int i = behavior.IndexOf(SpellPrefix, StringComparison.Ordinal);
+            if (i < 0) return null;
+            if (i != 0 && char.IsLetter(behavior[i - 1])) return null;
+
+            int end = i + SpellPrefix.Length;
+            while (end < behavior.Length && (char.IsLetterOrDigit(behavior[end]) || behavior[end] == '-')) end++;
+            return end > i + SpellPrefix.Length ? behavior.Substring(i, end - i) : null;
         }
     }
 }
