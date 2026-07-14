@@ -27,6 +27,7 @@ public class CombatController : ControllerBase
             t.SlowPerMagnitude, t.KnockbackPerMagnitude, t.ChargedAttackThreshold,
             t.DeliveryProjectileSpeed, t.DeliveryProjectileGravity, t.DeliveryRange,
             t.DeliveryAreaRadius, t.DeliveryHitscanRadius,
-            t.BlockReduction, t.BlockFrontArcDot, t.MovingDistanceThreshold));
+            t.BlockReduction, t.BlockFrontArcDot, t.MovingDistanceThreshold,
+            t.BindingCombatLockSeconds));
     }
 }

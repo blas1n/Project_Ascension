@@ -358,6 +358,7 @@ namespace ProjectAscension.Game
             d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold,
             d.deliveryProjectileSpeed, d.deliveryProjectileGravity, d.deliveryRange,
             d.deliveryAreaRadius, d.deliveryHitscanRadius,
-            d.blockReduction, d.blockFrontArcDot, d.movingDistanceThreshold);
+            d.blockReduction, d.blockFrontArcDot, d.movingDistanceThreshold,
+            d.bindingCombatLockSeconds);
     }
 }

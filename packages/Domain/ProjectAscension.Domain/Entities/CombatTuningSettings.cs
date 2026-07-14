@@ -55,5 +55,9 @@ namespace ProjectAscension.Domain.Entities
 
         // Discovery grammar input (ADR 0009): metres of per-frame displacement that reads as Moving.
         public float MovingDistanceThreshold { get; set; }
+
+        // Binding lock: seconds since the player's last combat activity before the discovery
+        // journal's hotkey binder opens back up (ADR: binding is knowledge, not equipment).
+        public float BindingCombatLockSeconds { get; set; }
     }
 }

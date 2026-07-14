@@ -29,6 +29,7 @@ public class CombatTuningProvider : ICombatTuningProvider
             s.SlowPerMagnitude, s.KnockbackPerMagnitude, s.ChargedAttackThreshold,
             s.DeliveryProjectileSpeed, s.DeliveryProjectileGravity, s.DeliveryRange,
             s.DeliveryAreaRadius, s.DeliveryHitscanRadius,
-            MovingDistanceThreshold: s.MovingDistanceThreshold);
+            MovingDistanceThreshold: s.MovingDistanceThreshold,
+            BindingCombatLockSeconds: s.BindingCombatLockSeconds);
     }
 }

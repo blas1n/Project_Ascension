@@ -32,11 +32,16 @@ namespace ProjectAscension.Game
             _toasts.Add(new Toast { Text = text, Until = Time.time + 4.5f });
         }
 
+        // A weapon is a physical object — it lives in your inventory until you walk it to the
+        // Equipment Station. A command is knowledge — bind it in your own journal, wherever you
+        // happen to be standing (ADR: binding is knowledge, not equipment). The key label is
+        // sourced from the binding (DiscoveryJournalHud.JournalKeyLabel → PlayerInputHandler.
+        // KeyLabel), never hardcoded, so a Korean keyboard layout can't turn "[J]" into a jamo.
         private static string Claim(ManifestationKind manifestation) => manifestation switch
         {
             ManifestationKind.Weapon => "new weapon in your inventory, equip it at the Equipment Station",
             ManifestationKind.Passive => "passive, always active",
-            _ => "new command, bind it to a hotkey at the Equipment Station",
+            _ => $"new command, bind it in your journal [{DiscoveryJournalHud.JournalKeyLabel}]",
         };
 
         private void OnGUI()

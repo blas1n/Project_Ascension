@@ -41,6 +41,9 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             BlockReduction = 0.75f,
             BlockFrontArcDot = 0.35f,
             MovingDistanceThreshold = 0.02f,
+            // 3s: long enough to cover a live exchange (monster attack cooldowns run 1-1.5s), short
+            // enough that stepping out of a fight for a breath immediately reopens the journal.
+            BindingCombatLockSeconds = 3f,
         });
     }
 }

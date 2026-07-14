@@ -29,5 +29,6 @@ namespace ProjectAscension.Contracts.Responses
         float DeliveryHitscanRadius,
         float BlockReduction,
         float BlockFrontArcDot,
-        float MovingDistanceThreshold);
+        float MovingDistanceThreshold,
+        float BindingCombatLockSeconds);
 }

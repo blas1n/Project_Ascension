@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectAscension.Combat;
 using ProjectAscension.Equipment;
-using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
 {
@@ -114,11 +112,15 @@ namespace ProjectAscension.Game
 
             // Ability bar: bind discovered commands to the Q/E/Shift/C hotkeys. Always shown, so the
             // player can see the slots even before discovering any command. Nothing auto-fills a
-            // slot — a fresh discovery waits in the journal until bound here (see class doc).
+            // slot — a fresh discovery waits in the journal until bound here (see class doc). Same
+            // combat lock as the journal's own binder (CommandBinderPicker) — a weapon rack in the
+            // city will practically never see it engaged, but it is one rule, not two.
             GUILayout.Space(4);
             GUILayout.Label("Ability slots (click one to bind a command):");
+            bool canRebind = CommandBinderPicker.CanRebindNow();
+            if (!canRebind) GUILayout.Label($"  {CommandBinderPicker.LockedReason}");
             for (int i = 0; i < session.CommandSlots.Length; i++)
-                DrawAbilitySlotButton(i, session);
+                DrawAbilitySlotButton(i, session, canRebind);
 
             GUILayout.Space(10);
             GUILayout.Label("Storage:");
@@ -154,7 +156,7 @@ namespace ProjectAscension.Game
             GUILayout.EndHorizontal();
         }
 
-        private void DrawAbilitySlotButton(int index, GameSession session)
+        private void DrawAbilitySlotButton(int index, GameSession session, bool canRebind)
         {
             var current = session.CommandSlots[index];
             var required = current != null ? CommandGate.RequiredEquipment(current) : System.Array.Empty<string>();
@@ -163,8 +165,10 @@ namespace ProjectAscension.Game
 
             GUILayout.BeginHorizontal();
             GUILayout.Label($"[{AbilitySlots.SlotLabel(index)}]", GUILayout.Width(50));
-            if (GUILayout.Button(text, GUILayout.Height(26)))
+            GUI.enabled = canRebind;
+            if (GUILayout.Button(text, GUILayout.Height(26)) && canRebind)
                 OpenCommandPicker(index);
+            GUI.enabled = true;
             GUILayout.EndHorizontal();
         }
 
@@ -235,53 +239,18 @@ namespace ProjectAscension.Game
 
         private void DrawCommandPickerEntries(GameSession session, PlayerStateService ps)
         {
-            if (GUILayout.Button("(none)", GUILayout.Height(28)))
-            {
-                session.AssignCommandSlot(_commandSlotIndex, null);
-                ClosePicker();
-                return;
-            }
-
-            var equipped = CurrentEquipmentTags(ps);
-            var assignable = AssignableCommands.For(session.DiscoveredSkills.Commands, equipped);
-            if (assignable.Count == 0)
-            {
-                GUILayout.Label("  (no commands usable with your current loadout)");
-                return;
-            }
-
-            foreach (var command in assignable)
-            {
-                int boundSlot = session.SlotOf(command);
-                string label = boundSlot >= 0 && boundSlot != _commandSlotIndex
-                    ? $"{command.Name}  (currently [{AbilitySlots.SlotLabel(boundSlot)}])"
-                    : command.Name;
-                if (!GUILayout.Button(label, GUILayout.Height(28))) continue;
-                session.AssignCommandSlot(_commandSlotIndex, command); // vacates any prior slot
-                ClosePicker();
-                return;
-            }
+            var equipped = CommandBinderPicker.CurrentEquipmentTags(ps);
+            if (!CommandBinderPicker.DrawEntries(session, equipped, _commandSlotIndex, out var selection)) return;
+            session.AssignCommandSlot(_commandSlotIndex, selection); // vacates any prior slot; null clears
+            ClosePicker();
         }
 
         private string PickerTitle() => _picker switch
         {
             Picker.WeaponLeft => "Choose left-hand weapon (RMB)",
             Picker.WeaponRight => "Choose right-hand weapon (LMB)",
-            Picker.Command => $"Bind a command to [{AbilitySlots.SlotLabel(_commandSlotIndex)}]",
+            Picker.Command => CommandBinderPicker.Title(_commandSlotIndex),
             _ => "",
         };
-
-        // The loadout the picker filters against is the SELECTION (PlayerState), not a scene
-        // Loadout lookup — SetLeft/SetRight already re-equip on the spot (see PlayerStateService),
-        // so these agree, and this reads correctly even before that component exists in-scene.
-        private static HashSet<string> CurrentEquipmentTags(PlayerStateService ps)
-        {
-            var tags = new HashSet<string>();
-            var left = EquipmentTags.For(ps.SelectedLeft);
-            var right = EquipmentTags.For(ps.SelectedRight);
-            if (left != null) tags.Add(left);
-            if (right != null) tags.Add(right);
-            return tags;
-        }
     }
 }
