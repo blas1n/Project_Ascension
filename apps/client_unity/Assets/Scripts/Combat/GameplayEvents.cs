@@ -51,9 +51,12 @@ namespace ProjectAscension.Combat
         public static event Action EquipmentChosen;
 
         // A discovery finished composing on the server and its skill loaded — carries the
-        // AI-composed NAME. The single source of a discovery's identity: the client no longer
-        // names discoveries locally (the server is authoritative — ADR 0002/0004).
-        public static event Action<string> SkillDiscovered;
+        // AI-composed NAME and how it manifests (weapon/command/passive). The single source of a
+        // discovery's identity: the client no longer names discoveries locally (the server is
+        // authoritative — ADR 0002/0004). The manifestation lets the toast (DiscoveryNotification)
+        // say WHERE to claim it — a discovery enters the inventory/journal only, never the player's
+        // hands automatically (see SkillCaster.OnSkillReady).
+        public static event Action<string, ManifestationKind> SkillDiscovered;
 
         // World facts (argument is the subject GameObject).
         public static event Action<GameObject> MonsterKilled;
@@ -81,7 +84,7 @@ namespace ProjectAscension.Combat
         public static void RaisePlayerDied() => PlayerDied?.Invoke();
         public static void RaiseEquipmentChosen() => EquipmentChosen?.Invoke();
 
-        public static void RaiseSkillDiscovered(string name) => SkillDiscovered?.Invoke(name);
+        public static void RaiseSkillDiscovered(string name, ManifestationKind manifestation) => SkillDiscovered?.Invoke(name, manifestation);
 
         public static void RaiseMonsterKilled(GameObject monster) => MonsterKilled?.Invoke(monster);
         public static void RaiseSampleCollected(GameObject sample) => SampleCollected?.Invoke(sample);

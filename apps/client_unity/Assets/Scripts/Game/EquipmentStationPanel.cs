@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using ProjectAscension.Combat;
 using ProjectAscension.Equipment;
 using ProjectAscension.GameSimulation.Combat;
@@ -13,9 +14,28 @@ namespace ProjectAscension.Game
     /// storage, and save your progress. None of that is the contract board's or an NPC's business —
     /// it is a THING in the city you walk up to and use, same as the board. Departure itself is a
     /// separate PLACE (the frontier gate, CityBlockout.Gate / DepartZone) — not a button here.
+    ///
+    /// Every discovery — weapon or command — lands here inert (SkillCaster.OnSkillReady puts a
+    /// weapon in the inventory, a command in the journal; neither auto-equips). This is the ONLY
+    /// place either becomes usable: a button per hand/hotkey opens a scrollable picker of what can
+    /// go there, you click an entry, it's bound. Commands are filtered to what's assignable with the
+    /// CURRENT loadout (ADR 0011's equipment gate, via the pure GameSimulation.Combat.
+    /// AssignableCommands) — no cyclers, so this scales past four commands.
     /// </summary>
     public sealed class EquipmentStationPanel : CityStationPanel
     {
+        private enum Picker
+        {
+            None,
+            WeaponLeft,
+            WeaponRight,
+            Command,
+        }
+
+        private Picker _picker = Picker.None;
+        private int _commandSlotIndex = -1;
+        private Vector2 _pickerScroll;
+
         private void Start()
         {
             if (CityBlockout.EquipmentInteractable != null)
@@ -23,7 +43,7 @@ namespace ProjectAscension.Game
 
             // The tutorial's "첫 장비 선택" beat fires on the ACT of choosing a hand's weapon
             // (LoadoutChanged), never on merely opening this panel. LoadoutChanged is raised only
-            // by SetLeft/SetRight — the cyclers below — so a returning player's constructor-time
+            // by SetLeft/SetRight — the pickers below — so a returning player's constructor-time
             // default loadout (which never calls them) can't auto-complete the step.
             var session = GameSession.Instance;
             if (session != null)
@@ -49,6 +69,21 @@ namespace ProjectAscension.Game
                 GameplayEvents.RaiseEquipmentChosen();
         }
 
+        // A picker is a mode WITHIN this panel, not a separate one — Esc backs out of it first
+        // (matching every other "step out" in this UI), and only a second Esc closes the station.
+        protected override void Update()
+        {
+            if (IsOpen && _picker != Picker.None
+                && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                ClosePicker();
+                return;
+            }
+            base.Update();
+        }
+
+        protected override void OnOpened() => ClosePicker(); // never reopen mid-pick from a stale state
+
         protected override void DrawPanel()
         {
             var session = GameSession.Instance;
@@ -57,6 +92,13 @@ namespace ProjectAscension.Game
                 GUI.Label(new Rect(20, 20, 500, 20), "No GameSession — start play from the Bootstrap scene.");
                 return;
             }
+
+            if (_picker != Picker.None)
+            {
+                DrawPicker(session);
+                return;
+            }
+
             var ps = session.PlayerState;
 
             var o = ModalOrigin(420f, 560f);
@@ -64,23 +106,19 @@ namespace ProjectAscension.Game
             GUILayout.Label("EQUIPMENT STATION");
             GUILayout.Space(6);
 
-            GUILayout.Label("Loadout (chosen from inventory):");
+            GUILayout.Label("Loadout (click a hand to choose from owned weapons):");
             // Left hand fires on RMB, right hand on LMB (PlayerCombat) — label it so the combo
             // guide's "LMB/RMB" is unambiguous.
-            DrawWeaponSelector("Left (RMB) ", ps.SelectedLeft, ps.SetLeft, ps.OwnedWeapons);
-            DrawWeaponSelector("Right (LMB)", ps.SelectedRight, ps.SetRight, ps.OwnedWeapons);
+            DrawWeaponSlotButton("Left (RMB) ", ps.SelectedLeft, Picker.WeaponLeft);
+            DrawWeaponSlotButton("Right (LMB)", ps.SelectedRight, Picker.WeaponRight);
 
             // Ability bar: bind discovered commands to the Q/E/Shift/C hotkeys. Always shown, so the
-            // player can see the slots even before discovering any command.
-            var commands = session.DiscoveredSkills.Commands;
-            session.EnsureDefaultCommandSlots();
+            // player can see the slots even before discovering any command. Nothing auto-fills a
+            // slot — a fresh discovery waits in the journal until bound here (see class doc).
             GUILayout.Space(4);
-            GUILayout.Label("Ability slots (hotkeys):");
-            if (commands.Count == 0)
-                GUILayout.Label("  (none yet — discover a non-magic combat skill)");
-            else
-                for (int i = 0; i < session.CommandSlots.Length; i++)
-                    DrawAbilitySlot(i, session, commands);
+            GUILayout.Label("Ability slots (click one to bind a command):");
+            for (int i = 0; i < session.CommandSlots.Length; i++)
+                DrawAbilitySlotButton(i, session);
 
             GUILayout.Space(10);
             GUILayout.Label("Storage:");
@@ -107,47 +145,143 @@ namespace ProjectAscension.Game
             GUILayout.EndArea();
         }
 
-        private static void DrawWeaponSelector(string label, WeaponData current,
-            System.Action<WeaponData> set, IReadOnlyList<WeaponData> owned)
+        private void DrawWeaponSlotButton(string label, WeaponData current, Picker which)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{label}: {(current != null ? current.DisplayName : "-")}", GUILayout.Width(170));
-            if (GUILayout.Button("<", GUILayout.Width(30))) set(Cycle(owned, current, -1));
-            if (GUILayout.Button(">", GUILayout.Width(30))) set(Cycle(owned, current, +1));
+            GUILayout.Label(label, GUILayout.Width(90));
+            if (GUILayout.Button(current != null ? current.DisplayName : "(empty)", GUILayout.Height(26)))
+                OpenPicker(which);
             GUILayout.EndHorizontal();
         }
 
-        private static WeaponData Cycle(IReadOnlyList<WeaponData> owned, WeaponData current, int dir)
-        {
-            if (owned.Count == 0) return current;
-            int index = 0;
-            for (int i = 0; i < owned.Count; i++)
-                if (owned[i] == current) { index = i; break; }
-            index = (index + dir + owned.Count) % owned.Count;
-            return owned[index];
-        }
-
-        private static void DrawAbilitySlot(int index, GameSession session, IReadOnlyList<DiscoveredSkill> commands)
+        private void DrawAbilitySlotButton(int index, GameSession session)
         {
             var current = session.CommandSlots[index];
             var required = current != null ? CommandGate.RequiredEquipment(current) : System.Array.Empty<string>();
             string req = required.Count > 0 ? "  needs " + string.Join("/", required) : "";
+            string text = $"{(current != null ? current.Name : "(empty)")}{req}";
+
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"[{AbilitySlots.SlotLabel(index)}] {(current != null ? current.Name : "(none)")}{req}", GUILayout.Width(260));
-            if (GUILayout.Button("<", GUILayout.Width(30))) session.AssignCommandSlot(index, CycleCommand(commands, current, -1));
-            if (GUILayout.Button(">", GUILayout.Width(30))) session.AssignCommandSlot(index, CycleCommand(commands, current, +1));
+            GUILayout.Label($"[{AbilitySlots.SlotLabel(index)}]", GUILayout.Width(50));
+            if (GUILayout.Button(text, GUILayout.Height(26)))
+                OpenCommandPicker(index);
             GUILayout.EndHorizontal();
         }
 
-        // Cycle through the commands plus a "(none)" entry at position 0.
-        private static DiscoveredSkill CycleCommand(IReadOnlyList<DiscoveredSkill> commands, DiscoveredSkill current, int dir)
+        private void OpenPicker(Picker which)
         {
-            int n = commands.Count + 1;
-            int idx = 0; // 0 = none
-            for (int i = 0; i < commands.Count; i++)
-                if (ReferenceEquals(commands[i], current)) { idx = i + 1; break; }
-            idx = (idx + dir + n) % n;
-            return idx == 0 ? null : commands[idx - 1];
+            _picker = which;
+            _commandSlotIndex = -1;
+            _pickerScroll = Vector2.zero;
+        }
+
+        private void OpenCommandPicker(int slotIndex)
+        {
+            _picker = Picker.Command;
+            _commandSlotIndex = slotIndex;
+            _pickerScroll = Vector2.zero;
+        }
+
+        private void ClosePicker()
+        {
+            _picker = Picker.None;
+            _commandSlotIndex = -1;
+        }
+
+        // The picker replaces the whole panel while open (simplest correct IMGUI layout for a list
+        // that can scroll past the screen) — a scrollable list of entries, each one a click-to-bind
+        // button, plus Cancel. Weapon hands list every owned weapon; hotkey slots list only the
+        // commands ASSIGNABLE with the current loadout (AssignableCommands, ADR 0011) — the owner's
+        // ask was "what can I bind with what I'm holding right now", not a longer list with reasons.
+        private void DrawPicker(GameSession session)
+        {
+            var ps = session.PlayerState;
+            var o = ModalOrigin(360f, 440f);
+            GUILayout.BeginArea(new Rect(o.x, o.y, 360f, 440f), GUI.skin.box);
+            GUILayout.Label(PickerTitle());
+            GUILayout.Space(6);
+
+            _pickerScroll = GUILayout.BeginScrollView(_pickerScroll, GUILayout.Height(340f));
+
+            if (_picker == Picker.Command)
+                DrawCommandPickerEntries(session, ps);
+            else
+                DrawWeaponPickerEntries(ps);
+
+            GUILayout.EndScrollView();
+
+            GUILayout.Space(6);
+            if (GUILayout.Button("Cancel", GUILayout.Height(28)))
+                ClosePicker();
+
+            GUILayout.EndArea();
+        }
+
+        private void DrawWeaponPickerEntries(PlayerStateService ps)
+        {
+            if (ps.OwnedWeapons.Count == 0)
+            {
+                GUILayout.Label("  (no weapons owned)");
+                return;
+            }
+            foreach (var w in ps.OwnedWeapons)
+            {
+                if (!GUILayout.Button(w.DisplayName, GUILayout.Height(28))) continue;
+                if (_picker == Picker.WeaponLeft) ps.SetLeft(w); else ps.SetRight(w);
+                ClosePicker();
+                return;
+            }
+        }
+
+        private void DrawCommandPickerEntries(GameSession session, PlayerStateService ps)
+        {
+            if (GUILayout.Button("(none)", GUILayout.Height(28)))
+            {
+                session.AssignCommandSlot(_commandSlotIndex, null);
+                ClosePicker();
+                return;
+            }
+
+            var equipped = CurrentEquipmentTags(ps);
+            var assignable = AssignableCommands.For(session.DiscoveredSkills.Commands, equipped);
+            if (assignable.Count == 0)
+            {
+                GUILayout.Label("  (no commands usable with your current loadout)");
+                return;
+            }
+
+            foreach (var command in assignable)
+            {
+                int boundSlot = session.SlotOf(command);
+                string label = boundSlot >= 0 && boundSlot != _commandSlotIndex
+                    ? $"{command.Name}  (currently [{AbilitySlots.SlotLabel(boundSlot)}])"
+                    : command.Name;
+                if (!GUILayout.Button(label, GUILayout.Height(28))) continue;
+                session.AssignCommandSlot(_commandSlotIndex, command); // vacates any prior slot
+                ClosePicker();
+                return;
+            }
+        }
+
+        private string PickerTitle() => _picker switch
+        {
+            Picker.WeaponLeft => "Choose left-hand weapon (RMB)",
+            Picker.WeaponRight => "Choose right-hand weapon (LMB)",
+            Picker.Command => $"Bind a command to [{AbilitySlots.SlotLabel(_commandSlotIndex)}]",
+            _ => "",
+        };
+
+        // The loadout the picker filters against is the SELECTION (PlayerState), not a scene
+        // Loadout lookup — SetLeft/SetRight already re-equip on the spot (see PlayerStateService),
+        // so these agree, and this reads correctly even before that component exists in-scene.
+        private static HashSet<string> CurrentEquipmentTags(PlayerStateService ps)
+        {
+            var tags = new HashSet<string>();
+            var left = EquipmentTags.For(ps.SelectedLeft);
+            var right = EquipmentTags.For(ps.SelectedRight);
+            if (left != null) tags.Add(left);
+            if (right != null) tags.Add(right);
+            return tags;
         }
     }
 }
