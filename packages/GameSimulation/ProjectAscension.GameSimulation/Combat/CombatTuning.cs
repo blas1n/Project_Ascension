@@ -46,7 +46,10 @@ namespace ProjectAscension.GameSimulation.Combat
         float BlockReduction = 0.75f,   // fraction of a blocked blow absorbed
         float BlockFrontArcDot = 0.35f, // dot(forward, toAttacker) needed to count as "in front"
                                         // Discovery grammar input (ADR 0009).
-        float MovingDistanceThreshold = 0.02f) // metres of per-frame displacement that reads as the Moving act quality
+        float MovingDistanceThreshold = 0.02f, // metres of per-frame displacement that reads as the Moving act quality
+                                               // Binding (ADR: binding is knowledge, not equipment — the journal binds
+                                               // anywhere, but not mid-fight; see BindingRules).
+        float BindingCombatLockSeconds = 3f)   // seconds since the player's last combat activity before rebinding opens back up
     {
         /// <summary>A baseline used by tests and as a safe fallback when the DB has no
         /// combat-tuning row yet. Mirrors the seeded defaults.</summary>
@@ -73,6 +76,7 @@ namespace ProjectAscension.GameSimulation.Combat
             DeliveryRange: 60f,
             DeliveryAreaRadius: 4f,
             DeliveryHitscanRadius: 1.5f,
-            MovingDistanceThreshold: 0.02f);
+            MovingDistanceThreshold: 0.02f,
+            BindingCombatLockSeconds: 3f);
     }
 }

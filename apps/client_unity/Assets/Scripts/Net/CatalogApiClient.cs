@@ -39,6 +39,7 @@ namespace ProjectAscension.Net
         public float blockReduction;
         public float blockFrontArcDot;
         public float movingDistanceThreshold;
+        public float bindingCombatLockSeconds;
     }
 
     [Serializable]

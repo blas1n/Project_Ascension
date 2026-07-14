@@ -28,11 +28,12 @@ namespace ProjectAscension.Game
         public static readonly Key[] SlotKeys = { Key.Q, Key.E, Key.LeftShift, Key.C };
         public const int SlotCount = 4; // = SlotKeys.Length
 
-        /// <summary>The hotkey label for a slot index, or null if out of range.</summary>
+        /// <summary>The hotkey label for a slot index, or null if out of range. Sourced from
+        /// PlayerInputHandler.KeyLabel (position-based — never the OS layout's display string, so
+        /// this can't turn into a jamo on a Korean keyboard) rather than a hardcoded letter, so
+        /// every hotkey prompt in the game agrees.</summary>
         public static string SlotLabel(int index)
-            => index >= 0 && index < SlotKeys.Length ? Label(SlotKeys[index]) : null;
-
-        private static string Label(Key key) => key == Key.LeftShift ? "Shift" : key.ToString();
+            => index >= 0 && index < SlotKeys.Length ? PlayerInputHandler.KeyLabel(SlotKeys[index]) : null;
 
         private SkillCaster _caster;
         private Loadout _loadout;

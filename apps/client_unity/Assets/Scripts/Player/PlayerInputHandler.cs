@@ -75,12 +75,34 @@ namespace ProjectAscension.Player
 
                 var key = path.Substring(keyboard.Length);
                 if (key.Length == 0) continue;
-                if (key.Length == 1) return key.ToUpperInvariant();          // "f" → "F"
-                if (key.StartsWith("left", StringComparison.Ordinal)) key = key.Substring(4);  // "leftShift" → "Shift"
-                if (key.StartsWith("right", StringComparison.Ordinal)) key = key.Substring(5);
-                return char.ToUpperInvariant(key[0]) + key.Substring(1);
+                return KeyLabel(key);
             }
             return fallback;
+        }
+
+        /// <summary>
+        /// The label for a raw <see cref="Key"/> — e.g. <see cref="Key.J"/> → "J", <see
+        /// cref="Key.LeftShift"/> → "Shift". Same position-based rationale as the binding-path
+        /// overload above (never GetBindingDisplayString(), which asks the OS layout what
+        /// character a key produces and turned a Korean keyboard's F into a jamo): a raw Key is
+        /// already a physical position, not a character, so this needs no binding lookup at all.
+        /// Shared by every hotkey label the game shows — AbilitySlots' Q/E/Shift/C ability slots
+        /// and the discovery journal's [J] — so none of them can drift into hardcoding a letter a
+        /// rebind (or a future non-QWERTY default) would silently make wrong.
+        /// </summary>
+        public static string KeyLabel(Key key) => key switch
+        {
+            Key.LeftShift => "Shift",
+            Key.RightShift => "Shift",
+            _ => KeyLabel(key.ToString()),
+        };
+
+        private static string KeyLabel(string key)
+        {
+            if (key.Length == 1) return key.ToUpperInvariant();          // "f" → "F"
+            if (key.StartsWith("left", StringComparison.Ordinal)) key = key.Substring(4);  // "leftShift" → "Shift"
+            if (key.StartsWith("right", StringComparison.Ordinal)) key = key.Substring(5);
+            return char.ToUpperInvariant(key[0]) + key.Substring(1);
         }
 
         public PlayerInputHandler(InputActionAsset asset)
