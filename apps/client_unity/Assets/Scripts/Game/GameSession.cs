@@ -319,8 +319,7 @@ namespace ProjectAscension.Game
             {
                 if (d != null)
                     GameSimulation.Player.PlayerStatsCatalog.Set(new GameSimulation.Player.PlayerStats(
-                        d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity,
-                        d.maxFocus, d.focusRegenPerSecond));
+                        d.maxHealth, d.moveSpeed, d.jumpVelocity, d.gravity));
             });
             yield return api.GetShop(items =>
             {
@@ -354,7 +353,7 @@ namespace ProjectAscension.Game
             d.projectileDamage, d.beamDamage, d.areaDamage, d.dotDamagePerTick, d.spreadFalloff,
             d.baseDotTicks, d.shieldPerMagnitude, d.dashPerMagnitude, d.leechFractionPerMagnitude,
             d.controlDurationPerMagnitude, d.passiveShieldReduction, d.passiveBarrierReduction,
-            d.passiveLeech, d.focusCostPerPoint,
+            d.passiveLeech, d.cooldownSecondsPerPoint, d.cooldownFloorSeconds, d.cooldownCeilingSeconds,
             d.slowPerMagnitude, d.knockbackPerMagnitude, d.chargedAttackThreshold,
             d.deliveryProjectileSpeed, d.deliveryProjectileGravity, d.deliveryRange,
             d.deliveryAreaRadius, d.deliveryHitscanRadius,

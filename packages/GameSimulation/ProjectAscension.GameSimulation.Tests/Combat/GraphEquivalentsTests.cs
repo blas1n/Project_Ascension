@@ -7,8 +7,8 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
 {
     /// <summary>
     /// The graph analogues of the primitive-derived subsystems (ADR 0007 Phase 4c) — passive
-    /// defense, focus cost, knowledge value, VFX accents. They must match the primitive path's
-    /// behaviour so switching consumers to graph-first is non-regressive.
+    /// defense, per-skill cooldown, knowledge value, VFX accents. They must match the primitive
+    /// path's behaviour so switching consumers to graph-first is non-regressive.
     /// </summary>
     public class GraphEquivalentsTests
     {
@@ -47,11 +47,14 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
-        public void FocusCost_FromGraph_IsPowerPointsTimesRate()
+        public void SkillCooldown_FromGraph_IsPowerPointsTimesRate_WhenWithinBounds()
         {
+            // Beam tier2 (3) + Damage tier1 (2) = 5 points; a mid-rate tuning keeps 5 × rate inside
+            // [Floor, Ceiling] so the raw scaling is visible (not clamped).
             var graph = Cast(new Emit(EmitDelivery.Beam, 2), new Damage(1));
             int points = EffectGraphQuery.PowerPoints(graph);
-            Assert.Equal(points * CombatTuning.Default.FocusCostPerPoint, FocusCost.Of(graph), precision: 3);
+            var tuning = CombatTuning.Default with { CooldownSecondsPerPoint = 1f };
+            Assert.Equal(points * tuning.CooldownSecondsPerPoint, SkillCooldown.Of(graph, tuning), precision: 3);
         }
 
         [Fact]

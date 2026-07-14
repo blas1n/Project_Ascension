@@ -13,7 +13,7 @@ public class PlayerController : ControllerBase
     public PlayerController(IPlayerDefinitionRepository repo) => _repo = repo;
 
     /// <summary>The player's balance stats (read-only). The client fetches these and
-    /// applies them to movement / health / focus, so a balance edit retunes the player
+    /// applies them to movement / health, so a balance edit retunes the player
     /// with no client rebuild.</summary>
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -21,7 +21,6 @@ public class PlayerController : ControllerBase
         var p = await _repo.GetAsync(ct);
         if (p is null) return NotFound();
         return Ok(new PlayerDefinitionResponse(
-            p.MaxHealth, p.MoveSpeed, p.JumpVelocity, p.Gravity,
-            p.MaxFocus, p.FocusRegenPerSecond));
+            p.MaxHealth, p.MoveSpeed, p.JumpVelocity, p.Gravity));
     }
 }

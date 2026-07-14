@@ -27,7 +27,9 @@ namespace ProjectAscension.Net
         public float passiveShieldReduction;
         public float passiveBarrierReduction;
         public float passiveLeech;
-        public float focusCostPerPoint;
+        public float cooldownSecondsPerPoint;
+        public float cooldownFloorSeconds;
+        public float cooldownCeilingSeconds;
         public float slowPerMagnitude;
         public float knockbackPerMagnitude;
         public float chargedAttackThreshold;
@@ -305,8 +307,6 @@ namespace ProjectAscension.Net
         public float moveSpeed;
         public float jumpVelocity;
         public float gravity;
-        public float maxFocus;
-        public float focusRegenPerSecond;
     }
 
     /// <summary>Thin UnityWebRequest client for the read-only server catalog. Coroutine-

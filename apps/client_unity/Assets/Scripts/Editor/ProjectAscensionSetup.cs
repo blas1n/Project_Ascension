@@ -357,9 +357,6 @@ namespace ProjectAscension.Editor
             var acts = player.AddComponent<ActRecorder>();
             SetObjectField(acts, "loadout", loadout);
 
-            // Focus (the resource discovered skills spend).
-            player.AddComponent<FocusPool>();
-
             // Server discovery → skill: SkillCaster fetches a fired discovery's composed
             // skill and mints/equips it; DiscoveryReporter posts behavior to the trigger;
             // the binder connects the two. Without this the discovery→weapon loop is dead.

@@ -120,6 +120,9 @@ namespace ProjectAscension.Game
             GUI.color = prev;
         }
 
+        // NOTE: AbilityBarHud's ability-slot row sits directly ABOVE this bar (bottom-centre,
+        // centered on the same axis) — it mirrors these h/pad constants to stack cleanly. Change
+        // either in tandem.
         private void DrawHealthBar()
         {
             const float w = 320f, h = 18f, pad = 24f;

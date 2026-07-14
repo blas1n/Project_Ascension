@@ -26,7 +26,7 @@ namespace ProjectAscension.GameSimulation.World
     /// Picks which interactable a press of [F] should hit, out of every candidate in the world this
     /// frame. Never opens or triggers anything itself — the shell reads the winning Id back and decides
     /// what that means (open a panel, load a scene, ...). Kept pure so "which thing wins when several
-    /// are in range" is verified without Unity, the same way <c>MonsterAi</c>/<c>FocusRules</c> are.
+    /// are in range" is verified without Unity, the same way <c>MonsterAi</c>/<c>WeaponFireRules</c> are.
     /// </summary>
     public static class InteractionRules
     {
