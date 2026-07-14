@@ -106,25 +106,29 @@ namespace ProjectAscension.Equipment
 
         /// <summary>Primary input pressed. An instant weapon fires now (returns true);
         /// a charge weapon (e.g. a bow) starts charging and fires on release. Virtual because not
-        /// every off-hand piece attacks — a shield uses the HELD input to raise a block instead.</summary>
-        public virtual bool PrimaryDown(AttackContext ctx)
+        /// every off-hand piece attacks — a shield uses the HELD input to raise a block instead.
+        /// <paramref name="otherHandReloading"/> is the OTHER equipped weapon's reload state — a
+        /// weapon that never fires (a shield) can ignore it, but anything that reaches
+        /// <see cref="TryFire"/> is gated by it (ReloadRules.CanAttack): reloading is a
+        /// whole-loadout commitment, not just the reloading weapon's.</summary>
+        public virtual bool PrimaryDown(AttackContext ctx, bool otherHandReloading)
         {
             if (_data == null) return false;
             if (_data.IsCharged) { _chargeStart = Time.time; return false; }
-            return TryFire(ctx, 0f);
+            return TryFire(ctx, 0f, otherHandReloading);
         }
 
         /// <summary>Primary input released. A charge weapon fires scaled by how long it
         /// was held; an instant weapon does nothing. Returns true if it fired.</summary>
-        public virtual bool PrimaryUp(AttackContext ctx)
+        public virtual bool PrimaryUp(AttackContext ctx, bool otherHandReloading)
         {
             if (_data == null || !_data.IsCharged || _chargeStart < 0f) return false;
             float charge = WeaponFireRules.ChargeFraction(_chargeStart, Time.time, _data.ChargeTime);
             _chargeStart = -1f;
-            return TryFire(ctx, charge);
+            return TryFire(ctx, charge, otherHandReloading);
         }
 
-        private bool TryFire(AttackContext ctx, float charge)
+        private bool TryFire(AttackContext ctx, float charge, bool otherHandReloading)
         {
             // Cooldown gating is a GameSimulation rule (headless-tested), not enforced here.
             if (!WeaponFireRules.CanFire(Time.time, _nextReadyTime)) return false;
@@ -135,6 +139,9 @@ namespace ProjectAscension.Equipment
                 BeginReload();
                 return false;
             }
+            // The other hand reloading blocks THIS shot too (own-reload is already covered above) —
+            // a real commitment, not a per-weapon inconvenience.
+            if (!ReloadRules.CanAttack(_isReloading, otherHandReloading)) return false;
             _nextReadyTime = WeaponFireRules.NextReady(Time.time, _data.Cooldown);
             LastCharge = charge;
             if (_data.HasSpread) _spread = SpreadRules.Bloom(_spread, _data.SpreadPerShot); // bloom on each shot

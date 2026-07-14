@@ -40,6 +40,12 @@ public class WeaponDefinitionConfiguration : IEntityTypeConfiguration<WeaponDefi
                 Cooldown = 0.6f,
                 ChargeTime = 0.8f,
                 MaxChargeMultiplier = 2.5f,
+                // A quiver-load, not a pistol clip: fewer arrows than the pistol's magazine (the
+                // bow is already slow per-shot, so 8 is a full quiver's worth of engagements) and a
+                // slower restock (2.4s — gathering/renocking a fresh set of arrows is a more
+                // deliberate act than slapping in a magazine).
+                MagazineSize = 8,
+                ReloadTime = 2.4f,
             },
             new WeaponDefinition
             {
@@ -72,6 +78,12 @@ public class WeaponDefinitionConfiguration : IEntityTypeConfiguration<WeaponDefi
                 ProjectileSpeed = 18f,
                 Cooldown = 0.8f,
                 MaxChargeMultiplier = 1f,
+                // Charge cells, not a pistol clip: a smaller "magazine" than either firearm (5 bolts)
+                // reflecting the catalyst's already-heavier per-shot cost, and the longest reload of
+                // any weapon (2.8s) — recharging arcane cells is a deliberate act of channeling, not
+                // a quick reload drill.
+                MagazineSize = 5,
+                ReloadTime = 2.8f,
             },
             // A shield is not a weapon: it deals nothing and fires nothing. Held in the off hand, it
             // BLOCKS while the hand is held down (BlockRules) — an active decision, not a passive stat.

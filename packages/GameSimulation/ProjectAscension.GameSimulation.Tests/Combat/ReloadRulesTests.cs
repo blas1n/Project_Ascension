@@ -60,5 +60,20 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         [Fact]
         public void ReloadFraction_GuardsAgainstZeroReloadTime()
             => Assert.Equal(1f, ReloadRules.ReloadFraction(isReloading: true, reloadStart: 0f, time: 0.5f, reloadTime: 0f));
+
+        [Fact]
+        public void CanAttack_TrueOnlyWhenNeitherHandIsReloading()
+        {
+            Assert.True(ReloadRules.CanAttack(handAReloading: false, handBReloading: false));
+            Assert.False(ReloadRules.CanAttack(handAReloading: true, handBReloading: false)); // own hand
+            Assert.False(ReloadRules.CanAttack(handAReloading: false, handBReloading: true));  // other hand
+            Assert.False(ReloadRules.CanAttack(handAReloading: true, handBReloading: true));   // both
+        }
+
+        [Fact]
+        public void CanAttack_IsSymmetric()
+            => Assert.Equal(
+                ReloadRules.CanAttack(handAReloading: true, handBReloading: false),
+                ReloadRules.CanAttack(handAReloading: false, handBReloading: true));
     }
 }

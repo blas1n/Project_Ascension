@@ -66,22 +66,27 @@ namespace ProjectAscension.Player
         private void OnLeftClick()
         {
             GameplayEvents.RaiseLeftClicked();
-            FireDown(loadout != null ? loadout.RightSlot : null);
+            FireDown(loadout?.RightSlot, IsReloading(loadout?.LeftSlot));
         }
 
-        private void OnLeftRelease() => FireUp(loadout != null ? loadout.RightSlot : null);
+        private void OnLeftRelease() => FireUp(loadout?.RightSlot, IsReloading(loadout?.LeftSlot));
 
         private void OnRightClick()
         {
             GameplayEvents.RaiseRightClicked();
-            FireDown(loadout != null ? loadout.LeftSlot : null);
+            FireDown(loadout?.LeftSlot, IsReloading(loadout?.RightSlot));
         }
 
-        private void OnRightRelease() => FireUp(loadout != null ? loadout.LeftSlot : null);
+        private void OnRightRelease() => FireUp(loadout?.LeftSlot, IsReloading(loadout?.RightSlot));
 
-        private void FireDown(EquipmentSlot slot)
+        // Whether the OTHER hand's weapon is mid-reload — the fact PrimaryDown/Up thread into
+        // TryFire (ReloadRules.CanAttack) so reloading locks both hands' attacks, not just the
+        // reloading weapon's. A slot with no weapon (or one with no magazine) is never reloading.
+        private static bool IsReloading(EquipmentSlot slot) => (slot?.Current as WeaponBase)?.IsReloading ?? false;
+
+        private void FireDown(EquipmentSlot slot, bool otherHandReloading)
         {
-            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryDown(ctx)) return;
+            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryDown(ctx, otherHandReloading)) return;
             Announce(weapon);
         }
 
@@ -96,9 +101,9 @@ namespace ProjectAscension.Player
             GameplayEvents.RaiseWeaponUsed(EquipmentTags.For(weapon.Data));
         }
 
-        private void FireUp(EquipmentSlot slot)
+        private void FireUp(EquipmentSlot slot, bool otherHandReloading)
         {
-            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx)) return;
+            if (!TryWeapon(slot, out var weapon, out var ctx) || !weapon.PrimaryUp(ctx, otherHandReloading)) return;
             Announce(weapon);
         }
 

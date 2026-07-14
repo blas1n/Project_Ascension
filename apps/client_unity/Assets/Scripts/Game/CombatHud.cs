@@ -143,24 +143,22 @@ namespace ProjectAscension.Game
         // Ammo readout, BOTTOM-RIGHT (the conventional FPS position) — clear of the health bar
         // (bottom-center), the contract HUD/focus/gold (top-left), and SkillGuideHud (top-right;
         // see its own comment about this hand-coordinated layout). The player has TWO hands and
-        // BOTH can hold a firearm (e.g. dual pistols), so both magazines show when both are
-        // present, and NEITHER draws when neither hand has one (sword/bow-only/catalyst/shield).
-        // Reloading shows progress instead of a count; empty and idle hints the reload key rather
-        // than leaving the player clicking a dead trigger unexplained.
+        // BOTH can hold a weapon (e.g. dual pistols), so both rows show whenever a hand holds
+        // something — a magazine weapon draws its count/reload, a magazine-less one (sword,
+        // shield) draws ∞ so the player can see at a glance it never runs dry. NEITHER draws only
+        // when neither hand has a weapon equipped at all.
         private void DrawMagazine()
         {
             if (_loadout == null) return;
             var right = _loadout.RightSlot?.Current as WeaponBase;   // LMB — primary fire
             var left = _loadout.LeftSlot?.Current as WeaponBase;     // RMB
-            bool rightHas = right != null && right.HasMagazine;
-            bool leftHas = left != null && left.HasMagazine;
-            if (!rightHas && !leftHas) return;
+            if (right == null && left == null) return;
 
             // LMB sits closest to the corner (primary fire, the conventional single-readout spot);
-            // RMB stacks above it only when the other hand also holds a magazine weapon.
+            // RMB stacks above it only when the other hand also holds a weapon.
             float y = Screen.height - MagazinePad;
-            if (rightHas) y = DrawMagazineRow(y, "LMB", right);
-            if (leftHas) DrawMagazineRow(y, "RMB", left);
+            if (right != null) y = DrawMagazineRow(y, "LMB", right);
+            if (left != null) DrawMagazineRow(y, "RMB", left);
         }
 
         private const float MagazinePad = 24f, MagazineWidth = 170f, MagazineRowHeight = 20f,
@@ -174,6 +172,16 @@ namespace ProjectAscension.Game
             float rowY = bottom - MagazineRowHeight;
             var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
             var prev = GUI.color;
+
+            if (!weapon.HasMagazine)
+            {
+                // Never runs dry — the point is legibility (you can SEE this hand never needs a
+                // reload), not a stat, so it's dimmer than a live ammo count.
+                GUI.color = new Color(1f, 1f, 1f, 0.55f);
+                GUI.Label(new Rect(x, rowY, MagazineWidth, MagazineRowHeight), $"{label}  ∞", style);
+                GUI.color = prev;
+                return rowY - MagazineGap;
+            }
 
             if (weapon.IsReloading)
             {

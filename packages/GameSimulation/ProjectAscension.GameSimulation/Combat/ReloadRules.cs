@@ -25,6 +25,15 @@ namespace ProjectAscension.GameSimulation.Combat
         public static bool CanBeginReload(int magazineSize, int loaded, bool isReloading)
             => magazineSize > 0 && !isReloading && loaded < magazineSize;
 
+        /// <summary>Loadout-level gate: whether an ATTACK may fire right now, given both hands'
+        /// reload state. Reloading is a commitment that costs the whole loadout, not just the
+        /// reloading weapon — while either hand is mid-reload, neither hand may attack. Symmetric
+        /// (the two parameters are interchangeable), so a caller passes "this hand" and "the other
+        /// hand" in either order. Blocking is not an attack (a shield's raise/lower never routes
+        /// through this — see ShieldWeapon), so it is unaffected by this gate.</summary>
+        public static bool CanAttack(bool handAReloading, bool handBReloading)
+            => !handAReloading && !handBReloading;
+
         /// <summary>A round leaving the chamber costs one from the magazine (never below 0).</summary>
         public static int AfterShot(int loaded) => loaded > 0 ? loaded - 1 : 0;
 

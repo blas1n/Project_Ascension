@@ -17,14 +17,17 @@ namespace ProjectAscension.Equipment
         public bool IsBlocking { get; private set; }
 
         // Returning false is deliberate: raising a shield is not an attack, so it must not announce one
-        // (no Attacked fact → no attack-driven discovery signal, no swing).
-        public override bool PrimaryDown(AttackContext ctx)
+        // (no Attacked fact → no attack-driven discovery signal, no swing). For the same reason a
+        // shield ignores otherHandReloading entirely: the both-hands reload lock (ReloadRules.CanAttack)
+        // only ever gates an actual attack (WeaponBase.TryFire), which this never calls — blocking still
+        // works while the other hand reloads.
+        public override bool PrimaryDown(AttackContext ctx, bool otherHandReloading)
         {
             IsBlocking = true;
             return false;
         }
 
-        public override bool PrimaryUp(AttackContext ctx)
+        public override bool PrimaryUp(AttackContext ctx, bool otherHandReloading)
         {
             IsBlocking = false;
             return false;
