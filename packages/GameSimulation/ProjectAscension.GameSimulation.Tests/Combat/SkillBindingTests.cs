@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using ProjectAscension.GameSimulation.Combat;
 using Xunit;
 
@@ -74,6 +76,63 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
             // Token-boundary matching: a behaviour that merely contains the letters must not implicate a
             // weapon that never took part.
             Assert.Empty(SkillBinding.RequiredEquipment(new[] { "Chain:meleeless", "Use:firearmish" }));
+        }
+
+        // --- BoundInstruments: the equipment GATE, not the ladder key --------------------------------
+        //
+        // Reproduces the live playtest bug ("장착 선택할 때 현재 발동 가능한거만 보여줘야 해. 지금은 전부
+        // 보여주는 듯" — the hotkey binder showed commands regardless of what was equipped). Pulled
+        // straight from the project's dev DB: "Converging Leap" (Ready, Command manifestation) had
+        // BehaviorsJson exactly like the first case below — made by fusing a forged weapon
+        // ("spell:aerial-synthesis") with jump. RequiredEquipment (the ladder key's vocabulary) is
+        // EMPTY for it by design (ADR 0011 — a forged weapon's own tag must not become a ladder key,
+        // or a player could farm a fresh easy ladder per discovery), so anything gated only by
+        // RequiredEquipment reads this as a body skill and shows it for every loadout. But a weapon
+        // DID take part — a forged one — so BoundInstruments (what the picker/CommandGate must use)
+        // has to say so.
+
+        [Fact]
+        public void ATechniqueMadeThroughAForgedWeapon_RequiresThatWeaponEquipped()
+        {
+            // The real shape of "Converging Leap" in the dev DB (trimmed to the fields that matter).
+            var behaviours = new[]
+            {
+                "Jump", "Use:jump", "While:jump@airborne",
+                "RangedAttack", "Use:spell:aerial-synthesis", "While:spell:aerial-synthesis@airborne",
+                "Seq:jump>spell:aerial-synthesis", "Seq:spell:aerial-synthesis>jump",
+                "Fuse:jump>spell:aerial-synthesis", "Fuse:spell:aerial-synthesis>jump",
+                "While:spell:aerial-synthesis@moving",
+            };
+
+            // The LADDER key must still see nothing bindable here (ADR 0011's anti-farming rule) —
+            // unchanged from before this fix.
+            Assert.Empty(SkillBinding.RequiredEquipment(behaviours));
+
+            // But the USE GATE must see the forged weapon that actually took part — this is the fix.
+            Assert.Equal(new[] { "spell:aerial-synthesis" }, SkillBinding.BoundInstruments(behaviours));
+            Assert.False(SkillBinding.Usable(behaviours, new HashSet<string>())); // nothing equipped
+            Assert.False(SkillBinding.Usable(behaviours, new HashSet<string> { "firearm" })); // wrong weapon
+            Assert.True(SkillBinding.Usable(behaviours, new HashSet<string> { "spell:aerial-synthesis" }));
+        }
+
+        [Fact]
+        public void AForgedWeaponFusedWithABaseCategory_BindsBoth()
+        {
+            var behaviours = new[] { "Use:firearm", "Fuse:spell:emberbrand>firearm", "Jump" };
+
+            Assert.Equal(
+                new HashSet<string> { "firearm", "spell:emberbrand" },
+                SkillBinding.BoundInstruments(behaviours).ToHashSet());
+            Assert.False(SkillBinding.Usable(behaviours, new HashSet<string> { "firearm" })); // half missing
+            Assert.True(SkillBinding.Usable(behaviours, new HashSet<string> { "firearm", "spell:emberbrand" }));
+        }
+
+        [Fact]
+        public void ASkillMadeWithOnlyTheBody_IsStillUnrestrictedUnderBoundInstruments()
+        {
+            var behaviours = new[] { "Jump", "Chain:jump", "Use:jump" };
+            Assert.Empty(SkillBinding.BoundInstruments(behaviours));
+            Assert.True(SkillBinding.Usable(behaviours, new HashSet<string>()));
         }
     }
 }

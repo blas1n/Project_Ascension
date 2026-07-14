@@ -339,6 +339,13 @@ public class SkillCompositionService : ISkillCompositionService
         return $"{r.ActorId}:{r.RegionId}:{weaponKey}:{DeliveryHeuristics.ForBehavior(r.Behaviors)}";
     }
 
+    // How many times a single skill will ask the composer to try again when it lands on a graph or
+    // a name that's already taken. This is the actual dedup guarantee (see ComposePendingAsync's
+    // comment) — the Avoid/AvoidNames lists handed to the composer are only a hint that a model is
+    // free to ignore; nothing enforced that hint before, which is how the same graph shape (and
+    // sometimes the same name) got frozen as Ready more than once.
+    private const int MaxUniquenessAttempts = 3;
+
     public async Task ComposePendingAsync(int batchSize, CancellationToken ct = default)
     {
         var pending = await _skills.GetPendingAsync(batchSize, ct);
@@ -352,9 +359,19 @@ public class SkillCompositionService : ISkillCompositionService
         // Actor-wide dedup on the GRAPH signature (its canonical serialization) — every new skill
         // must be structurally distinct from every one already composed. Seeded from the Ready
         // skills' graphs and grown as this batch composes (so same-pass siblings stay distinct too).
-        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        //
+        // Identity (Name) is tracked the same way and for the same reason: a skill that only
+        // differs from an existing one by its NAME is still the same skill wearing a new coat of
+        // paint (a rename is not a discovery) — CLAUDE.md "your own skill, your own path" and
+        // ADR 0010's ban on the ladder becoming a slot machine both fail if the name is left
+        // unchecked while only the graph is guarded.
+        var takenGraphs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var takenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in await _skills.GetReadyAsync(ct))
-            if (!string.IsNullOrEmpty(s.EffectGraphJson)) taken.Add(s.EffectGraphJson!);
+        {
+            if (!string.IsNullOrEmpty(s.EffectGraphJson)) takenGraphs.Add(s.EffectGraphJson!);
+            if (!string.IsNullOrEmpty(s.Name)) takenNames.Add(s.Name!);
+        }
 
         foreach (var skill in pending)
         {
@@ -372,20 +389,52 @@ public class SkillCompositionService : ISkillCompositionService
 
             // ADR 0007 Phase 4c: the AI composes the whole skill — name, description, and effect
             // GRAPH — in ONE call. The graph is the sole composed artifact (no primitive pass);
-            // Avoid carries the actor-wide taken structures so the new skill stays distinct.
+            // Avoid/AvoidNames carry the actor-wide taken sets so the new skill is STEERED toward
+            // distinct — but a model (especially a small local one, and always the deterministic
+            // stub) can still ignore that steer, so every candidate is CHECKED against both taken
+            // sets below, and re-rolled (a fresh seed per attempt) until it clears both or the
+            // attempts run out.
             var graphProfile = fought.Select(b => new ProjectAscension.SkillForge.BehaviorWeight(b.Behavior, b.Count)).ToList();
             var lineage = await RetrieveGraphLineageAsync(skill.DiscoveryId, ct); // RAG: evolve prior discoveries
-            var startedAt = Stopwatch.GetTimestamp();
-            var comp = await _graphComposer.ComposeAsync(
-                new EffectGraphRequest(skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed, taken.ToList(), lineage), ct);
-            var elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+
+            SkillGraphComposition? comp = null;
+            string? graphJson = null;
+            double elapsedMs = 0;
+            for (int attempt = 0; attempt < MaxUniquenessAttempts; attempt++)
+            {
+                var startedAt = Stopwatch.GetTimestamp();
+                var candidate = await _graphComposer.ComposeAsync(
+                    new EffectGraphRequest(
+                        skill.Theme, graphProfile, new PowerBudget(skill.PowerBudget), request.Seed + attempt,
+                        takenGraphs.ToList(), lineage, takenNames.ToList()),
+                    ct);
+                elapsedMs += Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+
+                if (candidate is null) break; // the composer itself failed — retrying won't fix that here
+
+                var candidateGraphJson = EffectGraphJson.Serialize(candidate.Graph);
+                bool graphDuplicate = takenGraphs.Contains(candidateGraphJson);
+                bool nameDuplicate = !string.IsNullOrWhiteSpace(candidate.Name) && takenNames.Contains(candidate.Name);
+                if (!graphDuplicate && !nameDuplicate)
+                {
+                    comp = candidate;
+                    graphJson = candidateGraphJson;
+                    break;
+                }
+
+                _logger.LogDebug(
+                    "Composed skill for discovery {DiscoveryId} duplicated an existing {What} (attempt {Attempt}/{Max}); retrying.",
+                    skill.DiscoveryId, graphDuplicate && nameDuplicate ? "graph+name" : graphDuplicate ? "graph" : "name",
+                    attempt + 1, MaxUniquenessAttempts);
+            }
+
             skill.Attempts++;
 
             if (comp is not null)
             {
                 skill.Name = comp.Name;
                 skill.Description = comp.Description;
-                skill.EffectGraphJson = EffectGraphJson.Serialize(comp.Graph);
+                skill.EffectGraphJson = graphJson;
                 skill.PowerCost = EffectGraph.Cost(comp.Graph);
                 // Delivery SHAPE from the graph's first Emit (the client also derives this); a
                 // graphless/movement skill has no emit → the behavior heuristic covers the DTO.
@@ -394,8 +443,9 @@ public class SkillCompositionService : ISkillCompositionService
 
                 // The canonical graph serialization is the structural signature — dedup against it
                 // so no two discovered skills share a shape (the "duplicate skill" guard, now on the
-                // graph instead of the primitive-kind set).
-                taken.Add(skill.EffectGraphJson);
+                // graph instead of the primitive-kind set). Its name joins the same guard.
+                takenGraphs.Add(skill.EffectGraphJson!);
+                takenNames.Add(skill.Name!);
 
                 // Manifestation follows the graph's structure (ADR 0007) — always available now.
                 // A weapon is born of a real SYNTHESIS — two hands woven, one of them magic — not of merely
@@ -414,10 +464,15 @@ public class SkillCompositionService : ISkillCompositionService
             }
             else
             {
-                // Leave Pending — retried on a later pass (defer, no fallback: ADR 0002).
+                // Leave Pending — retried on a later pass (defer, no fallback: ADR 0002). This now
+                // also covers "the composer only ever offers something already taken": there is
+                // still no deterministic fallback skill minted here — the discovery waits for a
+                // pass (a new seed, a growing/shrinking taken set, a deeper lineage) that produces
+                // something genuinely its own, however long that takes.
                 _metrics.Deferred(1, elapsedMs);
                 _logger.LogWarning(
-                    "Deferred composition for discovery {DiscoveryId} — no valid skill graph.", skill.DiscoveryId);
+                    "Deferred composition for discovery {DiscoveryId} — no valid/unique skill graph after {Attempts} attempt(s).",
+                    skill.DiscoveryId, MaxUniquenessAttempts);
             }
 
             await _skills.UpdateAsync(skill, ct);

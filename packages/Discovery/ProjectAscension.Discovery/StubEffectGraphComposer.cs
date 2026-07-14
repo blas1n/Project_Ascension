@@ -30,8 +30,16 @@ public sealed class StubEffectGraphComposer : IEffectGraphComposer
         }
         else if (attacks > 0)
         {
+            // Delivery varies with the seed (not fixed to Projectile) so two offensive discoveries
+            // of the same shape don't always collapse to the identical graph — the seed already
+            // differs per discovery (and per uniqueness retry, SkillCompositionService), so this
+            // gives the deterministic baseline the same kind of variety an LLM would supply, and
+            // keeps it from deadlocking against the caller's dedup check (the "duplicate skill" bug
+            // this composer must not reproduce offline either).
+            var deliveries = new[] { EmitDelivery.Projectile, EmitDelivery.Beam, EmitDelivery.Burst, EmitDelivery.Nova };
+            var delivery = deliveries[(int)((ulong)request.Seed % (ulong)deliveries.Length)];
             graph = new Trigger(TriggerKind.OnCast,
-                new Sequence(new EffectNode[] { new Emit(EmitDelivery.Projectile, 1), new Damage(1) }));
+                new Sequence(new EffectNode[] { new Emit(delivery, 1), new Damage(1) }));
         }
         else
         {

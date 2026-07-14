@@ -54,5 +54,28 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         [Fact]
         public void NullCommands_ReturnsEmpty()
             => Assert.Empty(AssignableCommands.For(null, new HashSet<string>()));
+
+        [Fact]
+        public void ACommandMadeThroughAForgedWeapon_IsNotAssignableWithAnUnrelatedLoadout()
+        {
+            // Reproduces the reported bug with a real discovered-command shape (dev DB "Converging
+            // Leap" — see SkillBindingTests). Before this fix, RequiredEquipment (which Usable used
+            // to call) saw no bindable weapon here at all — a forged weapon's own tag doesn't count
+            // as a base category — so the command was treated as body-made and shown for every
+            // loadout, which is exactly "the picker shows everything".
+            var commands = new[]
+            {
+                Cmd("Converging Leap", "Jump", "Use:jump", "RangedAttack",
+                    "Use:spell:aerial-synthesis", "Fuse:jump>spell:aerial-synthesis"),
+                Cmd("Wide Slash", "Use:melee"),
+            };
+
+            var withUnrelatedFirearm = AssignableCommands.For(commands, new HashSet<string> { "firearm" });
+            Assert.DoesNotContain(withUnrelatedFirearm, c => c.Name == "Converging Leap");
+
+            var withTheForgedWeaponEquipped =
+                AssignableCommands.For(commands, new HashSet<string> { "spell:aerial-synthesis" });
+            Assert.Contains(withTheForgedWeaponEquipped, c => c.Name == "Converging Leap");
+        }
     }
 }
