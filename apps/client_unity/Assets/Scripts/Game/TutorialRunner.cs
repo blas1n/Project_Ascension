@@ -146,54 +146,52 @@ namespace ProjectAscension.Game
             if (TutorialDirector.HasTravelledEnoughToCountAsMoved(_travelled)) Signal(TutorialSignal.Moved);
         }
 
+        // The persistent objective tracker (playtest, 2nd report: "all I see is dialogue at the top
+        // of the screen" — this WAS that floating string; it is now a proper framed panel, always
+        // visible, top-center — clear of ContractHud (top-left), SkillGuideHud (top-right), the
+        // ability bar / health bar (bottom-center) and the magazine (bottom-right)). The headline is
+        // never authored twice: it reads TutorialGuideScript.For(step).Objective, the SAME pure model
+        // the guide's own dialogue reads — this class adds only the training step's live checklist,
+        // which is real gameplay state (Progress.Seen), not a second copy of the script.
         private void OnGUI()
         {
-            var prompt = PromptFor(Progress);
-            if (string.IsNullOrEmpty(prompt)) return;
+            var objective = TutorialGuideScript.For(Progress.Step).Objective;
+            if (string.IsNullOrEmpty(objective)) return;
 
-            const float w = 560f, h = 30f;
-            var rect = new Rect((Screen.width - w) * 0.5f, 28f, w, h);
+            var checklist = Progress.Step == TutorialStep.Training ? TrainingChecklist(Progress) : "";
 
-            var style = new GUIStyle(GUI.skin.label)
+            const float w = 460f;
+            float h = string.IsNullOrEmpty(checklist) ? 54f : 76f;
+            var box = new Rect((Screen.width - w) * 0.5f, 16f, w, h);
+
+            GUI.Box(box, "Objective");
+
+            var body = new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true, fontStyle = FontStyle.Bold };
+            body.normal.textColor = Color.white;
+            GUI.Label(new Rect(box.x + 14f, box.y + 22f, box.width - 28f, 30f), objective, body);
+
+            if (!string.IsNullOrEmpty(checklist))
             {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 15,
-                fontStyle = FontStyle.Bold,
-            };
-            style.normal.textColor = Color.white;
-
-            GUI.Label(rect, prompt, style);
+                var sub = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
+                sub.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.9f);
+                GUI.Label(new Rect(box.x + 14f, box.y + 52f, box.width - 28f, 22f), checklist, sub);
+            }
         }
 
-        /// <summary>Minimal, present-tense prompts — what to DO, never an explanation.</summary>
-        private static string PromptFor(TutorialProgress progress) => progress.Step switch
-        {
-            TutorialStep.CreateCharacter => "",
-            TutorialStep.Training => TrainingPrompt(progress),
-            TutorialStep.ChooseEquipment => "Press [F] at the equipment station to choose two pieces of equipment.",
-            TutorialStep.FirstDiscovery => "Fight your own way — discovery comes from how you act.",
-            TutorialStep.AcceptSurveyContract => "Press [F] at the board to take a contract.",
-            TutorialStep.EarnMap => "Survey the outskirts. Reach the marker.",
-            TutorialStep.AcceptDeepContract => "Press [F] at the board to take the next contract.",
-            TutorialStep.FirstDeath => "Go deeper.",
-            TutorialStep.DelegateContract => "You cannot finish this alone. Delegate it with the clerk (위임).",
-            TutorialStep.IssueContract => "Then hire someone who can. Issue a contract with the clerk (발주).",
-            TutorialStep.Return => "Press [F] at the return pad to go back to the city.",
-            _ => "",
-        };
-
-        private static string TrainingPrompt(TutorialProgress progress)
+        /// <summary>Training's live sub-checklist — real gameplay state (what's still outstanding),
+        /// never a re-authored copy of the objective line above it; only asks for what the player
+        /// hasn't already done.</summary>
+        private static string TrainingChecklist(TutorialProgress progress)
         {
             var left = TutorialDirector.RemainingTraining(progress);
             if (left == TutorialSignal.None) return "";
 
-            // Only ask for what's still outstanding — never tell the player to do what they just did.
             var parts = new System.Collections.Generic.List<string>(4);
             if ((left & TutorialSignal.Moved) != 0) parts.Add("Move");
             if ((left & TutorialSignal.Jumped) != 0) parts.Add("Jump");
             if ((left & TutorialSignal.Evaded) != 0) parts.Add("Step out of range during a monster's wind-up");
             if ((left & TutorialSignal.Attacked) != 0) parts.Add("Attack");
-            return string.Join("   ·   ", parts);
+            return "Still to do: " + string.Join("   ·   ", parts);
         }
     }
 }

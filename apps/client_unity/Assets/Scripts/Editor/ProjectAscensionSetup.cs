@@ -271,7 +271,10 @@ namespace ProjectAscension.Editor
             // The dedicated first-hour guide (playtest: the authored first hour existed in the
             // simulation but was never SHOWN to the player — they were just dropped in the city). A
             // per-player instanced NPC (see TutorialGuide's own doc comment for why it must not be a
-            // shared world NPC), spawned beside the player's spawn point.
+            // shared world NPC). TutorialGuide ALSO self-installs at runtime now (playtest, 2nd
+            // report: a player who never re-ran this menu item never got a guide at all) — baking
+            // one in here too keeps a freshly-built scene identical to a self-installed one; guarded
+            // against ever double-spawning by TutorialGuide.EnsureForScene's own FindObjectOfType check.
             var guideGo = new GameObject("TutorialGuide");
             guideGo.transform.position = CityBlockout.PlayerSpawn + new Vector3(2f, 0f, 1f);
             guideGo.AddComponent<TutorialGuide>();
@@ -415,6 +418,7 @@ namespace ProjectAscension.Editor
 
             // The first hour's stages 6-8-9-10-11 happen out here too (map, death, delegation,
             // issuing, return) — the guide follows the player's first hour across both scenes.
+            // (Also self-installs at runtime — see the City-scene comment above.)
             var frontierGuideGo = new GameObject("TutorialGuide");
             frontierGuideGo.transform.position = new Vector3(2f, 0f, 1f); // beside the frontier spawn (Vector3.zero)
             frontierGuideGo.AddComponent<TutorialGuide>();

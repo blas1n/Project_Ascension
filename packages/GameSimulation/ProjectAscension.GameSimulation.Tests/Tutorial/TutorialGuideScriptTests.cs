@@ -34,6 +34,44 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             Assert.Equal(TutorialGuideStation.None, line.Station);
         }
 
+        // The persistent objective tracker (client HUD) reads Objective, distinct from the guide's
+        // spoken Text — every LIVED step except CreateCharacter (the character sheet already owns
+        // that moment) needs one, or the tracker goes blank mid-tutorial.
+        private static readonly TutorialStep[] StepsWithATrackedObjective =
+        {
+            TutorialStep.Training, TutorialStep.ChooseEquipment, TutorialStep.FirstDiscovery,
+            TutorialStep.AcceptSurveyContract, TutorialStep.EarnMap, TutorialStep.AcceptDeepContract,
+            TutorialStep.FirstDeath, TutorialStep.DelegateContract, TutorialStep.IssueContract,
+            TutorialStep.Return,
+        };
+
+        [Fact]
+        public void EveryStepWithATrackedObjective_HasOne()
+        {
+            foreach (var step in StepsWithATrackedObjective)
+                Assert.False(string.IsNullOrWhiteSpace(TutorialGuideScript.For(step).Objective), $"{step} has no objective.");
+        }
+
+        [Theory]
+        [InlineData(TutorialStep.CreateCharacter)] // the character sheet already owns this moment
+        [InlineData(TutorialStep.Complete)]        // no more tutorial
+        public void StepsWithNoTrackedObjective_HaveNone(TutorialStep step)
+        {
+            Assert.True(string.IsNullOrEmpty(TutorialGuideScript.For(step).Objective));
+        }
+
+        [Fact]
+        public void Objective_IsNeverTheSameStringAsTheSpokenLine()
+        {
+            // The guide SPEAKS in character; the tracker STATES the task. If they ever collide
+            // verbatim, either the objective is unauthored copy-paste or the line lost its voice.
+            foreach (var step in StepsWithATrackedObjective)
+            {
+                var line = TutorialGuideScript.For(step);
+                Assert.NotEqual(line.Text, line.Objective);
+            }
+        }
+
         [Theory]
         [InlineData(TutorialStep.Training, TutorialGuideStation.TrainingGround)]           // 2단계 훈련장
         [InlineData(TutorialStep.ChooseEquipment, TutorialGuideStation.EquipmentStation)]  // 3단계 첫 장비 선택
