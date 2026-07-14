@@ -30,7 +30,6 @@ namespace ProjectAscension.Game
         private HitReceiver _self;
         private SkillEffects _effects;
         private PassiveModifiers _passives;
-        private FocusPool _focus;
         private Skill _skill;
         private EffectNode _graph;          // the held weapon skill's effect graph (ADR 0007), null if graphless
         private string _deliveryStyle = ""; // AI-composed delivery style for the held weapon skill
@@ -51,13 +50,13 @@ namespace ProjectAscension.Game
         {
             _self = GetComponent<HitReceiver>();
             // Discovered-skill drivers, provisioned on the player (they were never placed in a
-            // scene). AbilitySlots casts Commands from hotkeys (Q/E/R/F), PassiveModifiers
-            // applies passives, SkillEffects presents dash/shield/control.
+            // scene). AbilitySlots casts Commands from hotkeys (Q/E/R/F) and gates each on its own
+            // cooldown, PassiveModifiers applies passives, SkillEffects presents dash/shield/control.
             _effects = GetComponent<SkillEffects>() ?? gameObject.AddComponent<SkillEffects>();
             _passives = GetComponent<PassiveModifiers>() ?? gameObject.AddComponent<PassiveModifiers>();
             if (GetComponent<AbilitySlots>() == null) gameObject.AddComponent<AbilitySlots>();
             if (GetComponent<SkillGuideHud>() == null) gameObject.AddComponent<SkillGuideHud>(); // shows each command's hotkey
-            _focus = GetComponent<FocusPool>();           // optional, gates casts by focus
+            if (GetComponent<AbilityBarHud>() == null) gameObject.AddComponent<AbilityBarHud>(); // Overwatch-style ability boxes + cooldown sweep
             if (!string.IsNullOrWhiteSpace(serverUrl)) _api = new DiscoveryApiClient(serverUrl);
         }
 
@@ -170,12 +169,9 @@ namespace ProjectAscension.Game
             // DB-driven combat balance (fetched at startup; Default offline).
             var tuning = CombatTuningCatalog.Current;
 
-            // Skills cost focus (combat-framework 집중력); refuse the cast when short — from the graph.
-            if (_focus != null && !_focus.TrySpend(FocusCost.Of(graph, tuning)))
-            {
-                Debug.Log($"[SkillCaster] Not enough focus to cast \"{skill.Name}\".");
-                return;
-            }
+            // Commands are cooldown-gated per ability slot (AbilitySlots, before this is even
+            // called) — weapons are gated by their own magazine/fire-rate cooldown (WeaponBase).
+            // Nothing to enforce here: this method just resolves and applies the skill.
 
             // Delivery SHAPE from the graph's Emit (ADR 0007); the held weapon's composed style is
             // the fallback when the graph emits nothing (movement/ward). A projectile flies, a beam

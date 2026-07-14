@@ -11,7 +11,6 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
     public class CombatTuningTests
     {
         private static EffectNode Cast(EffectNode step) => new Trigger(TriggerKind.OnCast, step);
-        private static Skill Of(params SkillPrimitive[] primitives) => new("Test Skill", primitives);
 
         [Fact]
         public void Default_MatchesTheSeededConstants()
@@ -31,13 +30,13 @@ namespace ProjectAscension.GameSimulation.Tests.Combat
         }
 
         [Fact]
-        public void CustomTuning_ScalesFocusCost()
+        public void CustomTuning_ScalesCooldown()
         {
-            var skill = Of(new SkillPrimitive(SkillPrimitiveKind.Projectile, 2)); // 2 points
-            var pricey = CombatTuning.Default with { FocusCostPerPoint = 10f };
+            var graph = Cast(new Emit(EmitDelivery.Projectile, 2)); // 3 power points
+            var slower = CombatTuning.Default with { CooldownSecondsPerPoint = 1f };
 
-            Assert.Equal(8f, FocusCost.Of(skill), precision: 3);          // 2 × 4 (default)
-            Assert.Equal(20f, FocusCost.Of(skill, pricey), precision: 3); // 2 × 10
+            Assert.Equal(2f, SkillCooldown.Of(graph), precision: 3);           // 3 × 0.3, floored to 2
+            Assert.Equal(3f, SkillCooldown.Of(graph, slower), precision: 3);   // 3 × 1
         }
 
         [Fact]

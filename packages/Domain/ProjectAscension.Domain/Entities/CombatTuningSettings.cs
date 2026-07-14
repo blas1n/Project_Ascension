@@ -32,8 +32,10 @@ namespace ProjectAscension.Domain.Entities
         public float PassiveBarrierReduction { get; set; }
         public float PassiveLeech { get; set; }
 
-        // Resource.
-        public float FocusCostPerPoint { get; set; }
+        // Cooldown (per-skill; replaces the removed Focus resource — see CombatTuning).
+        public float CooldownSecondsPerPoint { get; set; }
+        public float CooldownFloorSeconds { get; set; }
+        public float CooldownCeilingSeconds { get; set; }
 
         // Control strength per control magnitude (the skill defines the status numbers).
         public float SlowPerMagnitude { get; set; }

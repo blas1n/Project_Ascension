@@ -11,7 +11,7 @@ public class PlayerDefinitionConfiguration : IEntityTypeConfiguration<PlayerDefi
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).ValueGeneratedNever(); // fixed singleton row
 
-        // Seeded defaults (mirror PlayerData / FocusPool / HitReceiver) — editable at runtime.
+        // Seeded defaults (mirror PlayerData / HitReceiver) — editable at runtime.
         builder.HasData(new PlayerDefinition
         {
             Id = 1,
@@ -19,8 +19,6 @@ public class PlayerDefinitionConfiguration : IEntityTypeConfiguration<PlayerDefi
             MoveSpeed = 5f,
             JumpVelocity = 6f,
             Gravity = 20f,
-            MaxFocus = 100f,
-            FocusRegenPerSecond = 15f,
         });
     }
 }

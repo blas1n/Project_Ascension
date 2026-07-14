@@ -28,7 +28,12 @@ public class CombatTuningSettingsConfiguration : IEntityTypeConfiguration<Combat
             PassiveShieldReduction = 0.06f,
             PassiveBarrierReduction = 0.08f,
             PassiveLeech = 0.05f,
-            FocusCostPerPoint = 4f,
+            // Per-skill cooldown (replaces the removed Focus resource): a discovered skill's
+            // effect-graph power points × 0.3s, clamped to 2..12s — a small skill (few points)
+            // costs ~2s, a large graph (near ADR 0010's 40-point budget max) costs 12s.
+            CooldownSecondsPerPoint = 0.3f,
+            CooldownFloorSeconds = 2f,
+            CooldownCeilingSeconds = 12f,
             SlowPerMagnitude = 0.15f,
             KnockbackPerMagnitude = 4f,
             ChargedAttackThreshold = 0.7f,

@@ -1,18 +1,16 @@
-using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using ProjectAscension.Equipment;
-using ProjectAscension.GameSimulation.Combat;
 
 namespace ProjectAscension.Game
 {
     /// <summary>
-    /// A small always-on guide listing the player's discovered COMMANDS and the hotkey that
-    /// invokes each (assigned to an ability slot — <see cref="AbilitySlots"/>), plus active
-    /// passives and discovered weapons. Without it the player has no way to know how to trigger
-    /// a discovered command — you press the shown hotkey. Immediate-mode GUI like
-    /// DiscoveryNotification; auto-provisioned by SkillCaster, so no scene wiring. Uses no
-    /// legacy Input API (project is on the new Input System).
+    /// A small always-on guide listing what's in the player's hands and active passives, plus
+    /// discovered-weapon/command counts. The ability hotkeys themselves (which command sits on
+    /// which key, its cooldown) are the <see cref="AbilityBarHud"/>'s job now — an Overwatch-style
+    /// box row is far more readable mid-fight than a text line, and duplicating both would drift.
+    /// Immediate-mode GUI like DiscoveryNotification; auto-provisioned by SkillCaster, so no scene
+    /// wiring. Uses no legacy Input API (project is on the new Input System).
     /// </summary>
     public sealed class SkillGuideHud : MonoBehaviour
     {
@@ -37,24 +35,6 @@ namespace ProjectAscension.Game
                 sb.AppendLine();
             }
 
-            // Only what's USABLE right now — the four ability hotkeys and active passives. The
-            // full list (which grows large) lives in the discovery journal ([J], DiscoveryJournalHud),
-            // so this HUD never overflows.
-            var current = _loadout != null ? EquipmentTags.CurrentTags(_loadout) : new HashSet<string>();
-            var session = GameSession.Instance;
-
-            sb.AppendLine("ABILITIES (hotkeys):");
-            var slots = session != null ? session.CommandSlots : null;
-            for (int i = 0; i < AbilitySlots.SlotKeys.Length; i++)
-            {
-                var cmd = slots != null && i < slots.Length ? slots[i] : null;
-                if (cmd == null) { sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] —"); continue; }
-                string lockTxt = !CommandGate.Invocable(cmd, current)
-                    ? $"  [LOCKED: {string.Join("/", CommandGate.RequiredEquipment(cmd))}]"
-                    : "";
-                sb.AppendLine($"  [{AbilitySlots.SlotLabel(i)}] {cmd.Name} — {SkillSummary.Describe(cmd)}{lockTxt}");
-            }
-
             if (set.Passives.Count > 0)
             {
                 sb.AppendLine("\nPassives (always on):");
@@ -66,7 +46,7 @@ namespace ProjectAscension.Game
             if (set.Commands.Count > AbilitySlots.SlotKeys.Length)
                 sb.AppendLine($"Commands: {set.Commands.Count} discovered ({AbilitySlots.SlotKeys.Length} slots — assign in city)");
 
-            // Top-right, clear of the contract HUD / focus / gold on the left.
+            // Top-right, clear of the contract HUD / gold on the left.
             GUI.Label(new Rect(Screen.width - 380f, 20f, 360f, 300f), sb.ToString());
         }
 

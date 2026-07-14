@@ -23,7 +23,8 @@ namespace ProjectAscension.GameSimulation.Effects
 
         /// <summary>The graph's "power points" — the tier-weighted size (Σ tier+1 over effect
         /// nodes, + DoT durations). The graph analogue of a primitive skill's Σ(magnitude+range+
-        /// duration); drives focus cost and knowledge value so a bigger skill costs/sells more.</summary>
+        /// duration); drives per-skill cooldown (SkillCooldown) and knowledge value, so a bigger
+        /// skill takes longer to ready again and sells for more.</summary>
         public static int PowerPoints(EffectNode node)
         {
             switch (node)

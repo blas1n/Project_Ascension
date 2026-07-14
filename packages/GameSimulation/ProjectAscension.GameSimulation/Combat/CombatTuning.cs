@@ -2,7 +2,7 @@ namespace ProjectAscension.GameSimulation.Combat
 {
     /// <summary>
     /// The tunable weights combat resolution scores against — per-magnitude damage,
-    /// defensive conversions, control duration, and focus cost. The resolvers stay
+    /// defensive conversions, control duration, and per-skill cooldown rate. The resolvers stay
     /// pure: the host loads these (from the DB, at runtime) and passes them in, so
     /// combat numbers are data-driven and server-authoritative, never hard-coded.
     /// Matters especially for the weapon-creation system — a discovered weapon's combat
@@ -26,8 +26,12 @@ namespace ProjectAscension.GameSimulation.Combat
         float PassiveShieldReduction,
         float PassiveBarrierReduction,
         float PassiveLeech,
-        // Resource.
-        float FocusCostPerPoint,
+        // Cooldown (per-skill; replaces the removed Focus resource — a discovered skill's wait
+        // is derived from its effect graph's power points × this rate, clamped to
+        // [CooldownFloorSeconds, CooldownCeilingSeconds], Overwatch-style).
+        float CooldownSecondsPerPoint,
+        float CooldownFloorSeconds,
+        float CooldownCeilingSeconds,
         // Control strength per control magnitude — so the status the skill applies is
         // defined by the skill (its magnitude), not fixed on the receiver.
         float SlowPerMagnitude,      // slow fraction per magnitude (0.45 → move at 55%)
@@ -67,7 +71,9 @@ namespace ProjectAscension.GameSimulation.Combat
             PassiveShieldReduction: 0.06f,
             PassiveBarrierReduction: 0.08f,
             PassiveLeech: 0.05f,
-            FocusCostPerPoint: 4f,
+            CooldownSecondsPerPoint: 0.3f,
+            CooldownFloorSeconds: 2f,
+            CooldownCeilingSeconds: 12f,
             SlowPerMagnitude: 0.15f,
             KnockbackPerMagnitude: 4f,
             ChargedAttackThreshold: 0.7f,

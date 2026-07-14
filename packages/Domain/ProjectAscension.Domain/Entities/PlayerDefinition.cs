@@ -3,7 +3,7 @@
 namespace ProjectAscension.Domain.Entities
 {
     /// <summary>
-    /// The single-row player balance stats — health, movement, and focus — as
+    /// The single-row player balance stats — health and movement — as
     /// server-managed, runtime-editable data. Moves the numbers out of the client
     /// ScriptableObject/components so balance and AI/dynamic systems can read and reshape
     /// them from the DB. (Camera feel and level geometry stay client-side preferences.)
@@ -18,9 +18,5 @@ namespace ProjectAscension.Domain.Entities
         public float MoveSpeed { get; set; }
         public float JumpVelocity { get; set; }
         public float Gravity { get; set; }
-
-        // Focus (the resource skills spend).
-        public float MaxFocus { get; set; }
-        public float FocusRegenPerSecond { get; set; }
     }
 }
