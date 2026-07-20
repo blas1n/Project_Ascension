@@ -146,13 +146,21 @@ namespace ProjectAscension.Game
             if (TutorialDirector.HasTravelledEnoughToCountAsMoved(_travelled)) Signal(TutorialSignal.Moved);
         }
 
+        // Same warm gold as the guide's own dialogue frame and ObjectiveMarker's beacon — one voice,
+        // so the tracker visibly belongs to the same "someone is directing you" system as the guide.
+        private static readonly Color ObjectiveGold = new Color(1f, 0.82f, 0.35f);
+
         // The persistent objective tracker (playtest, 2nd report: "all I see is dialogue at the top
-        // of the screen" — this WAS that floating string; it is now a proper framed panel, always
-        // visible, top-center — clear of ContractHud (top-left), SkillGuideHud (top-right), the
-        // ability bar / health bar (bottom-center) and the magazine (bottom-right)). The headline is
-        // never authored twice: it reads TutorialGuideScript.For(step).Objective, the SAME pure model
-        // the guide's own dialogue reads — this class adds only the training step's live checklist,
-        // which is real gameplay state (Progress.Seen), not a second copy of the script.
+        // of the screen" — this WAS that floating string; playtest, 3rd report: the guide vanishing on
+        // dismiss left the player with nothing to go on, which is what exposed that this tracker,
+        // while technically always rendering, was a plain default-skin GUI.Box — low-contrast and easy
+        // to mistake for background chrome. It is now a real framed panel, gold-bordered like every
+        // other "the guide is telling you something" surface, always visible, top-center — clear of
+        // ContractHud (top-left), SkillGuideHud (top-right), the ability bar / health bar
+        // (bottom-center) and the magazine (bottom-right)). The headline is never authored twice: it
+        // reads TutorialGuideScript.For(step).Objective, the SAME pure model the guide's own dialogue
+        // reads — this class adds only the training step's live checklist, which is real gameplay
+        // state (Progress.Seen), not a second copy of the script.
         private void OnGUI()
         {
             var objective = TutorialGuideScript.For(Progress.Step).Objective;
@@ -160,22 +168,47 @@ namespace ProjectAscension.Game
 
             var checklist = Progress.Step == TutorialStep.Training ? TrainingChecklist(Progress) : "";
 
-            const float w = 460f;
-            float h = string.IsNullOrEmpty(checklist) ? 54f : 76f;
-            var box = new Rect((Screen.width - w) * 0.5f, 16f, w, h);
+            const float w = 520f, headerH = 22f, pad = 16f;
+            float bodyH = string.IsNullOrEmpty(checklist) ? 38f : 60f;
+            var box = new Rect((Screen.width - w) * 0.5f, 18f, w, headerH + bodyH);
 
-            GUI.Box(box, "Objective");
+            var prev = GUI.color;
+            GUI.color = new Color(0.07f, 0.06f, 0.04f, 0.88f); // dark panel body, high contrast on any backdrop
+            GUI.DrawTexture(box, Texture2D.whiteTexture);
+            GUI.color = prev;
+            DrawBorder(box, new Color(ObjectiveGold.r, ObjectiveGold.g, ObjectiveGold.b, 0.9f), 2f);
 
-            var body = new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true, fontStyle = FontStyle.Bold };
+            var header = new Rect(box.x, box.y, box.width, headerH);
+            GUI.color = new Color(ObjectiveGold.r, ObjectiveGold.g, ObjectiveGold.b, 0.22f);
+            GUI.DrawTexture(header, Texture2D.whiteTexture);
+            GUI.color = prev;
+            var headerStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 12, fontStyle = FontStyle.Bold };
+            headerStyle.normal.textColor = new Color(1f, 0.88f, 0.55f);
+            GUI.Label(header, "OBJECTIVE", headerStyle);
+
+            // "▸" reads as a directive, not ambient flavor text — the same job the guide's spoken line
+            // does, restated as an instruction the player can glance at any time, dialogue or not.
+            var body = new GUIStyle(GUI.skin.label) { fontSize = 16, wordWrap = true, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
             body.normal.textColor = Color.white;
-            GUI.Label(new Rect(box.x + 14f, box.y + 22f, box.width - 28f, 30f), objective, body);
+            GUI.Label(new Rect(box.x + pad, header.yMax + 4f, box.width - pad * 2f, 32f), "▸ " + objective, body);
 
             if (!string.IsNullOrEmpty(checklist))
             {
-                var sub = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
-                sub.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.9f);
-                GUI.Label(new Rect(box.x + 14f, box.y + 52f, box.width - 28f, 22f), checklist, sub);
+                var sub = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true, alignment = TextAnchor.UpperCenter };
+                sub.normal.textColor = new Color(1f, 0.88f, 0.55f, 0.95f);
+                GUI.Label(new Rect(box.x + pad, header.yMax + 34f, box.width - pad * 2f, 24f), checklist, sub);
             }
+        }
+
+        private static void DrawBorder(Rect r, Color color, float thickness)
+        {
+            var prev = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(new Rect(r.x, r.y, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.yMax - thickness, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.y, thickness, r.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.xMax - thickness, r.y, thickness, r.height), Texture2D.whiteTexture);
+            GUI.color = prev;
         }
 
         /// <summary>Training's live sub-checklist — real gameplay state (what's still outstanding),
