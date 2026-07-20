@@ -23,9 +23,18 @@ namespace ProjectAscension.Game
     /// no decision about progression (TutorialDirector's job, and only its job — this class never calls
     /// TutorialRunner.Signal). On a new step it walks up to the player and opens a dialogue popup
     /// (which takes <see cref="UiFocus"/>, same discipline as every other modal in the city, so the
-    /// player can't wander off mid-line by accident); once dismissed it steps back out of the way
-    /// rather than gluing itself to the player's heel. It faces whatever station the line points at
+    /// player can't wander off mid-line by accident). It faces whatever station the line points at
     /// while it talks — the closest thing to actually pointing a finger.
+    ///
+    /// Playtest (a person just vanishing after the dialogue reads as broken, and gives the player
+    /// nothing to follow): once dismissed, the guide does NOT retreat to the player's heel and idle —
+    /// it WALKS to the current step's target station (the same one <see cref="ObjectiveMarker"/>
+    /// beacons, resolved through the same <see cref="TutorialGuideStations"/>) and stands there,
+    /// turned back to face the player, so its own body becomes a living waypoint: "go here" instead of
+    /// a sentence you have to remember. Only a step with no place to point at
+    /// (<see cref="TutorialGuideStation.None"/> — CreateCharacter, FirstDiscovery, FirstDeath) falls
+    /// back to the old polite-follow-distance behaviour, because there is genuinely nowhere to send the
+    /// player and standing still in an arbitrary spot would be worse than staying close.
     ///
     /// Procedural body (no authored art yet, same seam as MonsterBody/CityNpc) — its own hooded,
     /// lantern-carrying silhouette and warm gold palette, distinct from every monster and every other
@@ -82,7 +91,13 @@ namespace ProjectAscension.Game
         private const float ArriveEpsilon = 0.15f;
         private const float LeaveDistance = 9f;
 
-        private enum GuideState { Idle, Approaching, Speaking, Retreating, Leaving, Gone }
+        // Idle: no station for this step (or none yet reachable) — hangs at a polite follow distance.
+        // Approaching: walking up to the player to speak. Speaking: dialogue open.
+        // Positioning: dismissed, walking to the current step's station (or, if there is none, to the
+        // follow point — same rest as Idle, just named for what triggered it). Stationed: arrived at
+        // the station and holding it, turned to face the player — the living waypoint.
+        // Leaving/Gone: TutorialStep.Complete — walks offscreen for good.
+        private enum GuideState { Idle, Approaching, Speaking, Positioning, Stationed, Leaving, Gone }
 
         private GuideState _state = GuideState.Idle;
         private Transform _player;
@@ -128,8 +143,11 @@ namespace ProjectAscension.Game
                     FaceStationOrPlayer();
                     if (DismissPressed()) CloseDialogue();
                     break;
-                case GuideState.Retreating:
-                    MoveToward(FollowPoint(), OnArrivedRetreat);
+                case GuideState.Positioning:
+                    MoveToward(PositioningTarget(), OnArrivedPositioning);
+                    break;
+                case GuideState.Stationed:
+                    FacePlayer();
                     break;
                 case GuideState.Leaving:
                     MoveToward(_leaveTarget, OnArrivedLeave);
@@ -188,10 +206,30 @@ namespace ProjectAscension.Game
         private void CloseDialogue()
         {
             if (_dialogueOpen) { UiFocus.Pop(); _dialogueOpen = false; }
-            _state = GuideState.Retreating;
+            _state = GuideState.Positioning;
         }
 
-        private void OnArrivedRetreat() => _state = GuideState.Idle;
+        // Walk to the step's station if it has one and it currently resolves in this scene; otherwise
+        // fall back to the old polite follow point. Re-read every frame (not cached at CloseDialogue
+        // time) so a station that becomes buildable mid-walk still gets picked up.
+        private Vector3 PositioningTarget() =>
+            HasStation(out var stationPos) ? stationPos : FollowPoint();
+
+        private void OnArrivedPositioning() =>
+            _state = HasStation(out _) ? GuideState.Stationed : GuideState.Idle;
+
+        private bool HasStation(out Vector3 position)
+        {
+            if (_station != TutorialGuideStation.None && TutorialGuideStations.TryResolve(_station, out position))
+                return true;
+            position = default;
+            return false;
+        }
+
+        private void FacePlayer()
+        {
+            if (_player != null) FaceDirection(_player.position - transform.position);
+        }
 
         private void BeginLeaving()
         {

@@ -11,9 +11,10 @@ namespace ProjectAscension.Game
     /// source here is either a live Interactable (null-checked; Unity's own destroyed-object equality
     /// makes that safe across scene teardown) or gated behind the owning blockout's IsBuilt flag.
     ///
-    /// Shared by <see cref="TutorialGuide"/> (it turns to face the station while it talks) and
-    /// <see cref="ObjectiveMarker"/> (it draws the beacon there) — one place that knows where things
-    /// are, so the two can never point at different spots.
+    /// Shared by <see cref="TutorialGuide"/> (it turns to face the station while it talks, then walks
+    /// to it and stands there once dismissed — a living waypoint) and <see cref="ObjectiveMarker"/>
+    /// (it draws the beacon there) — one place that knows where things are, so the two can never
+    /// point at different spots: the guide always ends up standing directly under its own beacon.
     /// </summary>
     public static class TutorialGuideStations
     {
