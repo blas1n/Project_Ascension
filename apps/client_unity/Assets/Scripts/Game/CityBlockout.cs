@@ -1,5 +1,6 @@
 using UnityEngine;
 using ProjectAscension.Combat;
+using ProjectAscension.Monsters;
 using ProjectAscension.World;
 
 namespace ProjectAscension.Game
@@ -243,6 +244,13 @@ namespace ProjectAscension.Game
             // A ledge to jump onto — the "repeated jump" and "air attack" behaviours need somewhere to happen.
             Box(root, "TrainLedge", TrainingGround + new Vector3(-4.5f, 0.6f, -3.5f), new Vector3(3f, 1.2f, 3f), StoneDark);
             Box(root, "TrainLedge_Hi", TrainingGround + new Vector3(0f, 1.2f, -4.5f), new Vector3(2.5f, 2.4f, 2.5f), StoneDark);
+
+            // A LIVE sparring partner (playtest: "hit something" never cleared — Evaded genuinely had
+            // nothing to evade). Dummies teach Attack; only a real MonsterAi-driven target can telegraph
+            // a wind-up to step out of (ADR 0012), which the yard also has to teach. Gentle by DB-driven
+            // design (MonsterDefinition "training" — see MonsterFactory), so a brand-new player can read
+            // the tell safely and repeatedly instead of being punished for training.
+            MonsterFactory.Create(MonsterType.Training, TrainingGround + new Vector3(-1f, 1f, 0f));
         }
 
         private static void Dummy(Transform root, Vector3 at)

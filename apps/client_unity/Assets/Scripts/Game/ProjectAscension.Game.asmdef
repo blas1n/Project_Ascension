@@ -9,6 +9,7 @@
     "ProjectAscension.Net",
     "ProjectAscension.Player",
     "ProjectAscension.World",
+    "ProjectAscension.Monsters",
     "Unity.InputSystem",
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.RenderPipelines.Universal.Runtime"
