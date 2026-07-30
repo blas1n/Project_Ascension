@@ -75,6 +75,25 @@ public class MonsterDefinitionConfiguration : IEntityTypeConfiguration<MonsterDe
                 Scale = 2.6f,
                 DropItemKey = "core",
                 DropAmount = 3,
+            },
+            // The city training ground's sparring partner (mirror MonsterFactory's Training case) — a
+            // brand-new player has to be able to read this tell, so the wind-up is the longest and most
+            // generous in the game, and the damage low enough that missing the dodge still teaches
+            // rather than punishes.
+            new MonsterDefinition
+            {
+                Key = "training",
+                MaxHealth = 30f,
+                MoveSpeed = 2f,
+                AggroRange = 9f,
+                AttackRange = 2f,
+                AttackCooldown = 1.6f,
+                AttackWindup = 1f,
+                Damage = 3f,
+                ProjectileSpeed = 0f,
+                Scale = 1f,
+                DropItemKey = "",
+                DropAmount = 0,
             });
     }
 }

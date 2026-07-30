@@ -56,6 +56,11 @@ namespace ProjectAscension.Monsters
             MonsterType.Ranged => new(25f, 2f, 30f, 14f, 1.5f, 0.5f, 6f, 18f, 1f, "feather", 2),
             MonsterType.Elite => new(120f, 2.5f, 35f, 18f, 1.2f, 0.65f, 14f, 24f, 1.6f, "core", 1),
             MonsterType.Guardian => new(600f, 3.2f, 45f, 20f, 1.4f, 0.9f, 45f, 26f, 2.6f, "core", 3),
+            // The training ground's sparring partner: short aggro (stays in the yard), a slow approach,
+            // a long generous wind-up (the most reactable tell in the game — a brand-new player has to
+            // be ABLE to read it), and low damage so it teaches instead of punishing (offline fallback;
+            // DB-driven like every other monster — see MonsterDefinitionConfiguration "training").
+            MonsterType.Training => new(30f, 2f, 9f, 2f, 1.6f, 1f, 3f, 0f, 1f, "", 0),
             _ => new(40f, 3.5f, 25f, 2f, 1f, 0.35f, 8f, 0f, 1f, "hide", 2), // Melee
         };
 
@@ -64,6 +69,9 @@ namespace ProjectAscension.Monsters
             MonsterType.Ranged => new Color(1f, 0.5f, 0.2f),
             MonsterType.Elite => new Color(0.7f, 0.2f, 0.9f),
             MonsterType.Guardian => new Color(0.32f, 0.12f, 0.42f), // near-black violet — it drinks the light
+            // Warm gold, not hostile red — reads as "safe to practice on", same family as the training
+            // floor's sand and the guide's own lantern-gold, never confusable with a real threat.
+            MonsterType.Training => new Color(0.82f, 0.66f, 0.24f),
             _ => new Color(0.85f, 0.2f, 0.2f),
         };
     }
