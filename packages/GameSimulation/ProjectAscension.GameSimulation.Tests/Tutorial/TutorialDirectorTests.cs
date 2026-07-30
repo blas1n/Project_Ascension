@@ -26,14 +26,16 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             p = Observe(p, TutorialSignal.Jumped);
             Assert.Equal(TutorialStep.CreateCharacter, p.Step);
 
+            // ADR 0016: equipment comes before training — you choose your loadout first.
             p = Observe(p, TutorialSignal.NameChosen);
-            Assert.Equal(TutorialStep.Training, p.Step);
+            Assert.Equal(TutorialStep.ChooseEquipment, p.Step);
         }
 
         [Fact]
         public void Training_NeedsAllFourVerbs()
         {
-            var p = Observe(TutorialProgress.Start, TutorialSignal.NameChosen);
+            // ADR 0016: ChooseEquipment happens before Training.
+            var p = Observe(TutorialProgress.Start, TutorialSignal.NameChosen, TutorialSignal.EquipmentChosen);
             Assert.Equal(TutorialStep.Training, p.Step);
 
             p = Observe(p, TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded);
@@ -41,7 +43,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             Assert.Equal(TutorialSignal.Attacked, TutorialDirector.RemainingTraining(p));
 
             p = Observe(p, TutorialSignal.Attacked);
-            Assert.Equal(TutorialStep.ChooseEquipment, p.Step);
+            Assert.Equal(TutorialStep.FirstDiscovery, p.Step);
             Assert.Equal(TutorialSignal.None, TutorialDirector.RemainingTraining(p));
         }
 
@@ -54,10 +56,10 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
             var p = Observe(TutorialProgress.Start,
                 TutorialSignal.DiscoveryMade,      // ahead of the script
                 TutorialSignal.NameChosen,
-                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked,
-                TutorialSignal.EquipmentChosen);
+                TutorialSignal.EquipmentChosen,    // ADR 0016: equipment before training
+                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked);
 
-            // ChooseEquipment completed → FirstDiscovery was already banked → skipped to the next step.
+            // Training completed → FirstDiscovery was already banked → skipped to the next step.
             Assert.Equal(TutorialStep.AcceptSurveyContract, p.Step);
         }
 
@@ -74,8 +76,8 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         {
             var p = Observe(TutorialProgress.Start,
                 TutorialSignal.NameChosen,
-                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked,
                 TutorialSignal.EquipmentChosen,
+                TutorialSignal.Moved, TutorialSignal.Jumped, TutorialSignal.Evaded, TutorialSignal.Attacked,
                 TutorialSignal.DiscoveryMade,
                 TutorialSignal.SurveyContractAccepted,
                 TutorialSignal.MapReceived,
@@ -103,7 +105,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         public void RepeatingASignal_IsIdempotent()
         {
             var p = Observe(TutorialProgress.Start, TutorialSignal.NameChosen, TutorialSignal.NameChosen);
-            Assert.Equal(TutorialStep.Training, p.Step);
+            Assert.Equal(TutorialStep.ChooseEquipment, p.Step);
         }
 
         // "Has moved enough to count" is UX, not economy — not DB-driven per CLAUDE.md — but it must

@@ -35,6 +35,19 @@ namespace ProjectAscension.Game
         public static readonly Vector3 PlayerSpawn = new Vector3(0f, 0f, -6f);
         /// <summary>The training ground's centre — walk here to learn the verbs.</summary>
         public static readonly Vector3 TrainingGround = new Vector3(-16f, 0f, 6f);
+
+        /// <summary>Half the training yard's side length — the fence ring's radius, shared by
+        /// <see cref="Training"/> and <see cref="TrainingGroundEntrance"/> so the entrance sits
+        /// exactly at the yard's own gate gap, not a separately-guessed position.</summary>
+        private const float TrainingHalf = 7f;
+
+        /// <summary>Where the guide/marker sends you to train — the yard's ENTRANCE (its east gate),
+        /// not the centre. Playtest: the guide used to stand at <see cref="TrainingGround"/> itself,
+        /// dead centre among the dummies, which read as "standing in the middle of a crowd" rather
+        /// than a guide waiting at the door of a place you walk INTO. Just outside the gate posts,
+        /// facing into the yard.</summary>
+        public static readonly Vector3 TrainingGroundEntrance =
+            TrainingGround + new Vector3(TrainingHalf + 1.5f, 0f, 0f);
         /// <summary>The contract board (게시판).</summary>
         public static readonly Vector3 BoardSpot = new Vector3(0f, 0f, 4f);
 
@@ -222,19 +235,42 @@ namespace ProjectAscension.Game
             EquipmentInteractable = interactable;
         }
 
-        /// <summary>The 훈련장: an arena with dummies to hit. Everything the first hour teaches — move,
-        /// jump, evade the tell, attack — is learned here by doing it.</summary>
+        /// <summary>The 훈련장: a bounded YARD with dummies to hit, not open ground scattered with
+        /// people-shaped things (playtest: it "didn't read as a training ground" — a fenced ring with
+        /// a marked gate, a sign at the door, and target dummies that look like targets fixes that).
+        /// Everything the first hour teaches — move, jump, evade the tell, attack — is learned here by
+        /// doing it.</summary>
         private static void Training(Transform root)
         {
             // A sand floor marks it out from the grass.
             Box(root, "TrainingFloor", TrainingGround + new Vector3(0f, 0.01f, 0f),
                 new Vector3(14f, 0.05f, 14f), new Color(0.78f, 0.72f, 0.55f));
 
-            // A low fence so it reads as its own room.
-            const float h = 0.9f, half = 7f;
+            // A low fence so it reads as its own room — closed on three sides, gated on the fourth
+            // (east, toward the plaza the player actually walks in from) so there is one legible way
+            // IN, not an unmarked missing wall.
+            const float h = 0.9f;
+            const float half = TrainingHalf;
+            const float gateHalf = 2f; // the gap's half-width — matches TrainGate_Post spacing below
             Box(root, "TrainFence_N", TrainingGround + new Vector3(0f, h * 0.5f, half), new Vector3(14f, h, 0.3f), Timber);
             Box(root, "TrainFence_S", TrainingGround + new Vector3(0f, h * 0.5f, -half), new Vector3(14f, h, 0.3f), Timber);
             Box(root, "TrainFence_W", TrainingGround + new Vector3(-half, h * 0.5f, 0f), new Vector3(0.3f, h, 14f), Timber);
+            // East wall, split around the gate gap instead of left open and unmarked.
+            var eastSegLen = half - gateHalf;
+            var eastSegZ = gateHalf + eastSegLen * 0.5f;
+            Box(root, "TrainFence_E_N", TrainingGround + new Vector3(half, h * 0.5f, eastSegZ), new Vector3(0.3f, h, eastSegLen), Timber);
+            Box(root, "TrainFence_E_S", TrainingGround + new Vector3(half, h * 0.5f, -eastSegZ), new Vector3(0.3f, h, eastSegLen), Timber);
+
+            // The gate itself — two posts and a lintel framing the one way in, mirroring the city
+            // gate's own vocabulary so "this is a threshold" reads the same way twice.
+            Box(root, "TrainGate_Post_N", TrainingGround + new Vector3(half, 1.1f, gateHalf), new Vector3(0.35f, 2.2f, 0.35f), StoneDark);
+            Box(root, "TrainGate_Post_S", TrainingGround + new Vector3(half, 1.1f, -gateHalf), new Vector3(0.35f, 2.2f, 0.35f), StoneDark);
+            Box(root, "TrainGate_Lintel", TrainingGround + new Vector3(half, 2.3f, 0f), new Vector3(0.35f, 0.3f, gateHalf * 2f + 0.4f), StoneDark);
+
+            // A sign at the door — a simple board on a post, same vocabulary as the contract board,
+            // so a "training area" label fits without inventing new set dressing.
+            Box(root, "TrainSign_Post", TrainingGround + new Vector3(half + 1.6f, 0.9f, gateHalf + 0.6f), new Vector3(0.15f, 1.8f, 0.15f), Timber);
+            Box(root, "TrainSign_Board", TrainingGround + new Vector3(half + 1.6f, 1.7f, gateHalf + 0.6f), new Vector3(1.6f, 0.9f, 0.12f), BoardWood);
 
             // Something to hit. Three of them, spread so the player has to move between blows.
             Dummy(root, TrainingGround + new Vector3(-3f, 0f, 3f));
@@ -249,17 +285,39 @@ namespace ProjectAscension.Game
             // nothing to evade). Dummies teach Attack; only a real MonsterAi-driven target can telegraph
             // a wind-up to step out of (ADR 0012), which the yard also has to teach. Gentle by DB-driven
             // design (MonsterDefinition "training" — see MonsterFactory), so a brand-new player can read
-            // the tell safely and repeatedly instead of being punished for training.
+            // the tell safely and repeatedly instead of being punished for training. Its own capsule
+            // silhouette (MonsterBody) already reads as a creature, not a person — distinct from the
+            // dummies (inert straw targets) and from the guide/NPCs (robed/boxy humanoids).
             MonsterFactory.Create(MonsterType.Training, TrainingGround + new Vector3(-1f, 1f, 0f));
         }
 
+        private static readonly Color Straw = new Color(0.82f, 0.72f, 0.35f);
+        private static readonly Color TargetRed = new Color(0.75f, 0.15f, 0.12f);
+        private static readonly Color TargetWhite = new Color(0.92f, 0.9f, 0.85f);
+
+        /// <summary>A straw practice post — a TARGET, not a person. Playtest: the old dummy was a
+        /// body-box-plus-head-box, the exact same silhouette grammar as <see cref="CityNpc"/> and the
+        /// tutorial guide, so a yard of them read as "a crowd of people" instead of a training ground.
+        /// This is a thin driven stake, a squat straw bundle (round-read and low, never torso-shaped),
+        /// and a painted bullseye facing the yard's gate — no head, no humanoid proportions anywhere.
+        /// The HitReceiver lives on an unrendered root so every part (stake, straw, target rings)
+        /// resolves to the SAME actor (see SimWorldSceneRegistrar) and squashes together on a hit.</summary>
         private static void Dummy(Transform root, Vector3 at)
         {
-            var post = Box(root, "Dummy", at + new Vector3(0f, 1f, 0f), new Vector3(0.9f, 2f, 0.9f), new Color(0.72f, 0.6f, 0.42f));
-            post.AddComponent<HitReceiver>().SetMaxHealth(60f);
-            post.AddComponent<TrainingDummy>();
-            // Head, so a hit reads at eye level in first person.
-            Box(post.transform, "Head", new Vector3(0f, 0.65f, 0f), new Vector3(0.55f, 0.35f, 0.55f), new Color(0.62f, 0.5f, 0.34f));
+            var dummy = new GameObject("TrainingDummy");
+            dummy.transform.SetParent(root, false);
+            dummy.transform.localPosition = at;
+            dummy.AddComponent<HitReceiver>().SetMaxHealth(60f);
+            dummy.AddComponent<TrainingDummy>();
+
+            Box(dummy.transform, "Dummy_Stake", new Vector3(0f, 1.2f, 0f), new Vector3(0.2f, 2.4f, 0.2f), Timber);
+            Box(dummy.transform, "Dummy_Straw", new Vector3(0f, 1.15f, 0f), new Vector3(0.85f, 0.9f, 0.85f), Straw);
+
+            // The bullseye, mounted facing +X — the yard's gate side — so it reads as a target the
+            // instant you walk in, from every dummy at once.
+            Box(dummy.transform, "Dummy_Target_Outer", new Vector3(0.46f, 1.4f, 0f), new Vector3(0.08f, 0.62f, 0.62f), TargetRed);
+            Box(dummy.transform, "Dummy_Target_Mid", new Vector3(0.5f, 1.4f, 0f), new Vector3(0.06f, 0.38f, 0.38f), TargetWhite);
+            Box(dummy.transform, "Dummy_Target_Bull", new Vector3(0.54f, 1.4f, 0f), new Vector3(0.05f, 0.14f, 0.14f), TargetRed);
         }
 
         /// <summary>The people who issue the work. Bodies for the three seeded NPCs — dialogue comes with

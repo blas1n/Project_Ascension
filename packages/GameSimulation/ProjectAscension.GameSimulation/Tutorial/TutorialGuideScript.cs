@@ -53,17 +53,20 @@ namespace ProjectAscension.GameSimulation.Tutorial
             TutorialStep.CreateCharacter =>
                 new("You're new here. Everyone was, once.", "", TutorialGuideStation.None),
 
-            // 2 — 훈련장. Minimal, present-tense, exactly what the doc asks for.
-            TutorialStep.Training =>
-                new("The yard's this way. Move. Jump. Hit something.",
-                    "Learn the basics at the training ground — move, jump, evade a wind-up, and strike.",
-                    TutorialGuideStation.TrainingGround),
-
-            // 3 — 첫 장비 선택. No steer toward a "right" pair — the doc is explicit that there isn't one.
+            // 2 — 첫 장비 선택, now BEFORE training (ADR 0016): you can't be taught to swing a weapon
+            // you never chose, and picking your two is the first real expression of agency. No steer
+            // toward a "right" pair — the doc is explicit that there isn't one.
             TutorialStep.ChooseEquipment =>
-                new("Two hands, two choices — the rack won't judge you.",
+                new("Arm yourself. Two hands, two choices — the rack won't judge you.",
                     "Choose your two weapons at the equipment station.",
                     TutorialGuideStation.EquipmentStation),
+
+            // 3 — 훈련장. Minimal, present-tense, exactly what the doc asks for — now put the chosen
+            // loadout to use instead of an empty-handed swing.
+            TutorialStep.Training =>
+                new("Now put them to use — move, jump, and take a swing at that thing.",
+                    "Learn the basics at the training ground — move, jump, evade a wind-up, and strike.",
+                    TutorialGuideStation.TrainingGround),
 
             // 4 — 첫 발견. Behavioural, not a destination. No marker (see TutorialGuideStation.None).
             TutorialStep.FirstDiscovery =>

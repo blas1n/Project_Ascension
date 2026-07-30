@@ -10,8 +10,9 @@ namespace ProjectAscension.GameSimulation.Tutorial
     public enum TutorialStep
     {
         CreateCharacter,        // 0 — name + appearance
-        Training,               // 2 — move, jump, evade a telegraph, attack
-        ChooseEquipment,        // 3 — pick two
+        ChooseEquipment,        // 2 — pick two, BEFORE training (ADR 0016) — you can't be taught to
+                                // swing a weapon you never chose
+        Training,               // 3 — move, jump, evade a telegraph, attack — now with your own loadout
         FirstDiscovery,         // 4 — arises from behaviour, never granted
         AcceptSurveyContract,   // 5 — "외곽 조사" from the board
         EarnMap,                // 6 — reach the marker; the map is an ITEM
@@ -80,9 +81,9 @@ namespace ProjectAscension.GameSimulation.Tutorial
         public static TutorialSignal Requirement(TutorialStep step) => step switch
         {
             TutorialStep.CreateCharacter => TutorialSignal.NameChosen,
+            TutorialStep.ChooseEquipment => TutorialSignal.EquipmentChosen,
             TutorialStep.Training => TutorialSignal.Moved | TutorialSignal.Jumped
                                    | TutorialSignal.Evaded | TutorialSignal.Attacked,
-            TutorialStep.ChooseEquipment => TutorialSignal.EquipmentChosen,
             TutorialStep.FirstDiscovery => TutorialSignal.DiscoveryMade,
             TutorialStep.AcceptSurveyContract => TutorialSignal.SurveyContractAccepted,
             TutorialStep.EarnMap => TutorialSignal.MapReceived,
