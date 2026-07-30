@@ -22,8 +22,11 @@ namespace ProjectAscension.Game
         {
             switch (station)
             {
+                // The yard's ENTRANCE, not its centre (playtest: the guide used to stand dead centre
+                // among the dummies, reading as "the middle of a crowd" rather than a place with a
+                // door — see CityBlockout.TrainingGroundEntrance).
                 case TutorialGuideStation.TrainingGround when CityBlockout.IsBuilt:
-                    position = CityBlockout.TrainingGround;
+                    position = CityBlockout.TrainingGroundEntrance;
                     return true;
 
                 case TutorialGuideStation.EquipmentStation when CityBlockout.EquipmentInteractable != null:

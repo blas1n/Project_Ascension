@@ -13,7 +13,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
     {
         private static readonly TutorialStep[] AllStepsExceptComplete =
         {
-            TutorialStep.CreateCharacter, TutorialStep.Training, TutorialStep.ChooseEquipment,
+            TutorialStep.CreateCharacter, TutorialStep.ChooseEquipment, TutorialStep.Training,
             TutorialStep.FirstDiscovery, TutorialStep.AcceptSurveyContract, TutorialStep.EarnMap,
             TutorialStep.AcceptDeepContract, TutorialStep.FirstDeath, TutorialStep.DelegateContract,
             TutorialStep.IssueContract, TutorialStep.Return,
@@ -39,7 +39,7 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         // that moment) needs one, or the tracker goes blank mid-tutorial.
         private static readonly TutorialStep[] StepsWithATrackedObjective =
         {
-            TutorialStep.Training, TutorialStep.ChooseEquipment, TutorialStep.FirstDiscovery,
+            TutorialStep.ChooseEquipment, TutorialStep.Training, TutorialStep.FirstDiscovery,
             TutorialStep.AcceptSurveyContract, TutorialStep.EarnMap, TutorialStep.AcceptDeepContract,
             TutorialStep.FirstDeath, TutorialStep.DelegateContract, TutorialStep.IssueContract,
             TutorialStep.Return,
@@ -73,8 +73,8 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         }
 
         [Theory]
-        [InlineData(TutorialStep.Training, TutorialGuideStation.TrainingGround)]           // 2단계 훈련장
-        [InlineData(TutorialStep.ChooseEquipment, TutorialGuideStation.EquipmentStation)]  // 3단계 첫 장비 선택
+        [InlineData(TutorialStep.ChooseEquipment, TutorialGuideStation.EquipmentStation)]  // 2단계 첫 장비 선택 (ADR 0016)
+        [InlineData(TutorialStep.Training, TutorialGuideStation.TrainingGround)]           // 3단계 훈련장 (ADR 0016)
         [InlineData(TutorialStep.AcceptSurveyContract, TutorialGuideStation.ContractBoard)]// 5단계 게시판
         [InlineData(TutorialStep.EarnMap, TutorialGuideStation.SurveyMarker)]              // 6단계 외곽 목표 지점
         [InlineData(TutorialStep.AcceptDeepContract, TutorialGuideStation.ContractBoard)]  // 7단계 게시판
