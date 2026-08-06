@@ -743,6 +743,114 @@ public class SkillCompositionServiceTests
         Assert.Single(skills.Skills.Select(StyleOf).Distinct()); // all on the SAME ladder
     }
 
+    // --- First-discovery onboarding (ADR 0017): a repro playtest of ordinary training-yard play
+    // (repeated basic attacks + jumps) scored ~82 in a single ~5s window and never crossed the
+    // normal FireThreshold (200) without ~25s of UNBROKEN activity. The actor's LIFETIME-FIRST
+    // discovery — no row in Discoveries at all — now gates on the much lower
+    // FirstDiscoveryThreshold (70) instead, so ordinary yard play reaches it. Every discovery after
+    // the first is back on the full economy. ---
+
+    private static EvaluateTriggerRequest OrdinaryYardPlay(Guid actor, string tag = "melee")
+        // MeleeAttack×30 (weight 2) + "melee" factor (4) + synergy (10) + persistence 1×5 = 79 —
+        // below FireThreshold (200) but above FirstDiscoveryThreshold (70). Mirrors the repro's ~82.
+        => new(actor, Region, DiscoveryType.Skill, "t", new[] { tag }, "Dash",
+            new[] { new BehaviorCount("MeleeAttack", 30) }, Persistence: 1);
+
+    [Fact]
+    public async Task Evaluate_LifetimeFirstDiscovery_FiresAtTheLowOnboardingThreshold()
+    {
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        var result = await service.EvaluateAndTriggerAsync(OrdinaryYardPlay(actor));
+
+        Assert.Equal(79, result.Score);          // the arithmetic behind the ADR 0017 threshold pick
+        Assert.True(result.Score < 200);         // well below the normal FireThreshold
+        Assert.True(result.Fired);               // yet it fires — this is a fresh player's lifetime-first
+        Assert.NotNull(result.DiscoveryId);
+        Assert.Single(discoveries.Discoveries);
+    }
+
+    [Fact]
+    public async Task Evaluate_ActorWithAPriorDiscovery_DoesNotFireAtTheLowScore()
+    {
+        // Once an actor has made ANY discovery — anywhere, in any style — they are no longer
+        // lifetime-first: this style's un-claimed Common rung must clear the normal FireThreshold
+        // (200), not the onboarding gate, even though nothing has been claimed in THIS style yet.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        // Give the actor their lifetime-first discovery via the manual trigger path (a real Discoveries row).
+        await service.TriggerAsync(new TriggerDiscoveryRequest(
+            actor, Region, DiscoveryType.Skill, "t", new[] { "arcane" }, "Projectile", "Common"));
+
+        // The same score (79) that fired for a fresh actor — but this actor is past onboarding now.
+        var result = await service.EvaluateAndTriggerAsync(OrdinaryYardPlay(actor));
+
+        Assert.Equal(79, result.Score);
+        Assert.False(result.Fired);
+        Assert.Null(result.DiscoveryId);
+    }
+
+    [Fact]
+    public async Task Evaluate_LifetimeFirstDiscovery_StillDedups_RepeatingTheSamePlayDoesNotClaimAgain()
+    {
+        // The onboarding gate only lowers the SCORE bar — the claim-key/rung logic is untouched, so
+        // repeating identical play in the same style does not mint a second discovery: the actor now
+        // owns Common in this style, and Uncommon demands 300, which 79 never reaches.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+        var actor = Guid.NewGuid();
+
+        var first = await service.EvaluateAndTriggerAsync(OrdinaryYardPlay(actor));
+        var repeated = await service.EvaluateAndTriggerAsync(OrdinaryYardPlay(actor));
+
+        Assert.True(first.Fired);
+        Assert.False(repeated.Fired);            // no duplicate for the exact same play
+        Assert.Single(discoveries.Discoveries);
+        Assert.Single(skills.Skills);
+    }
+
+    [Fact]
+    public async Task Evaluate_ArcaneDrivenPlay_FiresAndComposesJustLikeMeleeOrFirearm()
+    {
+        // The player's worry ("is magic un-discoverable?") is unfounded — arcane play scores through
+        // the exact same TriggerEvaluator formula as melee/firearm play (same behavior weights, an
+        // "arcane" factor weight like any other), and composes into a real, named, Ready skill.
+        var discoveries = new FakeDiscoveryRepo();
+        var skills = new FakeSkillRepo();
+        using var metrics = new CompositionMetrics();
+        var service = Service(discoveries, skills, new FakeKnowledgeRepo(), metrics);
+
+        // Distinct themes (not both "t"): the stub composer's name is derived from the theme, and the
+        // service's actor-wide name-dedup would otherwise force a same-named pair through a pointless
+        // retry — a batching quirk of the fixture, not anything about arcane play being penalized.
+        EvaluateTriggerRequest Play(Guid actor, string theme, string tag, string behavior) => new(
+            actor, Region, DiscoveryType.Skill, theme, new[] { tag }, "Beam",
+            new[] { new BehaviorCount(behavior, 400) }, Persistence: 0);
+
+        var melee = await service.EvaluateAndTriggerAsync(Play(Guid.NewGuid(), "melee strike", "melee", "MeleeAttack"));
+        var arcane = await service.EvaluateAndTriggerAsync(Play(Guid.NewGuid(), "arcane bolt", "arcane", "RangedAttack"));
+
+        Assert.True(melee.Fired);
+        Assert.True(arcane.Fired);               // magic fires exactly like any other loadout
+
+        // And it composes into a real skill — not a fallback, not silently skipped.
+        await service.ComposePendingAsync(10);
+        var arcaneSkill = skills.Skills.First(s => s.DiscoveryId == arcane.DiscoveryId);
+        Assert.Equal(DiscoveryContentStatus.Ready, arcaneSkill.Status);
+        Assert.False(string.IsNullOrEmpty(arcaneSkill.Name));
+        Assert.False(string.IsNullOrEmpty(arcaneSkill.EffectGraphJson));
+    }
+
     [Fact]
     public async Task Evaluate_RecordsLineageFromPriorKnowledge()
     {

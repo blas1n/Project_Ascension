@@ -96,7 +96,16 @@ public class SkillCompositionService : ISkillCompositionService
             return new EvaluateTriggerResponse(false, outcome.Score, null); // this style is finished
 
         var next = best is null ? Rarity.Common : best.Value + 1;
-        if (outcome.Score < TriggerEvaluator.RungScore(next, tuning))
+
+        // Onboarding (ADR 0017): the actor's LIFETIME-FIRST discovery — no row in Discoveries at
+        // all, in ANY style — gates on the low FirstDiscoveryThreshold instead of the normal rung
+        // score, so ordinary training-yard play can reach it. It is still a real discovery composed
+        // from real behaviour (ADR 0002/0010 otherwise unchanged): the style ladder, dedup, and
+        // rarity-climbs-one-rung-at-a-time rules all still apply below. Every discovery after this
+        // one — including a later first discovery in a NEW style — is back on the full economy.
+        var isLifetimeFirst = (await _discoveries.GetByActorAsync(request.ActorId, ct)).Count == 0;
+        var requiredScore = isLifetimeFirst ? tuning.FirstDiscoveryThreshold : TriggerEvaluator.RungScore(next, tuning);
+        if (outcome.Score < requiredScore)
             return new EvaluateTriggerResponse(false, outcome.Score, null); // not yet worth the next rung
 
         // Rarity IS the reward, so rarity buys the expression: a Common skill does one plain thing; a

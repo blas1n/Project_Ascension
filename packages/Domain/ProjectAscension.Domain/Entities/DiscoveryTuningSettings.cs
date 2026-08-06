@@ -19,6 +19,10 @@ namespace ProjectAscension.Domain.Entities
         public int PersistenceWeight { get; set; }
         public int CombinationSynergy { get; set; }
         public int FireThreshold { get; set; }
+        // Onboarding (ADR 0017): the actor's LIFETIME-FIRST discovery gates on this instead of
+        // FireThreshold, so ordinary training-yard play can reach it. Every discovery after the
+        // first stays on the full FireThreshold/rung economy (ADR 0010 unchanged).
+        public int FirstDiscoveryThreshold { get; set; }
 
         // Power budget curve (continuous in score).
         public int BudgetBase { get; set; }
