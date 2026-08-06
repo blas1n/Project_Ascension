@@ -1,3 +1,4 @@
+using System;
 using ProjectAscension.GameSimulation.Tutorial;
 using Xunit;
 
@@ -93,6 +94,24 @@ namespace ProjectAscension.GameSimulation.Tests.Tutorial
         public void StepsWithNoPlace_HaveNoStation(TutorialStep step)
         {
             Assert.Equal(TutorialGuideStation.None, TutorialGuideScript.For(step).Station);
+        }
+
+        // ADR 0017: the old FirstDiscovery line ("Fight it your own way. See what happens.") was too
+        // passive for a first-timer who doesn't yet know discovery reads HOW they fight. The guide
+        // now nudges toward a concrete, easy COMPOSITION (the doc's own examples: airborne strikes,
+        // chaining actions together) while still leaving the actual act — and any specific skill —
+        // entirely up to the player (ADR 0002: no scripted discovery).
+        [Fact]
+        public void FirstDiscovery_NudgesTowardACompositionalAction_WithoutScriptingASpecificSkill()
+        {
+            var line = TutorialGuideScript.For(TutorialStep.FirstDiscovery);
+
+            // Points at a concrete behavioural composition, not a vague "do your thing."
+            Assert.Contains("airborne", line.Text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("your own way", line.Text, StringComparison.OrdinalIgnoreCase);
+
+            // Still behavioural, not a place (belt-and-suspenders with StepsWithNoPlace_HaveNoStation).
+            Assert.Equal(TutorialGuideStation.None, line.Station);
         }
     }
 }

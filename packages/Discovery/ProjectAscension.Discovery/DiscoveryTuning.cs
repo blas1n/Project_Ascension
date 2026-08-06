@@ -23,6 +23,11 @@ public sealed record DiscoveryTuning(
     int ConcurrencyWeight, // While:a@q — done while airborne / charged / blocking
     int ChainWeight,       // Chain:a   — done again and again
     int FireThreshold,
+    // Onboarding (ADR 0017): the gate used ONLY for an actor's LIFETIME-FIRST discovery (the
+    // Discoveries table has no row for them yet) — reachable from ordinary training-yard play.
+    // Every discovery after the first is back on FireThreshold/the rung ladder; scarcity (ADR
+    // 0010) is unchanged for everything past the very first.
+    int FirstDiscoveryThreshold,
     // The Nth discovery in the SAME space costs exponentially more (ADR 0010). The first is easy; the
     // fifth is ten times harder. Repeating one act runs out of road — you must play differently, or
     // compose better (ADR 0009). Grinding is made to exhaust itself.
@@ -94,6 +99,15 @@ public sealed record DiscoveryTuning(
         // first rung is earned by sustained play (still reachable by grinding, per ADR 0010 §1-c), not
         // handed out by one twitch.
         FireThreshold: 200,
+        // Onboarding (ADR 0017): a fresh player's repro session (ordinary training-yard attacks +
+        // jumps) scored ~82 after a single ~5s activity window (persistence=1) — nowhere near
+        // FireThreshold (200), which that same play only cleared at persistence=5 (~25s of
+        // UNBROKEN activity; DiscoveryReporter resets persistence to 0 on any idle 5s window, so
+        // intermittent yard play never accumulated that far). 70 sits below that ~82 repro score
+        // (so the exact same first window now fires) but well above what a few idle button presses
+        // alone would reach (Jump alone is weight 1, no synergy at a single distinct behaviour) —
+        // reachable, not free.
+        FirstDiscoveryThreshold: 70,
         BudgetBase: 6,
         BudgetGrowth: 2.4,
         BudgetMin: 10,

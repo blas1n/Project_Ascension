@@ -69,9 +69,14 @@ namespace ProjectAscension.GameSimulation.Tutorial
                     TutorialGuideStation.TrainingGround),
 
             // 4 — 첫 발견. Behavioural, not a destination. No marker (see TutorialGuideStation.None).
+            // The old line ("Fight it your own way") was too passive for a first-timer who doesn't
+            // yet know discovery responds to HOW you fight — a repro playtest swung and jumped for
+            // ~25s straight and nothing fired. Points at a concrete, easy COMPOSITION (doc's own
+            // examples: 반복 점프/공중 공격/회피 직후 공격) without scripting a specific skill — the
+            // player still has to act (ADR 0002); this only makes the fertile behaviour legible.
             TutorialStep.FirstDiscovery =>
-                new("Fight it your own way. See what happens.",
-                    "Fight your own way — a discovery comes from how you act.",
+                new("Don't just swing — mix it up. Strike while you're airborne, or weave two things together. That's where discoveries come from.",
+                    "Fight your own way — combine two actions (attack mid-air, chain a dodge into a strike) to spark a discovery.",
                     TutorialGuideStation.None),
 
             // 5 — 첫 계약 (외곽 조사).

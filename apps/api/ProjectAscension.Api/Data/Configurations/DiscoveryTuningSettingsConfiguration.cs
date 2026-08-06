@@ -33,6 +33,9 @@ public class DiscoveryTuningSettingsConfiguration : IEntityTypeConfiguration<Dis
             // clear the bar for a first discovery (ADR 0010; see DiscoveryTuning.Default for the
             // arithmetic). Rarity bands rescaled to match, same ×1.5 exponential spacing.
             FireThreshold = 200,
+            // Onboarding (ADR 0017): the actor's LIFETIME-FIRST discovery gates on this instead of
+            // FireThreshold — see DiscoveryTuning.Default for the arithmetic behind 70.
+            FirstDiscoveryThreshold = 70,
             BudgetBase = 6,
             // Cost exponential, power logarithmic (ADR 0010): grinding one act exhausts itself, and
             // getting stronger stays possible but grows steadily dearer.
